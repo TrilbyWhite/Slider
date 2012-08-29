@@ -1,3 +1,10 @@
+/*************************************************************************\
+| Slider                                                                  |
+| ======                                                                  |
+| by Jesse McClure <jesse@mccluresk9.com>, Copyright 2012                 |
+|     Inspired by Impress, coded from scratch                             |
+| license: GPLv3                                                          |
+\*************************************************************************/
 
 #include <stdlib.h>
 #include <stdio.h>
