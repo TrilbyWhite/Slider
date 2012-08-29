@@ -19,8 +19,6 @@
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
 
-#define DPI_SCALE		2.2
-
 inline void usage() {
 }
 
@@ -59,6 +57,7 @@ static char *uri;
 struct {
 	Pixmap *slide;
 	int count, num, rendered;
+	float scale;
 } show;
 struct {
 	Pixmap view;
@@ -192,7 +191,7 @@ void *render_all(void *arg) {
 	sorter.grid = (int) sqrt(show.count) + 1;
 	sorter.h = (sh-10)/sorter.grid - 10;
 	sorter.w = sorter.h*4/3;
-	sorter.scale = DPI_SCALE * sorter.h / sh;
+	sorter.scale = show.scale * sorter.h / sh;
 	Pixmap thumbnail = XCreatePixmap(dpy,root,
 		sorter.w,sorter.h,DefaultDepth(dpy,scr));
 	/* create empty overview frame in sorter.view (dotted outlines for slides) */
@@ -214,7 +213,7 @@ void *render_all(void *arg) {
 		target = cairo_xlib_surface_create(
 				dpy, show.slide[i], DefaultVisual(dpy,scr), asp, sh);
 		cairo = cairo_create(target);
-		cairo_scale(cairo,DPI_SCALE,DPI_SCALE);
+		cairo_scale(cairo,show.scale,show.scale);
 		poppler_page_render(page,cairo);
 		cairo_surface_destroy(target);
 		cairo_destroy(cairo);
@@ -264,6 +263,7 @@ int main(int argc, const char **argv) {
 	XChangeWindowAttributes(dpy,win,CWEventMask|CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
 	XSetInputFocus(dpy,win,RevertToPointerRoot,CurrentTime);
+	show.scale = sh * 0.00368;
 
 	/* set up Xlib graphics contexts */
 	XGCValues val;
