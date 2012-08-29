@@ -19,9 +19,6 @@
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
 
-inline void usage() {
-}
-
 typedef struct {
 	unsigned int mod;
 	KeySym keysym;
