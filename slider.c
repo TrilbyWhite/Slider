@@ -2,7 +2,7 @@
 | Slider                                                                  |
 | ======                                                                  |
 | by Jesse McClure <jesse@mccluresk9.com>, Copyright 2012                 |
-|     Inspired by Impress, coded from scratch                             |
+|     Inspired by Impressive, coded from scratch                          |
 | license: GPLv3                                                          |
 \*************************************************************************/
 
