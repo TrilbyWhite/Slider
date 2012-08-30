@@ -260,7 +260,7 @@ int main(int argc, const char **argv) {
 	XChangeWindowAttributes(dpy,win,CWEventMask|CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
 	XSetInputFocus(dpy,win,RevertToPointerRoot,CurrentTime);
-	show.scale = sh * 0.0036;
+	show.scale = sh * 0.003674309;
 	
 	/* set up Xlib graphics contexts */
 	XGCValues val;
