@@ -185,12 +185,17 @@ void *render_all(void *arg) {
 	cairo_surface_t *target;
 	cairo_t *cairo;
 	/* calculations for overview/sorter mode */
+	page = poppler_document_get_page(pdf,0);
+	double pdfw,pdfh;
+	poppler_page_get_size(page,&pdfw,&pdfh);
+	show.scale = sh / pdfh;
 	sorter.grid = (int) sqrt(show.count) + 1;
 	sorter.h = (sh-10)/sorter.grid - 10;
 	sorter.w = sorter.h*4/3;
 	sorter.scale = show.scale * sorter.h / sh;
 	Pixmap thumbnail = XCreatePixmap(dpy,root,
 		sorter.w,sorter.h,DefaultDepth(dpy,scr));
+
 	/* create empty overview frame in sorter.view (dotted outlines for slides) */
 	XFillRectangle(dpy,sorter.view,gc,0,0,sw,sh);
 	int i,j, n=0, x=(sw-sorter.grid*(sorter.w+10))/2, y=10;
@@ -260,7 +265,6 @@ int main(int argc, const char **argv) {
 	XChangeWindowAttributes(dpy,win,CWEventMask|CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
 	XSetInputFocus(dpy,win,RevertToPointerRoot,CurrentTime);
-	show.scale = sh * 0.003674309;
 	
 	/* set up Xlib graphics contexts */
 	XGCValues val;
