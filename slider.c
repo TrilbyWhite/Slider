@@ -82,9 +82,9 @@ void buttonpress(XEvent *e) {
 		else if (e->xbutton.button == 3) { /* do nothing yet */ }
 	}
 	else {
-		if (e->xbutton.button == 1) move("l");
+		if (e->xbutton.button == 1) move("r");
 		else if (e->xbutton.button == 2) overview(NULL);
-		else if (e->xbutton.button == 3) move("r");
+		else if (e->xbutton.button == 3) move("l");
 	}
 }
 
