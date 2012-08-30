@@ -12,3 +12,6 @@ clean:
 
 tarball: clean
 	@tar -czf ${APP}.tar.gz *
+
+install: ${APP}
+	@install -m755 slider ${DESTDIR}${PREFIX}/bin/slider
