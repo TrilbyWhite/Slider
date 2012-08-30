@@ -191,9 +191,10 @@ void *render_all(void *arg) {
 	double pdfw,pdfh;
 	poppler_page_get_size(page,&pdfw,&pdfh);
 	show.scale = sh / pdfh;
+	asp = sh * pdfw/pdfh;
 	sorter.grid = (int) sqrt(show.count) + 1;
 	sorter.h = (sh-10)/sorter.grid - 10;
-	sorter.w = sorter.h*4/3;
+	sorter.w = sorter.h * pdfw/pdfh;
 	sorter.scale = show.scale * sorter.h / sh;
 	Pixmap thumbnail = XCreatePixmap(dpy,root,
 		sorter.w,sorter.h,DefaultDepth(dpy,scr));
@@ -213,6 +214,7 @@ void *render_all(void *arg) {
 	for (i = 0; i < show.count; i++) {
 		/* show.slide[i] creation and rendering */
 		show.slide[i] = XCreatePixmap(dpy,root,asp,sh,DefaultDepth(dpy,scr));
+		XFillRectangle(dpy,show.slide[i],wgc,0,0,asp,sh);
 		page = poppler_document_get_page(pdf,i);
 		target = cairo_xlib_surface_create(
 				dpy, show.slide[i], DefaultVisual(dpy,scr), asp, sh);
@@ -222,6 +224,7 @@ void *render_all(void *arg) {
 		cairo_surface_destroy(target);
 		cairo_destroy(cairo);
 		/* sorter.view updating */
+		XFillRectangle(dpy,thumbnail,wgc,0,0,sorter.w,sorter.h);
 		target = cairo_xlib_surface_create(
 			dpy,thumbnail, DefaultVisual(dpy,scr),sorter.w, sorter.h);
 		cairo = cairo_create(target);
@@ -258,7 +261,6 @@ int main(int argc, const char **argv) {
 	root = RootWindow(dpy,scr);
 	sw = DisplayWidth(dpy,scr);
 	sh = DisplayHeight(dpy,scr);
-	asp = sh*4/3 - 2;
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
 	XSetWindowAttributes wa;
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
