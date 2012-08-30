@@ -65,6 +65,8 @@ struct {
 #include "config.h"
 
 void buttonpress(XEvent *e) {
+	XRaiseWindow(dpy,win);
+	XSetInputFocus(dpy,win,RevertToPointerRoot,CurrentTime);
 	int x,y,n;
 	if (overview_mode) {
 		if (e->xbutton.button == 1) {
