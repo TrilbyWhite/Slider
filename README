@@ -7,8 +7,10 @@ Partially inspired by Impressive but coded entirely separately from scratch in p
 
 Dependencies: poppler-glib
 
-Usage: slider <pdf-filename>
+Usage: slider [options] <pdf-filename>
+  options: -f  to *not* start in fullscreen mode.
 
+See discussion here: https://bbs.archlinux.org/viewtopic.php?id=147952
 
 Controls (default):
 ===================
@@ -20,6 +22,7 @@ Presentation mode:
 	Alt+q           - exits.
 	b               - black mute
 	w               - white mute
+	f               - toggle fullscreen
 	r | <ENTER>     - redraw (unmute)
 	Left mouse      - move forward one slide
 	Right mouse     - move backward one slide

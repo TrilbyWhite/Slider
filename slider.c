@@ -29,6 +29,7 @@ typedef struct {
 static void buttonpress(XEvent *);
 static void die(const char *, ...);
 static void draw(const char *);
+static void fullscreen(const char *);
 static void keypress(XEvent *);
 static void move(const char *);
 static void mute(const char *);
@@ -50,6 +51,7 @@ static PopplerDocument *pdf;
 static Bool cancel_render = False;
 static Bool white_muted = False;
 static Bool overview_mode = False;
+static Bool fullscreen_mode = True;
 static char *uri;
 struct {
 	Pixmap *slide;
@@ -90,8 +92,13 @@ void buttonpress(XEvent *e) {
 
 void command_line(int argc, const char **argv) {
 	if (argc == 1) die("%s requires a filename or uri for a pdf\n",argv[0]);
-	char *fullpath = realpath(argv[1],NULL);
-	if (fullpath == NULL) die("Cannot find file \"%s\"\n",argv[1]);
+	int i;
+	for (i = 1; i < argc - 1; i++) {
+		if (argv[i][0] == '-' && argv[i][1] == 'f') fullscreen_mode = False;
+		else fprintf(stderr,"unrecognized parameter \"%s\" ignored.\n",argv[i]);
+	}	
+	char *fullpath = realpath(argv[i],NULL);
+	if (fullpath == NULL) die("Cannot find file \"%s\"\n",argv[i]);
 	uri = (char *) calloc(strlen(fullpath) + 8,sizeof(char));
 	strcpy(uri,"file://");
 	strcat(uri,fullpath);
@@ -111,6 +118,27 @@ void draw(const char *arg) {
 	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
 	XFlush(dpy); /* or XSync(dpy,True|False); */
 }
+
+void fullscreen(const char *arg) {
+	static x,y,w,h;
+	XWindowAttributes xwa;
+	XSetWindowAttributes attr;
+	if ( (fullscreen_mode=!fullscreen_mode) ) {
+		XGetWindowAttributes(dpy,win, &xwa);
+		x = xwa.x; y = xwa.y; w = xwa.width; h = xwa.height;
+		attr.override_redirect = True;
+		XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&attr);
+		XMoveResizeWindow(dpy,win,0,0,sw,sh);
+		XRaiseWindow(dpy,win);
+	}
+	else {
+		attr.override_redirect = False;
+		XMoveResizeWindow(dpy,win,x,y,w,h);
+		XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&attr);
+	}
+	draw(NULL);
+}
+	
 
 void keypress(XEvent *e) {
 	unsigned int i;
@@ -174,7 +202,7 @@ void overview(const char *arg) {
 	XFlush(dpy);
 	overview_mode = True;
 }
-	
+
 void quit(const char *arg) { running=False; }
 
 void *render_all(void *arg) {
@@ -263,13 +291,13 @@ int main(int argc, const char **argv) {
 	sw = DisplayWidth(dpy,scr);
 	sh = DisplayHeight(dpy,scr);
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
+	XStoreName(dpy,win,"Slider");
 	XSetWindowAttributes wa;
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
-	wa.override_redirect = True;
+	wa.override_redirect = False;
 	// TODO: wa.cursor CWCursor
 	XChangeWindowAttributes(dpy,win,CWEventMask|CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
-	XSetInputFocus(dpy,win,RevertToPointerRoot,CurrentTime);
 	
 	/* set up Xlib graphics contexts */
 	XGCValues val;
@@ -299,6 +327,7 @@ int main(int argc, const char **argv) {
 	pthread_create(&render_thread,NULL,render_all,NULL);
 	/* wait for first frame to render */
 	while (show.rendered < 1) usleep(50000);
+	if (fullscreen_mode) { fullscreen_mode = ! fullscreen_mode; fullscreen(NULL); }
 
 	/* main loop */
 	draw(NULL);

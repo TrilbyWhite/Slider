@@ -8,6 +8,7 @@ static Key keys[] = {
 	{ 0,			XK_b,			mute,			"black"		},
 	{ 0,			XK_w,			mute,			"white"		},
 	{ 0,			XK_r,			draw,			NULL		},
+	{ 0,			XK_f,			fullscreen,		NULL		},
 	{ 0,			XK_Return,		draw,			NULL		},
 	{ 0,			XK_Tab,			overview,		NULL		},
 	{ 0,			XK_Down,		move,			"down"		},
