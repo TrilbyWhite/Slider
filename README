@@ -14,20 +14,20 @@ Controls (default):
 ===================
 
 Presentation mode:
-	<Arrow Keys>    	- move as expected to advance or go back one slide
-	<Space>         	- advance one slide
-	Tab             	- change to overview mode
-	Alt+q           	- exits.
-	b               	- black mute
-	w               	- white mute
-	r | <ENTER>     	- redraw (unmute)
-	Left mouse		- move forward one slide
-	Right mouse     	- move backward one slide
-	Middle mouse    	- change to overview mode
+	<Arrow Keys>    - move as expected to advance or go back one slide
+	<Space>         - advance one slide
+	Tab             - change to overview mode
+	Alt+q           - exits.
+	b               - black mute
+	w               - white mute
+	r | <ENTER>     - redraw (unmute)
+	Left mouse      - move forward one slide
+	Right mouse     - move backward one slide
+	Middle mouse    - change to overview mode
 
 Overview mode: ("slide sorter")
-	<Arrow Keys>    	- navigate slides as expected
-	Left mouse      	- select a slide
-	Middle mouse    	- return to presentation mode
-	r | <ENTER> | Tab	- return to presentation mode
+	<Arrow Keys>    - navigate slides as expected
+	Left mouse      - select a slide
+	Middle mouse    - return to presentation mode
+	r | <ENTER>     - return to presentation mode
 
