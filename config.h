@@ -11,7 +11,7 @@ static Key keys[] = {
 	{ 0,			XK_f,			fullscreen,		NULL		},
 #ifdef SLIDER_FORMFILL
 	{ 0,			XK_e,			fill_field,		NULL		},
-//	{ Mod1Mask,		XK_s,			fill_field,		"save"		}, /* DO NOT USE YET - this WILL destroy your pdf */
+	{ Mod1Mask,		XK_s,			fill_field,		"save"		}, /* DO NOT USE YET - this WILL destroy your pdf */
 #endif
 	{ 0,			XK_Return,		draw,			NULL		},
 	{ 0,			XK_Tab,			overview,		NULL		},

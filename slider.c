@@ -74,7 +74,13 @@ struct {
 void fill_field(const char *arg) {
 	if (show.rendered < show.count - 1) return; /* I don't know why this is needed yet */
 	if (arg != NULL) {
-		poppler_document_save(pdf,"file:///tmp/Slider_crap.pdf",NULL);
+		GError *err = NULL;
+		if ( !poppler_document_save(pdf,"file:///tmp/slider_crap.pdf",&err) ) {
+			fprintf(stderr,"poppler_document_save error: %s\n",err->message);
+			g_error_free(err);
+			err = NULL;
+		}
+		return;
 	}
 	PopplerPage *pg = poppler_document_get_page(pdf,show.num);
 	GList *fmaps = poppler_page_get_form_field_mapping(pg);
