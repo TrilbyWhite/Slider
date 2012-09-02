@@ -169,7 +169,7 @@ void keypress(XEvent *e) {
 	KeySym keysym = XkbKeycodeToKeysym(dpy,(KeyCode)ev->keycode,0,0);
 	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++)
 		if ( (keysym == keys[i].keysym) && keys[i].func &&
-				(keys[i].mod == ev->state & ~LockMask)  )
+				keys[i].mod | LockMask == ev->state | LockMask )
 			keys[i].func(keys[i].arg);
 }
 
