@@ -127,16 +127,22 @@ void fullscreen(const char *arg) {
 	XWindowAttributes xwa;
 	XSetWindowAttributes attr;
 	XEvent xev;
+	Atom state = XInternAtom(dpy, "_NET_WM_STATE", False);
+	Atom full = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	if (netwm) {	/* NET_WM   !! Experimental !! */
-		memset(&xev, 0, sizeof(xev));
-		xev.type = ClientMessage;
-		xev.xclient.window = win;
-		xev.xclient.message_type = XInternAtom(dpy, "_NET_WM_STATE", False);
-		xev.xclient.format = 32;
-		xev.xclient.data.l[0] = 2;	/* 2 = Toggle */
-		xev.xclient.data.l[1] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+		xev.xclient.type=ClientMessage;
+		xev.xclient.serial = 0;
+		xev.xclient.send_event=True;
+		xev.xclient.window=win;
+		xev.xclient.message_type=state;
+		xev.xclient.format=32;
+		xev.xclient.data.l[0] = 2;
+		xev.xclient.data.l[1] = full;
 		xev.xclient.data.l[2] = 0;
-		XSendEvent(dpy,root,False,SubstructureNotifyMask,&xev);
+		XSendEvent(dpy,root, False, SubstructureRedirectMask |
+				SubstructureNotifyMask, &xev);
+		XSync(dpy,False);
+		usleep(10000);
 	}
 	else { /* not NET_WM */
 		if ( (fullscreen_mode=!fullscreen_mode) ) {
