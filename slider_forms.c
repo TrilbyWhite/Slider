@@ -29,11 +29,13 @@ typedef struct {
 static void buttonpress(XEvent *);
 static void die(const char *, ...);
 static void draw(const char *);
+#ifdef SLIDER_FORMFILL
+static void fill_field(const char *);
+#endif
 static void fullscreen(const char *);
 static void keypress(XEvent *);
 static void move(const char *);
 static void mute(const char *);
-static void pen(const char *);
 static void quit(const char *);
 static void overview(const char *);
 
@@ -66,6 +68,116 @@ struct {
 } sorter;
 
 #include "config.h"
+
+#ifdef SLIDER_FORMFILL
+/*experimental field filling*/
+void fill_field(const char *arg) {
+	if (show.rendered < show.count - 1) return; /* I don't know why this is needed yet */
+	if (arg != NULL) {
+		GError *err = NULL;
+		if ( !poppler_document_save(pdf,"file:///tmp/slider_crap.pdf",&err) ) {
+			fprintf(stderr,"poppler_document_save error: %s\n",err->message);
+			g_error_free(err);
+			err = NULL;
+		}
+		return;
+	}
+	PopplerPage *pg = poppler_document_get_page(pdf,show.num);
+	GList *fmaps = poppler_page_get_form_field_mapping(pg);
+	if (fmaps == NULL) return;
+
+	/* TODO: change mouse cursor */
+	XEvent ev;
+	while ( ! XNextEvent(dpy,&ev) )
+		if (ev.type = ButtonPress) break;
+	double x = (ev.xbutton.x-(sw-asp)/2) / show.scale;
+	double y = (sh - ev.xbutton.y)/show.scale;
+	/* TODO: revert mouse cursor */
+
+	int i;
+	GList *list;
+	PopplerFormFieldMapping *fmap;
+	for (list = fmaps; list; list=list->next) {
+		fmap = (PopplerFormFieldMapping *) list->data;
+		if 	(	(x >= fmap->area.x1) && (x <= fmap->area.x2) &&
+				(y >= fmap->area.y1) && (y <= fmap->area.y2)	)
+			break;
+	}
+	int wx = show.scale * fmap->area.x1 + (sw-asp)/2;
+	int wy = sh - show.scale * fmap->area.y2;
+	int ww = show.scale * fmap->area.x2 + (sw-asp)/2 - wx;
+	int wh = sh - show.scale * fmap->area.y1 - wy;
+	KeySym key;
+	char instring[255];
+	char *fullstring = (char *) calloc(2,sizeof(char));
+	char cc[] = "    ";
+	int n;
+	if ( list ) { /* clicked in a field */
+		PopplerFormField *field = fmap->field;
+		gchar *text = poppler_form_field_text_get_text(field);
+		if (text) strcpy(instring,text);
+		else instring[0] = '\0';
+		i = strlen(instring);
+		g_free(text);
+		XFillRectangle(dpy,win,wgc,wx,wy,ww,wh);
+		XDrawRectangle(dpy,win,hgc,wx,wy,ww,wh);
+		XDrawString(dpy,win,gc,wx,wy+wh,instring,strlen(instring));
+		XFlush(dpy);
+		int fh=12;	/* get these from font settings */
+		int fw=5;
+		Bool newline = False;
+		XFillRectangle(dpy,win,wgc,wx,wy,ww,wh);
+		XDrawRectangle(dpy,win,hgc,wx,wy,ww,wh);
+		wy+=2;
+		wx+=2;
+		while ( ! XNextEvent(dpy,&ev) ) {
+			if (ev.type = KeyPress) {
+				n = XLookupString(&(ev.xkey),cc,4,&key,NULL);
+				if (key == XK_Return) newline=True;
+				else if (key == XK_q) {
+					if (strlen(fullstring) > 1) strcat(fullstring,"\n");
+					strcat(fullstring,instring);
+					break;
+				}
+				else if (key == XK_BackSpace || key == XK_Delete)
+					instring[(i > 0 ? --i : i)] = '\0';
+				else if (n == 1) {
+					instring[i++]=cc[0];
+					instring[i] = '\0';
+				}
+				if (newline) {
+					newline = False;
+					fullstring = (char *) realloc(fullstring,
+						(strlen(fullstring)+strlen(instring)+2) * sizeof(char));
+					if (strlen(fullstring) > 1) strcat(fullstring,"\n");
+					strcat(fullstring,instring);
+					instring[i=0] = '\0';
+					wy+=fh;
+				}
+				XFillRectangle(dpy,win,wgc,wx,wy,ww-4,fh);
+				XDrawString(dpy,win,gc,wx,wy+fh,instring,strlen(instring));
+				XFlush(dpy);
+			}
+		}
+		poppler_form_field_text_set_text(field,fullstring);
+		free(fullstring);
+	}
+	poppler_page_free_form_field_mapping(fmaps);
+	/* re-render page TODO: why does this crash if rendering thread is still running? */
+	cairo_surface_t *target;
+	cairo_t *cairo;	
+	XFillRectangle(dpy,show.slide[show.num],wgc,0,0,asp,sh);
+	target = cairo_xlib_surface_create(
+			dpy, show.slide[show.num], DefaultVisual(dpy,scr), asp, sh);
+	cairo = cairo_create(target);
+	cairo_scale(cairo,show.scale,show.scale);
+	poppler_page_render(pg,cairo);
+	cairo_surface_destroy(target);
+	cairo_destroy(cairo);
+	draw(NULL);
+}
+#endif /* SLIDER_FORMFILL */
+
 
 void buttonpress(XEvent *e) {
 	XRaiseWindow(dpy,win);
@@ -202,39 +314,6 @@ void overview(const char *arg) {
 	XDrawRectangle(dpy,win,hgc,x-1,y-1,sorter.w+2,sorter.h+2);
 	XFlush(dpy);
 	overview_mode = True;
-}
-
-void pen(const char *arg) {
-	XEvent ev;
-	int x,y,nx,ny;
-	char pw[3] = "  "; pw[0] = arg[0]; pw[1] = arg[1];
-	Colormap cmap = DefaultColormap(dpy,scr);
-	XColor color;
-	XAllocNamedColor(dpy,cmap,arg+3,&color,&color);
-	XGCValues val;
-	val.foreground = color.pixel;
-	val.line_width = atoi(pw);
-	GC pgc = XCreateGC(dpy,win,GCForeground|GCLineWidth,&val);
-	for (;;) {
-		while ( !XNextEvent(dpy,&ev) && ev.type!=ButtonPress && ev.type!=KeyPress );
-		if (ev.type == KeyPress) {
-			XPutBackEvent(dpy,&ev);
-			break;
-		}
-		XGrabPointer(dpy,ev.xbutton.window,True,
-			PointerMotionMask | ButtonReleaseMask, GrabModeAsync,
-			GrabModeAsync,None,None,CurrentTime);
-		x = ev.xbutton.x; y = ev.xbutton.y;
-		while ( !XNextEvent(dpy,&ev) && ev.type != ButtonRelease) {
-			nx = ev.xmotion.x; ny = ev.xmotion.y;
-			XDrawLine(dpy,win,pgc,x,y,nx,ny);
-			x = nx; y = ny;
-			XFlush(dpy);
-		}
-		XUngrabPointer(dpy,CurrentTime);
-	}
-	/* force a redraw of the background in case pens went outside of the slide */
-	white_muted = True;
 }
 
 void quit(const char *arg) { running=False; }

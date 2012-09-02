@@ -6,7 +6,7 @@ ${APP}: ${APP}.c config.h
 	@gcc -o ${APP} ${APP}.c ${LIBS}
 	@strip ${APP}
 
-${APP}_forms: ${APP}.c config.h
+${APP}_forms: ${APP}_forms.c config.h
 	@gcc -DSLIDER_FORMFILL -o ${APP} ${APP}.c ${LIBS}
 	@strip ${APP}
 
