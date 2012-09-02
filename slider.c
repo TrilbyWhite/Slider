@@ -20,6 +20,8 @@
 #include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 
+#define NUMLOCK	Mod2Mask
+
 typedef struct {
 	unsigned int mod;
 	KeySym keysym;
@@ -168,9 +170,8 @@ void keypress(XEvent *e) {
 	XKeyEvent *ev = &e->xkey;
 	KeySym keysym = XkbKeycodeToKeysym(dpy,(KeyCode)ev->keycode,0,0);
 	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++)
-		if ( (keysym == keys[i].keysym) && keys[i].func &&
-				keys[i].mod | LockMask == ev->state | LockMask )
-			keys[i].func(keys[i].arg);
+		if ( (keysym == keys[i].keysym) && keys[i].func && keys[i].mod  == (ev->state & ~NUMLOCK) )
+				keys[i].func(keys[i].arg);
 }
 
 void move(const char *arg) {
