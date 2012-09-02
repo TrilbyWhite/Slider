@@ -18,6 +18,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
+#include <X11/Xatom.h>
 
 typedef struct {
 	unsigned int mod;
@@ -47,6 +48,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress]		= buttonpress,
 	[KeyPress]			= keypress
 };
+static Bool netwm;
 
 static PopplerDocument *pdf;
 static Bool cancel_render = False;
@@ -124,18 +126,32 @@ void fullscreen(const char *arg) {
 	static x,y,w,h;
 	XWindowAttributes xwa;
 	XSetWindowAttributes attr;
-	if ( (fullscreen_mode=!fullscreen_mode) ) {
-		XGetWindowAttributes(dpy,win, &xwa);
-		x = xwa.x; y = xwa.y; w = xwa.width; h = xwa.height;
-		attr.override_redirect = True;
-		XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&attr);
-		XMoveResizeWindow(dpy,win,0,0,sw,sh);
-		XRaiseWindow(dpy,win);
+	XEvent xev;
+	if (netwm) {	/* NET_WM   !! Experimental !! */
+		memset(&xev, 0, sizeof(xev));
+		xev.type = ClientMessage;
+		xev.xclient.window = win;
+		xev.xclient.message_type = XInternAtom(dpy, "_NET_WM_STATE", False);
+		xev.xclient.format = 32;
+		xev.xclient.data.l[0] = 2;	/* 2 = Toggle */
+		xev.xclient.data.l[1] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+		xev.xclient.data.l[2] = 0;
+		XSendEvent(dpy,root,False,SubstructureNotifyMask,&xev);
 	}
-	else {
-		attr.override_redirect = False;
-		XMoveResizeWindow(dpy,win,x,y,w,h);
-		XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&attr);
+	else { /* not NET_WM */
+		if ( (fullscreen_mode=!fullscreen_mode) ) {
+			XGetWindowAttributes(dpy,win, &xwa);
+			x = xwa.x; y = xwa.y; w = xwa.width; h = xwa.height;
+			attr.override_redirect = True;
+			XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&attr);
+			XMoveResizeWindow(dpy,win,0,0,sw,sh);
+			XRaiseWindow(dpy,win);
+		}
+		else {
+			attr.override_redirect = False;
+			XMoveResizeWindow(dpy,win,x,y,w,h);
+			XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&attr);
+		}
 	}
 	draw(NULL);
 }
@@ -331,7 +347,19 @@ int main(int argc, const char **argv) {
 	// TODO: wa.cursor CWCursor
 	XChangeWindowAttributes(dpy,win,CWEventMask|CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
-	
+
+/* check for NET_WM  !! Experimental !! */
+Atom type, NET_CHECK = XInternAtom(dpy,"_NET_SUPPORTING_WM_CHECK",True);
+Window *wins;
+int fmt;
+unsigned long after,nwins;
+XGetWindowProperty(dpy,root,NET_CHECK,0,UINT_MAX,False,XA_WINDOW,
+	&type,&fmt,&nwins,&after,(unsigned char**)&wins);
+if ( type == XA_WINDOW && nwins > 0 && wins[0] != None) netwm = True;
+else netwm = False;
+XFree(wins);
+/* end netwm check */
+
 	/* set up Xlib graphics contexts */
 	XGCValues val;
 	XColor color;
