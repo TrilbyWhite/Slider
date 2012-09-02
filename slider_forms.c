@@ -134,7 +134,7 @@ void fill_field(const char *arg) {
 			if (ev.type = KeyPress) {
 				n = XLookupString(&(ev.xkey),cc,4,&key,NULL);
 				if (key == XK_Return) newline=True;
-				else if (key == XK_q) {
+				else if (key == XK_Tab) {
 					if (strlen(fullstring) > 1) strcat(fullstring,"\n");
 					strcat(fullstring,instring);
 					break;
