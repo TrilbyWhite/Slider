@@ -268,8 +268,15 @@ void pen(const char *arg) {
 
 void quit(const char *arg) { running=False; }
 
+void warn() {
+	XDrawRectangle(dpy,win,hgc,(sw-asp)/2+2,2,asp-4,sh-4);
+	XFlush(dpy);
+	usleep(150000);
+	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
+}
+
 void zoom(const char *arg) {
-	if (show.rendered < show.count - 1) return; /* ensure rendering is done */
+	if (show.rendered < show.count - 1) { warn(); return; } /* ensure rendering is done */
 	XDefineCursor(dpy,win,None); // Make crosshair cursor 
 	XEvent ev;
 	int x1,y1,x2=-1,y2;
@@ -279,7 +286,6 @@ void zoom(const char *arg) {
 		XDefineCursor(dpy,win,invisible_cursor);
 		return;
 	}
-	Pixmap area;
 	XGrabPointer(dpy,ev.xbutton.window,True,
 		PointerMotionMask | ButtonReleaseMask, GrabModeAsync,
 		GrabModeAsync,None,None,CurrentTime);
@@ -287,8 +293,6 @@ void zoom(const char *arg) {
 	while ( !XNextEvent(dpy,&ev) && ev.type != ButtonRelease && ev.type!=KeyPress ) {
 		XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
 		XDrawRectangle(dpy,win,hgc,x1,y1,ev.xbutton.x-x1,ev.xbutton.y-y1);
-		XFlush(dpy);
-		usleep(500);
 		XSync(dpy,True);
 	}
 	if (ev.type == KeyPress) {
@@ -299,26 +303,17 @@ void zoom(const char *arg) {
 	x2 = ev.xbutton.x; y2 = ev.xbutton.y;
 	mute("black");
 	white_muted = True;
-	PopplerRectangle rect = {
-			(x1 - (sw-asp)/2)/show.scale,
-			((sh-y2))/show.scale,
-			(x2 - (sw-asp)/2)/show.scale,
-			((sh-y1))/show.scale };
-	PopplerColor glph = { 0,0,0 };
-	PopplerColor bg = { 65535, 65535, 65535 };
 	Pixmap region = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
 	XFillRectangle(dpy,region,wgc,0,0,sw,sh);
 	PopplerPage *page = poppler_document_get_page(pdf,show.num);
 	cairo_surface_t *target = cairo_xlib_surface_create(
 			dpy, region, DefaultVisual(dpy,scr), sw, sh);
 	cairo_t *cairo = cairo_create(target);
-	double xscale = sw / (rect.x2-rect.x1);
-	double yscale = sh / (rect.y2-rect.y1);
+	double xscale = show.scale * sw / (x2 - x1);
+	double yscale = show.scale * sh / (y2-y1);
 	double scale = (xscale > yscale ? yscale : xscale);
 	cairo_scale(cairo,scale,scale);
 	cairo_translate(cairo, ((sw-asp)/2-x1)/show.scale, -y1/show.scale );
-	poppler_page_render_selection(page,cairo, &rect, NULL,
-		POPPLER_SELECTION_GLYPH, &glph, &bg);
 	poppler_page_render(page,cairo);
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
