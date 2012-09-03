@@ -23,6 +23,8 @@ Presentation mode:
 	b               - black mute
 	w               - white mute
 	f               - toggle fullscreen
+	z				- Zoom*
+	#1-9			- Drawing pens
 	r | <ENTER>     - redraw (unmute)
 	Left mouse      - move forward one slide
 	Right mouse     - move backward one slide
@@ -34,3 +36,7 @@ Overview mode: ("slide sorter")
 	Middle mouse    - return to presentation mode
 	r | <ENTER>     - return to presentation mode
 
+*You can only zoom once the rendering thread is complete.  If you try to zoom
+before rendering is complete you will get a 'warning' flash on the border of the
+slide.  Once rendered, hit "z" then select a rectangle to zoom in on with the
+mouse.
