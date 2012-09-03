@@ -13,6 +13,7 @@ static Key keys[] = {
 	{ 0,			XK_r,			draw,			NULL			},
 	{ 0,			XK_Return,		draw,			NULL			},
 	/* keyboard movement controls */
+	{ 0,			XK_space,		move,			"right"			},
 	{ 0,			XK_Down,		move,			"down"			},
 	{ 0,			XK_Up,			move,			"up"			},
 	{ 0,			XK_Left,		move,			"left"			},
