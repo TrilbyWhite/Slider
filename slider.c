@@ -80,7 +80,7 @@ void buttonpress(XEvent *e) {
 	XSetInputFocus(dpy,win,RevertToPointerRoot,CurrentTime);
 	int x,y,n;
 	if (overview_mode) {
-		if (e->xbutton.button == 1) {
+		if (e->xbutton.button == 1 || e->xbutton.button == 3) {
 			x = (e->xbutton.x - (sw-sorter.grid*(sorter.w+10))/2)/(sorter.w + 10);
 			y = (e->xbutton.y - 10) / (sorter.h + 10);
 			n = y*sorter.grid+x;
@@ -89,8 +89,8 @@ void buttonpress(XEvent *e) {
 				overview(NULL);
 			}
 		}
-		else if (e->xbutton.button == 2) draw(NULL);
-		else if (e->xbutton.button == 3) { /* do nothing yet */ }
+		if (e->xbutton.button == 2 || e->xbutton.button == 3)
+			draw(NULL);
 	}
 	else {
 		if (e->xbutton.button == 1) move("r");
@@ -123,6 +123,7 @@ void die(const char *msg, ...) {
 }
 
 void draw(const char *arg) {
+	XDefineCursor(dpy,win,invisible_cursor);
 	if (white_muted || overview_mode) mute("black");
 	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
 	XFlush(dpy); /* or XSync(dpy,True|False); */
@@ -211,6 +212,7 @@ void mute(const char *color) {
 }
 
 void overview(const char *arg) {
+	XDefineCursor(dpy,win,None);
 	XLockDisplay(dpy); /* incase render thread is still working */
 	XCopyArea(dpy,sorter.view,win,gc,0,0,sw,sh,0,0);
 	XUnlockDisplay(dpy);

@@ -34,6 +34,7 @@ Overview mode: ("slide sorter")
 	<Arrow Keys>    - navigate slides as expected
 	Left mouse      - select a slide
 	Middle mouse    - return to presentation mode
+	Right mouse     - select slider and return to presentation
 	r | <ENTER>     - return to presentation mode
 
 *You can only zoom once the rendering thread is complete.  If you try to zoom
