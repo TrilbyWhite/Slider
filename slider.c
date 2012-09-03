@@ -19,6 +19,7 @@
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
 #include <X11/Xatom.h>
+#include <X11/cursorfont.h>
 
 #define NUMLOCK	Mod2Mask
 
@@ -39,6 +40,7 @@ static void mute(const char *);
 static void pen(const char *);
 static void quit(const char *);
 static void overview(const char *);
+static void zoom(const char *);
 
 static Display *dpy;
 static int scr;
@@ -51,6 +53,8 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[KeyPress]			= keypress
 };
 static Bool netwm;
+static Cursor invisible_cursor;
+static Cursor highlight;
 
 static PopplerDocument *pdf;
 static Bool cancel_render = False;
@@ -228,6 +232,7 @@ void overview(const char *arg) {
 }
 
 void pen(const char *arg) {
+	XDefineCursor(dpy,win,None);
 	XEvent ev;
 	int x,y,nx,ny;
 	char pw[3] = "  "; pw[0] = arg[0]; pw[1] = arg[1];
@@ -256,11 +261,74 @@ void pen(const char *arg) {
 		}
 		XUngrabPointer(dpy,CurrentTime);
 	}
+	XDefineCursor(dpy,win,invisible_cursor);
 	/* force a redraw of the background in case pens went outside of the slide */
 	white_muted = True;
 }
 
 void quit(const char *arg) { running=False; }
+
+void zoom(const char *arg) {
+	if (show.rendered < show.count - 1) return; /* ensure rendering is done */
+	XDefineCursor(dpy,win,None); // Make crosshair cursor 
+	XEvent ev;
+	int x1,y1,x2=-1,y2;
+	while ( !XNextEvent(dpy,&ev) && ev.type!=ButtonPress && ev.type!=KeyPress );
+	if (ev.type == KeyPress) {
+		XPutBackEvent(dpy,&ev);
+		XDefineCursor(dpy,win,invisible_cursor);
+		return;
+	}
+	Pixmap area;
+	XGrabPointer(dpy,ev.xbutton.window,True,
+		PointerMotionMask | ButtonReleaseMask, GrabModeAsync,
+		GrabModeAsync,None,None,CurrentTime);
+	x1 = ev.xbutton.x; y1 = ev.xbutton.y;
+	while ( !XNextEvent(dpy,&ev) && ev.type != ButtonRelease && ev.type!=KeyPress ) {
+		XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
+		XDrawRectangle(dpy,win,hgc,x1,y1,ev.xbutton.x-x1,ev.xbutton.y-y1);
+		XFlush(dpy);
+		usleep(500);
+		XSync(dpy,True);
+	}
+	if (ev.type == KeyPress) {
+		XPutBackEvent(dpy,&ev);
+		XDefineCursor(dpy,win,invisible_cursor);
+		return;
+	}
+	x2 = ev.xbutton.x; y2 = ev.xbutton.y;
+	mute("black");
+	white_muted = True;
+	PopplerRectangle rect = {
+			(x1 - (sw-asp)/2)/show.scale,
+			((sh-y2))/show.scale,
+			(x2 - (sw-asp)/2)/show.scale,
+			((sh-y1))/show.scale };
+	PopplerColor glph = { 0,0,0 };
+	PopplerColor bg = { 65535, 65535, 65535 };
+	Pixmap region = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
+	XFillRectangle(dpy,region,wgc,0,0,sw,sh);
+	PopplerPage *page = poppler_document_get_page(pdf,show.num);
+	cairo_surface_t *target = cairo_xlib_surface_create(
+			dpy, region, DefaultVisual(dpy,scr), sw, sh);
+	cairo_t *cairo = cairo_create(target);
+	double xscale = sw / (rect.x2-rect.x1);
+	double yscale = sh / (rect.y2-rect.y1);
+	double scale = (xscale > yscale ? yscale : xscale);
+	cairo_scale(cairo,scale,scale);
+	cairo_translate(cairo, ((sw-asp)/2-x1)/show.scale, -y1/show.scale );
+	poppler_page_render_selection(page,cairo, &rect, NULL,
+		POPPLER_SELECTION_GLYPH, &glph, &bg);
+	poppler_page_render(page,cairo);
+	cairo_surface_destroy(target);
+	cairo_destroy(cairo);
+	XCopyArea(dpy,region,win,gc,0,0,sw,sh,
+		(sw-(x2-x1)*scale/show.scale)/2,
+		(sh-(y2-y1)*scale/show.scale)/2	);
+	XFreePixmap(dpy,region);
+	XDefineCursor(dpy,win,invisible_cursor);
+	XFlush(dpy);
+}
 
 void *render_all(void *arg) {
 /* render_all runs as an independent thread and quits when it is done */
@@ -347,25 +415,23 @@ int main(int argc, const char **argv) {
 	sw = DisplayWidth(dpy,scr);
 	sh = DisplayHeight(dpy,scr);
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
+	/* set attributes and map */
 	XStoreName(dpy,win,"Slider");
 	XSetWindowAttributes wa;
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
-	wa.override_redirect = False;
-	// TODO: wa.cursor CWCursor
-	XChangeWindowAttributes(dpy,win,CWEventMask|CWOverrideRedirect,&wa);
+	XChangeWindowAttributes(dpy,win,CWEventMask,&wa);
 	XMapWindow(dpy, win);
 
-/* check for NET_WM  !! Experimental !! */
-Atom type, NET_CHECK = XInternAtom(dpy,"_NET_SUPPORTING_WM_CHECK",False);
-Window *wins;
-int fmt;
-unsigned long after,nwins;
-XGetWindowProperty(dpy,root,NET_CHECK,0,UINT_MAX,False,XA_WINDOW,
-	&type,&fmt,&nwins,&after,(unsigned char**)&wins);
-if ( type == XA_WINDOW && nwins > 0 && wins[0] != None) netwm = True;
-else netwm = False;
-XFree(wins);
-/* end netwm check */
+	/* check for EWMH compliant WM */
+	Atom type, NET_CHECK = XInternAtom(dpy,"_NET_SUPPORTING_WM_CHECK",False);
+	Window *wins;
+	int fmt;
+	unsigned long after,nwins;
+	XGetWindowProperty(dpy,root,NET_CHECK,0,UINT_MAX,False,XA_WINDOW,
+		&type,&fmt,&nwins,&after,(unsigned char**)&wins);
+	if ( type == XA_WINDOW && nwins > 0 && wins[0] != None) netwm = True;
+	else netwm = False;
+	XFree(wins);
 
 	/* set up Xlib graphics contexts */
 	XGCValues val;
@@ -389,6 +455,11 @@ XFree(wins);
 	hgc = XCreateGC(dpy,root,GCForeground|GCLineWidth,&val);
 		/* pixmap for overview */
 	sorter.view = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
+		/* create cursor(s) */
+	char curs_data = 0;
+	Pixmap curs_map = XCreateBitmapFromData(dpy,win,&curs_data,1,1);
+	invisible_cursor = XCreatePixmapCursor(dpy,curs_map,curs_map,&color,&color,0,0);
+	XFreePixmap(dpy,curs_map);
 
 	/* start rendering thread */
 	pthread_t render_thread;
@@ -396,6 +467,7 @@ XFree(wins);
 	/* wait for first frame to render */
 	while (show.rendered < 1) usleep(50000);
 	if (fullscreen_mode) { fullscreen_mode = ! fullscreen_mode; fullscreen(NULL); }
+	XDefineCursor(dpy,win,invisible_cursor);
 
 	/* main loop */
 	draw(NULL);
