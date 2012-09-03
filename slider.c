@@ -356,7 +356,7 @@ int main(int argc, const char **argv) {
 	XMapWindow(dpy, win);
 
 /* check for NET_WM  !! Experimental !! */
-Atom type, NET_CHECK = XInternAtom(dpy,"_NET_SUPPORTING_WM_CHECK",True);
+Atom type, NET_CHECK = XInternAtom(dpy,"_NET_SUPPORTING_WM_CHECK",False);
 Window *wins;
 int fmt;
 unsigned long after,nwins;
