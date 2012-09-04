@@ -2,6 +2,12 @@
 APP = slider
 LIBS = `pkg-config --cflags --libs x11 poppler-glib cairo` -pthread -lm
 
+all: slipper slider
+
+slipper: slipper.c
+	@gcc -o slipper slipper.c -lX11
+	@strip slipper
+
 ${APP}: ${APP}.c config.h
 	@gcc -o ${APP} ${APP}.c ${LIBS}
 	@strip ${APP}
@@ -11,8 +17,7 @@ ${APP}_forms: ${APP}_forms.c config.h
 	@strip ${APP}
 
 clean:
-	@rm -f ${APP}
-	@rm -f ${APP}.tar.gz
+	@rm -f ${APP} ${APP}.tar.gz slipper
 
 tarball: clean
 	@tar -czf ${APP}.tar.gz *

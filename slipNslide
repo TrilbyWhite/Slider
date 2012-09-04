@@ -1,0 +1,3 @@
+#!/bin/bash
+
+slider -p $1 | slipper

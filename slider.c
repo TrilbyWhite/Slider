@@ -21,7 +21,6 @@
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
 
-#define NUMLOCK	Mod2Mask
 
 typedef struct {
 	unsigned int mod;
@@ -61,6 +60,7 @@ static Bool cancel_render = False;
 static Bool white_muted = False;
 static Bool overview_mode = False;
 static Bool fullscreen_mode = True;
+static Bool presenter_mode = False;
 static char *uri;
 struct {
 	Pixmap *slide;
@@ -103,7 +103,11 @@ void command_line(int argc, const char **argv) {
 	if (argc == 1) die("%s requires a filename or uri for a pdf\n",argv[0]);
 	int i;
 	for (i = 1; i < argc - 1; i++) {
-		if (argv[i][0] == '-' && argv[i][1] == 'f') fullscreen_mode = False;
+		if (argv[i][0] && argv[i][1] != '\0') {
+			if (argv[i][1] == 'f') fullscreen_mode = False;
+			else if (argv[i][1] == 'p') presenter_mode = True;
+			else fprintf(stderr,"unrecognized parameter \"%s\" ignored.\n",argv[i]);
+		}
 		else fprintf(stderr,"unrecognized parameter \"%s\" ignored.\n",argv[i]);
 	}	
 	char *fullpath = realpath(argv[i],NULL);
@@ -123,6 +127,7 @@ void die(const char *msg, ...) {
 }
 
 void draw(const char *arg) {
+	if (presenter_mode)  { fprintf(stdout,"SLIDE: %d\n",show.num); fflush(stdout); }
 	XDefineCursor(dpy,win,invisible_cursor);
 	if (white_muted || overview_mode) mute("black");
 	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
@@ -175,7 +180,7 @@ void keypress(XEvent *e) {
 	XKeyEvent *ev = &e->xkey;
 	KeySym keysym = XkbKeycodeToKeysym(dpy,(KeyCode)ev->keycode,0,0);
 	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++)
-		if ( (keysym == keys[i].keysym) && keys[i].func && keys[i].mod  == ((ev->state&~NUMLOCK)&~LockMask) )
+		if ( (keysym == keys[i].keysym) && keys[i].func && keys[i].mod  == ((ev->state&~Mod2Mask)&~LockMask) )
 				keys[i].func(keys[i].arg);
 }
 
@@ -199,6 +204,7 @@ void move(const char *arg) {
 }
 
 void mute(const char *color) {
+	if (presenter_mode) fprintf(stdout,"MUTE: %s\n",color);
 	if (color[0] == 'w') { /* white */
 		XFillRectangle(dpy,win,wgc,0,0,sw,sh);
 		white_muted = True;
@@ -212,6 +218,7 @@ void mute(const char *color) {
 }
 
 void overview(const char *arg) {
+	if (presenter_mode) fprintf(stdout,"OVERVIEW: %d\n",show.num);
 	XDefineCursor(dpy,win,None);
 	XLockDisplay(dpy); /* incase render thread is still working */
 	XCopyArea(dpy,sorter.view,win,gc,0,0,sw,sh,0,0);
@@ -234,6 +241,7 @@ void overview(const char *arg) {
 }
 
 void pen(const char *arg) {
+	if (presenter_mode) fprintf(stdout,"PEN\n");
 	XDefineCursor(dpy,win,None);
 	XEvent ev;
 	int x,y,nx,ny;
@@ -271,6 +279,7 @@ void pen(const char *arg) {
 void quit(const char *arg) { running=False; }
 
 void warn() {
+	if (presenter_mode) fprintf(stdout,"WARN\n");
 	XDrawRectangle(dpy,win,hgc,(sw-asp)/2+2,2,asp-4,sh-4);
 	XFlush(dpy);
 	usleep(150000);
@@ -395,6 +404,7 @@ void *render_all(void *arg) {
 		}
 	}
 	XFreePixmap(dpy,thumbnail);
+	if (presenter_mode) fprintf(stdout,"RENDERING COMPLETE\n");
 }
 
 int main(int argc, const char **argv) {
@@ -417,6 +427,18 @@ int main(int argc, const char **argv) {
 	XSetWindowAttributes wa;
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
 	XChangeWindowAttributes(dpy,win,CWEventMask,&wa);
+
+/* EXPERIMENTAL!  for presentor mode */
+Atom slider_atom;
+if (presenter_mode) {
+	slider_atom = XInternAtom(dpy,"SLIDER_PRESENTATION",False);
+	XSetSelectionOwner(dpy,slider_atom,win,CurrentTime);
+	XFlush(dpy);
+	fprintf(stdout,"START: set SLIDER_PRESENTATION atom");
+	fflush(stdout);
+}
+/* end experimental */
+
 	XMapWindow(dpy, win);
 
 	/* check for EWMH compliant WM */
@@ -474,6 +496,12 @@ int main(int argc, const char **argv) {
 		if (handler[ev.type]) handler[ev.type](&ev);	
 
 	/* clean up */
+	if (presenter_mode) {
+		printf("END\n");
+		fflush(stdout);
+		XSetSelectionOwner(dpy,slider_atom,None,CurrentTime);
+		XFlush(dpy);
+	}
 	if (show.rendered < show.count) { /* quiting before render thread ended */
 		cancel_render = True;	/* give thread time to quit */
 		usleep(250000);
