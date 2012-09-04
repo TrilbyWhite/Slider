@@ -1,27 +1,29 @@
 
-APP = slider
-LIBS = `pkg-config --cflags --libs x11 poppler-glib cairo` -pthread -lm
+APP1 = slider
+LIBS1 = `pkg-config --cflags --libs x11 poppler-glib cairo` -pthread -lm
+APP2 = slipper
+LIBS2 = `pkg-config --cflags --libs x11 cairo` 
 
-all: slipper slider
+all: ${APP1} ${APP2}
 
-slipper: slipper.c
-	@gcc -o slipper slipper.c -lX11
-	@strip slipper
+${APP2}: ${APP2}.c
+	@gcc -o ${APP2} ${APP2}.c ${LIBS2}
+	@strip ${APP2}
 
-${APP}: ${APP}.c config.h
-	@gcc -o ${APP} ${APP}.c ${LIBS}
-	@strip ${APP}
+${APP1}: ${APP1}.c config.h
+	@gcc -o ${APP1} ${APP1}.c ${LIBS1}
+	@strip ${APP1}
 
-${APP}_forms: ${APP}_forms.c config.h
-	@gcc -DSLIDER_FORMFILL -o ${APP} ${APP}.c ${LIBS}
-	@strip ${APP}
+${APP1}_forms: ${APP1}_forms.c config.h
+	@gcc -DSLIDER_FORMFILL -o ${APP1} ${APP1}.c ${LIBS}
+	@strip ${APP1}
 
 clean:
-	@rm -f ${APP} ${APP}.tar.gz slipper
+	@rm -f ${APP1} ${APP1}.tar.gz slipper
 
 tarball: clean
-	@tar -czf ${APP}.tar.gz *
+	@tar -czf ${APP1}.tar.gz *
 
-install: ${APP}
+install: ${APP1}
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@install -m755 slider ${DESTDIR}${PREFIX}/bin/slider
