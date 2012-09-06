@@ -15,7 +15,7 @@ ${APP1}: ${APP1}.c config.h
 	@strip ${APP1}
 
 ${APP1}_forms: ${APP1}_forms.c config.h
-	@gcc -DSLIDER_FORMFILL -o ${APP1} ${APP1}.c ${LIBS}
+	@gcc -DSLIDER_FORMFILL -o ${APP1} ${APP1}.c ${LIBS1}
 	@strip ${APP1}
 
 clean:
