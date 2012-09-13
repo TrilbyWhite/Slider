@@ -27,3 +27,4 @@ tarball: clean
 install: ${APP1}
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
 	@install -m755 slider ${DESTDIR}${PREFIX}/bin/slider
+	@install -m755 slipper ${DESTDIR}${PREFIX}/bin/slipper
