@@ -46,7 +46,8 @@ static int scr;
 static Window root,win;
 static GC gc,wgc,hgc,lgc;
 static Bool running;
-static int sw=0,sh=0,asp;
+static int sw=0,sh=0;
+float aspx=1.0,aspy=1.0;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress]		= buttonpress,
 	[KeyPress]			= keypress
@@ -136,7 +137,7 @@ void draw(const char *arg) {
 	if (presenter_mode)  { fprintf(stdout,"SLIDE: %d\n",show.num); fflush(stdout); }
 	XDefineCursor(dpy,win,invisible_cursor);
 	if (white_muted || overview_mode) mute("black");
-	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
+	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
 	XFlush(dpy); /* or XSync(dpy,True|False); */
 }
 
@@ -286,10 +287,10 @@ void quit(const char *arg) { running=False; }
 
 void warn() {
 	if (presenter_mode) fprintf(stdout,"WARN\n");
-	XDrawRectangle(dpy,win,hgc,(sw-asp)/2+2,2,asp-4,sh-4);
+	XDrawRectangle(dpy,win,hgc,(sw-aspx*sw)/2+2,(sh-aspy*sh)/2+2,aspx*sw-4,aspy*sh-4);
 	XFlush(dpy);
 	usleep(150000);
-	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
+	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
 }
 
 void zoom(const char *arg) {
@@ -308,7 +309,7 @@ void zoom(const char *arg) {
 		GrabModeAsync,None,None,CurrentTime);
 	x1 = ev.xbutton.x; y1 = ev.xbutton.y;
 	while ( !XNextEvent(dpy,&ev) && ev.type != ButtonRelease && ev.type!=KeyPress ) {
-		XCopyArea(dpy,show.slide[show.num],win,gc,0,0,asp,sh,(sw-asp)/2,0);
+		XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
 		XDrawRectangle(dpy,win,hgc,x1,y1,ev.xbutton.x-x1,ev.xbutton.y-y1);
 		XSync(dpy,True);
 	}
@@ -330,7 +331,6 @@ void zoom(const char *arg) {
 	double yscale = show.scale * sh / (y2-y1);
 	double scale = (xscale > yscale ? yscale : xscale);
 	cairo_scale(cairo,scale,scale);
-	cairo_translate(cairo, ((sw-asp)/2-x1)/show.scale, -y1/show.scale );
 	poppler_page_render(page,cairo);
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
@@ -360,7 +360,10 @@ void *render_all(void *arg) {
 	vsc = sh / pdfh;
 	hsc = sw / pdfw;
 	show.scale = (vsc > hsc ? hsc : vsc);
-	asp = sh * pdfw/pdfh;
+	float aspw = sh/pdfh * pdfw;
+	float asph = sw/pdfw * pdfh;
+	if (aspw < sw) aspx=aspw/sw;
+	else aspy=asph/sh;
 	sorter.grid = (int) sqrt(show.count) + 1;
 	sorter.h = (sh-10)/sorter.grid - 10;
 	sorter.w = sorter.h * pdfw/pdfh;
@@ -382,11 +385,11 @@ void *render_all(void *arg) {
 	n = 0; x = (sw-sorter.grid*(sorter.w+10))/2; y = 10;
 	for (i = 0; i < show.count; i++) {
 		/* show.slide[i] creation and rendering */
-		show.slide[i] = XCreatePixmap(dpy,root,asp,sh,DefaultDepth(dpy,scr));
-		XFillRectangle(dpy,show.slide[i],wgc,0,0,asp,sh);
+		show.slide[i] = XCreatePixmap(dpy,root,aspx*sw,aspy*sh,DefaultDepth(dpy,scr));
+		XFillRectangle(dpy,show.slide[i],wgc,0,0,aspx*sw,aspy*sh);
 		page = poppler_document_get_page(pdf,i);
 		target = cairo_xlib_surface_create(
-				dpy, show.slide[i], DefaultVisual(dpy,scr), asp, sh);
+				dpy, show.slide[i], DefaultVisual(dpy,scr), aspx*sw, aspy*sh);
 		cairo = cairo_create(target);
 		cairo_scale(cairo,show.scale,show.scale);
 		poppler_page_render(page,cairo);
@@ -436,18 +439,14 @@ int main(int argc, const char **argv) {
 	XSetWindowAttributes wa;
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
 	XChangeWindowAttributes(dpy,win,CWEventMask,&wa);
-
-/* EXPERIMENTAL!  for presentor mode */
-Atom slider_atom;
-if (presenter_mode) {
-	slider_atom = XInternAtom(dpy,"SLIDER_PRESENTATION",False);
-	XSetSelectionOwner(dpy,slider_atom,win,CurrentTime);
-	XFlush(dpy);
-	fprintf(stdout,"START: set SLIDER_PRESENTATION atom\n");
-	fflush(stdout);
-}
-/* end experimental */
-
+	Atom slider_atom;
+	if (presenter_mode) {
+		slider_atom = XInternAtom(dpy,"SLIDER_PRESENTATION",False);
+		XSetSelectionOwner(dpy,slider_atom,win,CurrentTime);
+		XFlush(dpy);
+		fprintf(stdout,"START: set SLIDER_PRESENTATION atom\n");
+		fflush(stdout);
+	}
 	XMapWindow(dpy, win);
 
 	/* check for EWMH compliant WM */
