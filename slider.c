@@ -46,7 +46,7 @@ static int scr;
 static Window root,win;
 static GC gc,wgc,hgc,lgc;
 static Bool running;
-static int sw,sh,asp;
+static int sw=0,sh=0,asp;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress]		= buttonpress,
 	[KeyPress]			= keypress
@@ -101,11 +101,17 @@ void buttonpress(XEvent *e) {
 
 void command_line(int argc, const char **argv) {
 	if (argc == 1) die("%s requires a filename or uri for a pdf\n",argv[0]);
-	int i;
+	int i,t1,t2;
 	for (i = 1; i < argc - 1; i++) {
 		if (argv[i][0] && argv[i][1] != '\0') {
 			if (argv[i][1] == 'f') fullscreen_mode = False;
 			else if (argv[i][1] == 'p') presenter_mode = True;
+			else if (argv[i][1] == 'g') {
+				if ( (sscanf(argv[++i],"%dx%d",&t1,&t2)) == 2 ) {
+					sw=t1;sh=t2;
+				}
+				else fprintf(stderr,"bad geometry specifier\n");
+			}
 			else fprintf(stderr,"unrecognized parameter \"%s\" ignored.\n",argv[i]);
 		}
 		else fprintf(stderr,"unrecognized parameter \"%s\" ignored.\n",argv[i]);
@@ -350,7 +356,10 @@ void *render_all(void *arg) {
 	page = poppler_document_get_page(pdf,0);
 	double pdfw,pdfh;
 	poppler_page_get_size(page,&pdfw,&pdfh);
-	show.scale = sh / pdfh;
+	float vsc,hsc;
+	vsc = sh / pdfh;
+	hsc = sw / pdfw;
+	show.scale = (vsc > hsc ? hsc : vsc);
 	asp = sh * pdfw/pdfh;
 	sorter.grid = (int) sqrt(show.count) + 1;
 	sorter.h = (sh-10)/sorter.grid - 10;
@@ -419,8 +428,8 @@ int main(int argc, const char **argv) {
 	if (!(dpy= XOpenDisplay(NULL))) die("Failed opening X display\n");
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
-	sw = DisplayWidth(dpy,scr);
-	sh = DisplayHeight(dpy,scr);
+	if (!sw) sw = DisplayWidth(dpy,scr);
+	if (!sh) sh = DisplayHeight(dpy,scr);
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
 	/* set attributes and map */
 	XStoreName(dpy,win,"Slider");
@@ -434,7 +443,7 @@ if (presenter_mode) {
 	slider_atom = XInternAtom(dpy,"SLIDER_PRESENTATION",False);
 	XSetSelectionOwner(dpy,slider_atom,win,CurrentTime);
 	XFlush(dpy);
-	fprintf(stdout,"START: set SLIDER_PRESENTATION atom");
+	fprintf(stdout,"START: set SLIDER_PRESENTATION atom\n");
 	fflush(stdout);
 }
 /* end experimental */

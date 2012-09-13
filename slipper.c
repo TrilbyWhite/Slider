@@ -13,6 +13,7 @@
 #include <cairo-xlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/extensions/Xrandr.h>
 
 /*temporary*/
 #define fact	3.0
@@ -57,7 +58,7 @@ int main(int argc, const char **argv) {
 	if (!(dpy= XOpenDisplay(NULL))) exit(1);
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
-	sw = DisplayWidth(dpy,scr);
+	sw = DisplayWidth(dpy,scr); // gets wrong width with external display
 	sh = DisplayHeight(dpy,scr);
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
 	/* set attributes and map */
@@ -67,6 +68,10 @@ int main(int argc, const char **argv) {
 	//XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
 	mirror = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
+	int num_sizes;
+	XRRScreenSize *xrrs = XRRSizes(dpy,0,&num_sizes);
+	int exw = xrrs[0].width;
+	int exh = xrrs[0].height;
 
 	/* set up Xlib graphics context(s) */
 	XGCValues val;
@@ -77,8 +82,8 @@ int main(int argc, const char **argv) {
 	gc = XCreateGC(dpy,root,GCForeground,&val);
 
 	/* connect to slider */
-	char *cmd = (char *) calloc(13+strlen(argv[1]),sizeof(char));
-	strcpy(cmd,"slider -p ");
+	char *cmd = (char *) calloc(32+strlen(argv[1]),sizeof(char));
+	sprintf(cmd,"slider -p -g %dx%d ",exw,exh);
 	strcat(cmd,argv[1]);
 	slider = popen(cmd,"r"); //TODO: send to correct screen
 	char line[255];

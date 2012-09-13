@@ -2,7 +2,7 @@
 APP1 = slider
 LIBS1 = `pkg-config --cflags --libs x11 poppler-glib cairo` -pthread -lm
 APP2 = slipper
-LIBS2 = `pkg-config --cflags --libs x11 cairo` 
+LIBS2 = `pkg-config --cflags --libs x11 cairo` -lXrandr
 
 all: ${APP1} ${APP2}
 
