@@ -70,8 +70,8 @@ int main(int argc, const char **argv) {
 	mirror = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
 	int num_sizes;
 	XRRScreenSize *xrrs = XRRSizes(dpy,0,&num_sizes);
-	int exw = xrrs[0].width;
-	int exh = xrrs[0].height;
+	int slider_w = xrrs[0].width;
+	int slider_h = xrrs[0].height;
 
 	/* set up Xlib graphics context(s) */
 	XGCValues val;
@@ -83,7 +83,7 @@ int main(int argc, const char **argv) {
 
 	/* connect to slider */
 	char *cmd = (char *) calloc(32+strlen(argv[1]),sizeof(char));
-	sprintf(cmd,"slider -p -g %dx%d ",exw,exh);
+	sprintf(cmd,"slider -p -g %dx%d ",slider_w,slider_h);
 	strcat(cmd,argv[1]);
 	slider = popen(cmd,"r"); //TODO: send to correct screen
 	char line[255];
@@ -97,8 +97,6 @@ int main(int argc, const char **argv) {
 		fprintf(stderr,"Could not connect to slider\n");
 		exit(1);
 	}
-	// TODO get slider w and h
-	int slider_w=sw,slider_h=sh;
 
 	/* mirror slider output scaled down */
 	target = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
@@ -135,6 +133,7 @@ int main(int argc, const char **argv) {
 		}
 	}
 	cairo_surface_destroy(slider_c);
+	pclose(slider);
 
 	XCloseDisplay(dpy);
 	return 0;
