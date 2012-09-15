@@ -12,11 +12,10 @@
 #include <cairo.h>
 #include <cairo-xlib.h>
 #include <X11/Xlib.h>
-#include <X11/Xatom.h>
 #include <X11/extensions/Xrandr.h>
 
 /*temporary*/
-#define fact	3.0
+#define fact	2.0
 
 static void draw();
 static void buttonpress(XEvent *);
@@ -26,12 +25,12 @@ static Display *dpy;
 static int scr;
 static Window root,win,slider_win;
 static FILE *slider;
-static Pixmap mirror;
+static Pixmap current,preview,pix_current,pix_preview;
 static GC gc;
 static Bool running;
-static int sw,sh;
-static cairo_surface_t *target, *slider_c;
-static cairo_t *cairo;
+static int sw,sh,aw,ah;
+static cairo_surface_t *target_current, *target_preview, *current_c, *preview_c;
+static cairo_t *cairo_current, *cairo_preview;
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
 	[Expose]		= expose,
@@ -45,14 +44,19 @@ void buttonpress(XEvent *ev) {
 void expose(XEvent *ev) { draw(); }
 
 void draw() {
-	XCopyArea(dpy,slider_win,mirror,gc,0,0,sw,sh,0,0);
-	cairo_set_source_surface(cairo,slider_c,0,0);
-	cairo_paint(cairo);
+	XCopyArea(dpy,current,pix_current,gc,0,0,sw,sh,0,0);
+	cairo_set_source_surface(cairo_current,current_c,0,0);
+	cairo_paint(cairo_current);
+	if (preview != 0) {
+		XCopyArea(dpy,preview,pix_preview,gc,0,0,sw,sh,0,0);
+		cairo_set_source_surface(cairo_preview,preview_c,0,0);
+		cairo_paint(cairo_preview);
+	}
 	XFlush(dpy);
 }
 
 int main(int argc, const char **argv) {
-	/* TODO: process command line arguments & get notes file */
+	if (argc == 1) exit(1);
 
 	/* open X connection & create window */
 	if (!(dpy= XOpenDisplay(NULL))) exit(1);
@@ -67,7 +71,6 @@ int main(int argc, const char **argv) {
 	//wa.override_redirect = True;
 	//XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
-	mirror = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
 	int num_sizes;
 	XRRScreenSize *xrrs = XRRSizes(dpy,0,&num_sizes);
 	int slider_w = xrrs[0].width;
@@ -83,26 +86,28 @@ int main(int argc, const char **argv) {
 
 	/* connect to slider */
 	char *cmd = (char *) calloc(32+strlen(argv[1]),sizeof(char));
-	sprintf(cmd,"slider -p -g %dx%d ",slider_w,slider_h);
+	sprintf(cmd,"./slider -p -g %dx%d ",slider_w,slider_h);
 	strcat(cmd,argv[1]);
 	slider = popen(cmd,"r"); //TODO: send to correct screen
 	char line[255];
 	fgets(line,254,slider);
-	while( strncmp(line,"START",5) != 0) fgets(line,254,slider);
-	Atom slider_atom;
-	while ( (slider_atom=XInternAtom(dpy,"SLIDER_PRESENTATION",True))==None )
-		usleep(200000);
-	slider_win = XGetSelectionOwner(dpy,slider_atom);
-	if (!slider_win) {
-		fprintf(stderr,"Could not connect to slider\n");
-		exit(1);
-	}
+	while( strncmp(line,"SLIDER START",11) != 0) fgets(line,254,slider);
+	sscanf(line,"SLIDER START (%dx%d)",&aw,&ah);
+	fgets(line,254,slider);
+	sscanf(line,"SLIDER: current=%lu, next=%lu",&current,&preview);
+	pix_current = XCreatePixmap(dpy,root,aw,ah,DefaultDepth(dpy,scr));
+	pix_preview = XCreatePixmap(dpy,root,aw,ah,DefaultDepth(dpy,scr));
 
 	/* mirror slider output scaled down */
-	target = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
-	cairo = cairo_create(target);
-	cairo_scale(cairo,sw/(slider_w*fact),sh/(slider_h*fact));
-	slider_c = cairo_xlib_surface_create(dpy,mirror,DefaultVisual(dpy,scr),sw,sh);
+	target_current = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
+	target_preview = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
+	cairo_current = cairo_create(target_current);
+	cairo_preview = cairo_create(target_preview);
+	cairo_scale(cairo_current,sw/(aw*fact),sh/(ah*fact));
+	cairo_scale(cairo_preview,sw/(aw*fact*2),sh/(ah*fact*2));
+	cairo_translate(cairo_preview,sw-sw/(aw*fact*2)-4,4);
+	current_c = cairo_xlib_surface_create(dpy,pix_current,DefaultVisual(dpy,scr),aw,ah);
+	preview_c = cairo_xlib_surface_create(dpy,pix_preview,DefaultVisual(dpy,scr),aw,ah);
 
 	XEvent ev;
 	int xfd,sfd,r;
@@ -125,14 +130,15 @@ int main(int argc, const char **argv) {
 		}
 		else if (FD_ISSET(sfd,&rfds)) { /* slider input */
 			fgets(line,254,slider);
-			if (strncmp(line,"END",3)==0) {
+			if (strncmp(line,"SLIDER END",9)==0) {
 				running = False;
 			}
+			sscanf(line,"SLIDER: current=%lu, next=%lu",&current,&preview);
 			/* process commands */
 			draw();
 		}
 	}
-	cairo_surface_destroy(slider_c);
+	cairo_surface_destroy(current_c);
 	pclose(slider);
 
 	XCloseDisplay(dpy);

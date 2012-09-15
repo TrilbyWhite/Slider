@@ -134,7 +134,13 @@ void die(const char *msg, ...) {
 }
 
 void draw(const char *arg) {
-	if (presenter_mode)  { fprintf(stdout,"SLIDE: %d\n",show.num); fflush(stdout); }
+	if (presenter_mode)  {
+		if (show.num + 1 < show.count)
+			fprintf(stdout,"SLIDER: current=%lu, next=%lu\n",show.slide[show.num],show.slide[show.num+1]);
+		else
+			fprintf(stdout,"SLIDER: current=%lu, next=0\n",show.slide[show.num]);
+		fflush(stdout);
+	}
 	XDefineCursor(dpy,win,invisible_cursor);
 	if (white_muted || overview_mode) mute("black");
 	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
@@ -370,6 +376,10 @@ void *render_all(void *arg) {
 	sorter.scale = show.scale * sorter.h / sh;
 	Pixmap thumbnail = XCreatePixmap(dpy,root,
 		sorter.w,sorter.h,DefaultDepth(dpy,scr));
+	if (presenter_mode) {
+		fprintf(stdout,"SLIDER START (%dx%d)\n",(int) (aspx*sw),(int) (aspy*sh) );
+		fflush(stdout);
+	}
 
 	/* create empty overview frame in sorter.view (dotted outlines for slides) */
 	XFillRectangle(dpy,sorter.view,gc,0,0,sw,sh);
@@ -439,14 +449,6 @@ int main(int argc, const char **argv) {
 	XSetWindowAttributes wa;
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
 	XChangeWindowAttributes(dpy,win,CWEventMask,&wa);
-	Atom slider_atom;
-	if (presenter_mode) {
-		slider_atom = XInternAtom(dpy,"SLIDER_PRESENTATION",False);
-		XSetSelectionOwner(dpy,slider_atom,win,CurrentTime);
-		XFlush(dpy);
-		fprintf(stdout,"START: set SLIDER_PRESENTATION atom\n");
-		fflush(stdout);
-	}
 	XMapWindow(dpy, win);
 
 	/* check for EWMH compliant WM */
@@ -505,10 +507,8 @@ int main(int argc, const char **argv) {
 
 	/* clean up */
 	if (presenter_mode) {
-		printf("END\n");
+		printf("SLIDER END\n");
 		fflush(stdout);
-		XSetSelectionOwner(dpy,slider_atom,None,CurrentTime);
-		XFlush(dpy);
 	}
 	if (show.rendered < show.count) { /* quiting before render thread ended */
 		cancel_render = True;	/* give thread time to quit */
