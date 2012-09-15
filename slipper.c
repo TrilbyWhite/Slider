@@ -14,8 +14,12 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 
+#define INTERNAL_MONITOR_WIDTH	1024
+#define INTERNAL_MONTIOR_HEIGHT	600
+
 /*temporary*/
-#define fact	2.0
+#define fact	0.7
+#define pfact	0.4
 
 static void draw();
 static void buttonpress(XEvent *);
@@ -26,7 +30,7 @@ static int scr;
 static Window root,win,slider_win;
 static FILE *slider;
 static Pixmap current,preview,pix_current,pix_preview;
-static GC gc;
+static GC gc,pgc;
 static Bool running;
 static int sw,sh,aw,ah;
 static cairo_surface_t *target_current, *target_preview, *current_c, *preview_c;
@@ -44,11 +48,13 @@ void buttonpress(XEvent *ev) {
 void expose(XEvent *ev) { draw(); }
 
 void draw() {
-	XCopyArea(dpy,current,pix_current,gc,0,0,sw,sh,0,0);
+	XFillRectangle(dpy,win,gc,0,0,sw,sh);
+	XCopyArea(dpy,current,pix_current,gc,0,0,aw,ah,0,0);
 	cairo_set_source_surface(cairo_current,current_c,0,0);
 	cairo_paint(cairo_current);
 	if (preview != 0) {
-		XCopyArea(dpy,preview,pix_preview,gc,0,0,sw,sh,0,0);
+		XFillRectangle(dpy,win,pgc,sw-sw*pfact-8,sh-sh*pfact-8,sw*pfact+8,sh*pfact+8);
+		XCopyArea(dpy,preview,pix_preview,gc,0,0,aw,ah,0,0);
 		cairo_set_source_surface(cairo_preview,preview_c,0,0);
 		cairo_paint(cairo_preview);
 	}
@@ -62,14 +68,12 @@ int main(int argc, const char **argv) {
 	if (!(dpy= XOpenDisplay(NULL))) exit(1);
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
-	sw = DisplayWidth(dpy,scr); // gets wrong width with external display
-	sh = DisplayHeight(dpy,scr);
+	sw = 1024;
+	sh = 600;
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
 	/* set attributes and map */
 	XStoreName(dpy,win,"Slipper");
 	XSetWindowAttributes wa;
-	//wa.override_redirect = True;
-	//XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&wa);
 	XMapWindow(dpy, win);
 	int num_sizes;
 	XRRScreenSize *xrrs = XRRSizes(dpy,0,&num_sizes);
@@ -80,9 +84,10 @@ int main(int argc, const char **argv) {
 	XGCValues val;
 	XColor color;
 	Colormap cmap = DefaultColormap(dpy,scr);
-		/* black, background, default */
 	val.foreground = BlackPixel(dpy,scr);
 	gc = XCreateGC(dpy,root,GCForeground,&val);
+	val.foreground = 122122;
+	pgc = XCreateGC(dpy,root,GCForeground,&val);
 
 	/* connect to slider */
 	char *cmd = (char *) calloc(32+strlen(argv[1]),sizeof(char));
@@ -103,9 +108,9 @@ int main(int argc, const char **argv) {
 	target_preview = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
 	cairo_current = cairo_create(target_current);
 	cairo_preview = cairo_create(target_preview);
-	cairo_scale(cairo_current,sw/(aw*fact),sh/(ah*fact));
-	cairo_scale(cairo_preview,sw/(aw*fact*2),sh/(ah*fact*2));
-	cairo_translate(cairo_preview,sw-sw/(aw*fact*2)-4,4);
+	cairo_scale(cairo_current,sw*fact/aw,sh*fact/ah);
+	cairo_translate(cairo_preview,sw-sw*pfact-4,sh-sh*pfact-4);
+	cairo_scale(cairo_preview,sw*pfact/aw,sh*pfact/ah);
 	current_c = cairo_xlib_surface_create(dpy,pix_current,DefaultVisual(dpy,scr),aw,ah);
 	preview_c = cairo_xlib_surface_create(dpy,pix_preview,DefaultVisual(dpy,scr),aw,ah);
 
