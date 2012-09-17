@@ -247,6 +247,7 @@ int main(int argc, const char **argv) {
 			fgets(line,254,slider);
 			if (strncmp(line,"SLIDER END",9)==0) {
 				running = False;
+				break;
 			}
 			sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
 			/* process commands */
