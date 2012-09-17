@@ -150,11 +150,14 @@ int main(int argc, const char **argv) {
 	sh = DisplayHeight(dpy,scr);
 
 	command_line(argc,argv);
-
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
 	/* set attributes and map */
 	XStoreName(dpy,win,"Slipper");
 	XSetWindowAttributes wa;
+	if (useXrandr) {
+		wa.override_redirect = True;
+		XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&wa);
+	}
 	XMapWindow(dpy, win);
 
 	/* set up screens */
@@ -201,6 +204,7 @@ int main(int argc, const char **argv) {
 	if (useXrandr) {
 		XMoveWindow(dpy,slider_win,0,sh);
 		XMoveResizeWindow(dpy,win,0,0,sw,sh);
+		XRaiseWindow(dpy,win);
 	}
 
 	/* mirror slider output scaled down */

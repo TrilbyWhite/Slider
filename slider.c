@@ -371,11 +371,12 @@ void *render_all(void *arg) {
 	if (aspw < sw) aspx=aspw/sw;
 	else aspy=asph/sh;
 	sorter.grid = (int) sqrt(show.count) + 1;
-	sorter.h = (sh-10)/sorter.grid - 10;
-	sorter.w = sorter.h * pdfw/pdfh;
-	sorter.scale = show.scale * sorter.h / sh;
-	Pixmap thumbnail = XCreatePixmap(dpy,root,
-		sorter.w,sorter.h,DefaultDepth(dpy,scr));
+	sorter.h = (aspy*sh-10)/sorter.grid - 10;
+	sorter.w = (aspx*sw-10)/sorter.grid - 10;
+	vsc = sorter.h * show.scale / sh;
+	hsc = sorter.w * show.scale / sw;
+	sorter.scale = (vsc > hsc ? vsc : hsc);
+	Pixmap thumbnail = XCreatePixmap(dpy,root,sorter.w,sorter.h,DefaultDepth(dpy,scr));
 	if (presenter_mode) {
 		fprintf(stdout,"SLIDER START (%dx%d) win=%lu slides=%d\n",(int) (aspx*sw),(int) (aspy*sh), win, show.count);
 		fflush(stdout);
