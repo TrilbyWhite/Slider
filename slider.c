@@ -136,9 +136,9 @@ void die(const char *msg, ...) {
 void draw(const char *arg) {
 	if (presenter_mode)  {
 		if (show.num + 1 < show.count)
-			fprintf(stdout,"SLIDER: current=%lu, next=%lu\n",show.slide[show.num],show.slide[show.num+1]);
+			fprintf(stdout,"SLIDER: %d current=%lu, next=%lu\n",show.num,show.slide[show.num],show.slide[show.num+1]);
 		else
-			fprintf(stdout,"SLIDER: current=%lu, next=0\n",show.slide[show.num]);
+			fprintf(stdout,"SLIDER: %d current=%lu, next=0\n",show.num,show.slide[show.num]);
 		fflush(stdout);
 	}
 	XDefineCursor(dpy,win,invisible_cursor);
@@ -377,7 +377,7 @@ void *render_all(void *arg) {
 	Pixmap thumbnail = XCreatePixmap(dpy,root,
 		sorter.w,sorter.h,DefaultDepth(dpy,scr));
 	if (presenter_mode) {
-		fprintf(stdout,"SLIDER START (%dx%d)\n",(int) (aspx*sw),(int) (aspy*sh) );
+		fprintf(stdout,"SLIDER START (%dx%d) win=%lu slides=%d\n",(int) (aspx*sw),(int) (aspy*sh), win, show.count);
 		fflush(stdout);
 	}
 

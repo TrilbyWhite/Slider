@@ -14,23 +14,27 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 
-#define INTERNAL_MONITOR_WIDTH	1024
-#define INTERNAL_MONTIOR_HEIGHT	600
-
-/*temporary*/
-#define fact	0.7
-#define pfact	0.4
 
 static void draw();
 static void buttonpress(XEvent *);
+static void command_line(int,const char**);
 static void expose(XEvent *);
 
+static FILE *dat;
+static Bool useXrandr;
+static time_t start_time;
+static float fact=0.7,pfact=0.4;
+static char fontstring[80] =
+	"-xos4-terminus-bold-r-normal--22-220-72-72-c-110-iso8859-2";
+static int cur_slide, last_slide;
+static char *pdf = NULL,*video1=NULL,*video2=NULL;
+static int duration=2700; /* 45 min = 2700 seconds */
 static Display *dpy;
 static int scr;
 static Window root,win,slider_win;
 static FILE *slider;
-static Pixmap current,preview,pix_current,pix_preview;
-static GC gc,pgc;
+static Pixmap current,preview,pix_current,pix_preview,buffer;
+static GC gc,pgc,ngc;
 static Bool running;
 static int sw,sh,aw,ah;
 static cairo_surface_t *target_current, *target_preview, *current_c, *preview_c;
@@ -45,36 +49,122 @@ void buttonpress(XEvent *ev) {
 	XSetInputFocus(dpy,slider_win,RevertToPointerRoot,CurrentTime);
 }
 
+void command_line(int argc, const char **argv) {
+	int i;
+	char datfile[255] = "";
+	char xrand[10] = "off";
+	char pdfname[255] = "";
+	char tv1[255] = "";
+	char tv2[255] = "";
+	for (i = 1; i < argc; i++) {
+		if (argv[i][0] == '-') {
+			/* switches */
+		}
+		else
+			strncpy(datfile,argv[i],254);
+	}
+	if (strlen(datfile) < 3) {
+		/* error */
+	}
+	dat = fopen(datfile,"r");
+	while (fgets(datfile,254,dat)) {
+		if ( (datfile[0] == '#') || (datfile[0] == '\n') )
+			continue;
+		if ( strncmp(datfile,"slide",5) == 0 )
+			break;
+		if (	! (sscanf(datfile,"set duration %d\n",&duration)) 		&&
+				! (sscanf(datfile,"set xrandr %s\n",xrand))				&&
+				! (sscanf(datfile,"set window %dx%d\n",&sw,&sh))		&&
+				! (sscanf(datfile,"set outputs %s %s\n",tv1,tv2))		&&
+				! (sscanf(datfile,"set current view %f\n",&fact))		&&
+				! (sscanf(datfile,"set next view %f\n",&pfact))			&&
+				! (sscanf(datfile,"set font %s\n",fontstring))			&&
+				! (sscanf(datfile,"set pdf %s\n",pdfname))			)
+			fprintf(stderr,"ignoring unrecognized command \"%s\"\n",datfile);
+	}
+	if (strncmp(xrand,"on",2) == 0) useXrandr = True;
+	else useXrandr = False;
+	if (strlen(tv1) < 2 || strlen(tv2) < 2) useXrandr = False;
+	else {
+		video1 = (char *) calloc(strlen(tv1)+1,sizeof(char));
+		video2 = (char *) calloc(strlen(tv2)+1,sizeof(char));
+		strcpy(video1,tv1);
+		strcpy(video2,tv2);
+	}
+	if (strlen(pdfname) > 2) {
+		pdf = (char *) calloc(strlen(pdfname)+1,sizeof(char));
+		strcpy(pdf,pdfname);
+	}
+}
+
 void expose(XEvent *ev) { draw(); }
 
 void draw() {
-	XFillRectangle(dpy,win,gc,0,0,sw,sh);
+	XFillRectangle(dpy,buffer,gc,0,0,sw,sh);
 	XCopyArea(dpy,current,pix_current,gc,0,0,aw,ah,0,0);
 	cairo_set_source_surface(cairo_current,current_c,0,0);
 	cairo_paint(cairo_current);
 	if (preview != 0) {
-		XFillRectangle(dpy,win,pgc,sw-sw*pfact-8,sh-sh*pfact-8,sw*pfact+8,sh*pfact+8);
+		XFillRectangle(dpy,buffer,pgc,sw-sw*pfact-8,
+			sh-sh*pfact-8,sw*pfact+8,sh*pfact+8);
 		XCopyArea(dpy,preview,pix_preview,gc,0,0,aw,ah,0,0);
 		cairo_set_source_surface(cairo_preview,preview_c,0,0);
 		cairo_paint(cairo_preview);
 	}
+	static char line[255];
+	int i;
+	fseek(dat,0,SEEK_SET);
+	for (i = 0; i <= cur_slide; i++)
+		while (fgets(line,254,dat))
+			if ( strncmp(line,"slide {",7)==0 ) break;
+	i = sh*fact;
+	while (fgets(line,254,dat)) {
+		if (line[0] == '#' || line[0] == '\n') continue;
+		if (line[0] == '}') break;
+		line[strlen(line)-1]='\0';
+		XDrawString(dpy,buffer,ngc,10,(i+=20),line,strlen(line));
+	}
+	int used_time = time(NULL) - start_time;
+	if (used_time > duration) used_time = duration;
+	char stat_string[100];
+	sprintf(stat_string,"Slide %d/%d, Time: %d/%d",
+		cur_slide,last_slide,used_time,duration);
+	XDrawString(dpy,buffer,ngc,sw*fact+10,20,"SLIDES",6);
+	XDrawRectangle(dpy,buffer,pgc,sw*fact+10,30,sw-sw*fact-20,20);
+	XFillRectangle(dpy,buffer,pgc,sw*fact+10,30,
+		(sw-sw*fact-20)*cur_slide/last_slide,20);
+	XDrawString(dpy,buffer,ngc,sw*fact+10,80,"TIME",4);
+	XDrawRectangle(dpy,buffer,pgc,sw*fact+10,90,sw-sw*fact-20,20);
+	XFillRectangle(dpy,buffer,pgc,sw*fact+10,90,
+		(sw-sw*fact-20)*used_time/duration,20);
+	XCopyArea(dpy,buffer,win,gc,0,0,sw,sh,0,0);
 	XFlush(dpy);
 }
 
 int main(int argc, const char **argv) {
-	if (argc == 1) exit(1);
-
 	/* open X connection & create window */
 	if (!(dpy= XOpenDisplay(NULL))) exit(1);
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
-	sw = 1024;
-	sh = 600;
+	sw = DisplayWidth(dpy,scr);
+	sh = DisplayHeight(dpy,scr);
+
+	command_line(argc,argv);
+
 	win = XCreateSimpleWindow(dpy,root,0,0,sw,sh,1,0,0);
 	/* set attributes and map */
 	XStoreName(dpy,win,"Slipper");
 	XSetWindowAttributes wa;
 	XMapWindow(dpy, win);
+
+	/* set up screens */
+	char *cmd;
+	if (useXrandr) {
+		cmd = (char *) calloc(60+strlen(video1)+strlen(video2),sizeof(char));
+		sprintf(cmd,"xrandr --output %s --auto --output %s --auto --below %s",video1,video2,video1);
+		system(cmd);
+		free(cmd);
+	}
 	int num_sizes;
 	XRRScreenSize *xrrs = XRRSizes(dpy,0,&num_sizes);
 	int slider_w = xrrs[0].width;
@@ -88,24 +178,36 @@ int main(int argc, const char **argv) {
 	gc = XCreateGC(dpy,root,GCForeground,&val);
 	val.foreground = 122122;
 	pgc = XCreateGC(dpy,root,GCForeground,&val);
+	val.foreground = WhitePixel(dpy,scr);
+	val.font = XLoadFont(dpy,fontstring);
+	ngc = XCreateGC(dpy,root,GCForeground|GCFont,&val);
 
 	/* connect to slider */
-	char *cmd = (char *) calloc(32+strlen(argv[1]),sizeof(char));
+	cmd = (char *) calloc(32+strlen(pdf),sizeof(char));
 	sprintf(cmd,"./slider -p -g %dx%d ",slider_w,slider_h);
-	strcat(cmd,argv[1]);
+	strcat(cmd,pdf);
 	slider = popen(cmd,"r"); //TODO: send to correct screen
+	free(cmd);
 	char line[255];
 	fgets(line,254,slider);
 	while( strncmp(line,"SLIDER START",11) != 0) fgets(line,254,slider);
-	sscanf(line,"SLIDER START (%dx%d)",&aw,&ah);
+	sscanf(line,"SLIDER START (%dx%d) win=%lu slides=%d",&aw,&ah,&slider_win,&last_slide);
+	last_slide--;
 	fgets(line,254,slider);
-	sscanf(line,"SLIDER: current=%lu, next=%lu",&current,&preview);
+	sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
 	pix_current = XCreatePixmap(dpy,root,aw,ah,DefaultDepth(dpy,scr));
 	pix_preview = XCreatePixmap(dpy,root,aw,ah,DefaultDepth(dpy,scr));
+	buffer = XCreatePixmap(dpy,root,sw,sh,DefaultDepth(dpy,scr));
+	if (useXrandr) {
+		XMoveWindow(dpy,slider_win,0,sh);
+		XMoveResizeWindow(dpy,win,0,0,sw,sh);
+	}
 
 	/* mirror slider output scaled down */
-	target_current = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
-	target_preview = cairo_xlib_surface_create(dpy,win,DefaultVisual(dpy,scr),sw,sh);
+	target_current = cairo_xlib_surface_create(dpy,buffer,
+		DefaultVisual(dpy,scr),sw,sh);
+	target_preview = cairo_xlib_surface_create(dpy,buffer,
+		DefaultVisual(dpy,scr),sw,sh);
 	cairo_current = cairo_create(target_current);
 	cairo_preview = cairo_create(target_preview);
 	cairo_scale(cairo_current,sw*fact/aw,sh*fact/ah);
@@ -122,6 +224,8 @@ int main(int argc, const char **argv) {
 	sfd = fileno(slider);
 	char *ret = line;
 	running = True;
+	start_time = time(NULL);
+	draw();
 	while (running) {
 		memset(&tv,0,sizeof(tv));
 		tv.tv_usec=500000; /* 0.5 sec */
@@ -129,6 +233,8 @@ int main(int argc, const char **argv) {
 		FD_SET(xfd,&rfds);
 		FD_SET(sfd,&rfds);
 		r = select(sfd+1,&rfds,0,0,&tv);
+		if (r == 0)
+			draw();
 		if (FD_ISSET(xfd,&rfds)) while (XPending(dpy)) { /* x input */
 			XNextEvent(dpy,&ev);
 			if (handler[ev.type]) handler[ev.type](&ev);
@@ -138,14 +244,22 @@ int main(int argc, const char **argv) {
 			if (strncmp(line,"SLIDER END",9)==0) {
 				running = False;
 			}
-			sscanf(line,"SLIDER: current=%lu, next=%lu",&current,&preview);
+			sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
 			/* process commands */
 			draw();
 		}
 	}
 	cairo_surface_destroy(current_c);
 	pclose(slider);
-
+	if (pdf) free(pdf);
+	if (useXrandr) {
+		cmd = (char *) calloc(60+strlen(video1)+strlen(video2),sizeof(char));
+		sprintf(cmd,"xrandr --output %s --auto --output %s --off",video1,video2);
+		system(cmd);
+		free(cmd);
+		free(video1);
+		free(video2);
+	}
 	XCloseDisplay(dpy);
 	return 0;
 }

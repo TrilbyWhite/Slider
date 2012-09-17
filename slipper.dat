@@ -1,0 +1,67 @@
+
+# SLIPPER DATA FILE
+# This is a sample data file that sets every available option for slipper
+# with comments describing each option
+# Slipper should be started by passing a single data file as a parameter
+
+###################################################################
+#                         OPTIONS                                 #
+###################################################################
+
+# - pdf (required) the presentation to show
+set pdf ~/slideshow.pdf
+
+# - duration (default=2700) sets the intended time in seconds
+# for the whole presentation.  Default 2700 seconds = 45 minutes
+set duration 2700
+
+# - xrandr (default=on) determines whether slipper should manage settings for an
+# external monitor.  If xrandr is off it is assumed that the user has called
+# xrandr manually and the extended desktop is managed by the window manager
+# - window (required if xrandr=off) sets the size for the presentor mode window
+# on the local monitor
+# - ouputs (required if xrandr=on) determines which outputs should be set
+# the first listed should be the local monitor for the presenter notes
+# the second is the external monitor or projector connection
+set xrandr on
+set window 1024x600
+set outputs LVDS1 VGA1
+
+# - current view (default=0.7) proportion of local screen used for current slide
+# - next view (default=0.4) '' for preview of next slide
+set current view 0.7
+set next view 0.4
+
+# - font (default=-xos4-terminus-bold-r-normal--22-220-72-72-c-110-iso8859-2)
+# select a font for on screen displays of notes and progress meters
+set font -xos4-terminus-bold-r-normal--22-220-72-72-c-110-iso8859-2
+
+###################################################################
+#                       SLIDE NOTES                               #
+###################################################################
+
+# - slide notes (optional) notes displayed for each slide
+# skipped slides must have an empty slide block
+
+# slide 1
+slide {
+This is a test line
+This is another line
+And a third
+}
+
+# slide 2 - note that spaces must be used for indentation.  Tabs will
+# not display properly
+slide {
+Slide 2
+  Indented
+}
+
+# slide 3 (no notes)
+slide {
+}
+
+# slide 4
+slide {
+Slide 4
+}
