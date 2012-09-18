@@ -19,6 +19,7 @@ static void draw();
 static void buttonpress(XEvent *);
 static void command_line(int,const char**);
 static void expose(XEvent *);
+static void usage(int);
 
 static FILE *dat;
 static Bool useXrandr;
@@ -26,6 +27,7 @@ static time_t start_time;
 static float fact=0.7,pfact=0.4;
 static char fontstring[80] =
 	"-xos4-terminus-bold-r-normal--22-220-72-72-c-110-iso8859-2";
+static char msg[32];
 static int cur_slide, last_slide;
 static char *pdf = NULL,*video1=NULL,*video2=NULL;
 static int duration=2700; /* 45 min = 2700 seconds */
@@ -64,9 +66,10 @@ void command_line(int argc, const char **argv) {
 			strncpy(datfile,argv[i],254);
 	}
 	if (strlen(datfile) < 3) {
-		/* error */
+		usage(1);
 	}
 	dat = fopen(datfile,"r");
+	int bad_commands=0;
 	while (fgets(datfile,254,dat)) {
 		if ( (datfile[0] == '#') || (datfile[0] == '\n') )
 			continue;
@@ -80,7 +83,12 @@ void command_line(int argc, const char **argv) {
 				! (sscanf(datfile,"set next view %f\n",&pfact))			&&
 				! (sscanf(datfile,"set font %s\n",fontstring))			&&
 				! (sscanf(datfile,"set pdf %s\n",pdfname))			)
-			fprintf(stderr,"ignoring unrecognized command \"%s\"\n",datfile);
+			fprintf(stderr,"(%d) ignoring unrecognized command \"%s\"\n",++bad_commands,datfile);
+		if (bad_commands > 9) {
+			fprintf(stderr,"Found %d bad commands in input file.  This is not likely a propper slipper data file.\n",
+				bad_commands);
+			exit(1);
+		}
 	}
 	if (strncmp(xrand,"on",2) == 0) useXrandr = True;
 	else useXrandr = False;
@@ -101,7 +109,7 @@ void expose(XEvent *ev) { draw(); }
 
 void draw() {
 	XFillRectangle(dpy,buffer,gc,0,0,sw,sh);
-	XCopyArea(dpy,current,pix_current,gc,0,0,aw,ah,0,0);
+	XCopyArea(dpy,current,pix_current,gc,0,0,aw-1,ah,0,0);
 	cairo_set_source_surface(cairo_current,current_c,0,0);
 	cairo_paint(cairo_current);
 	if (preview != 0) {
@@ -137,8 +145,24 @@ void draw() {
 	XDrawRectangle(dpy,buffer,pgc,sw*fact+10,90,sw-sw*fact-20,20);
 	XFillRectangle(dpy,buffer,pgc,sw*fact+10,90,
 		(sw-sw*fact-20)*used_time/duration,20);
+	if (strlen(msg) > 1)
+		XDrawString(dpy,buffer,ngc,sw*fact+10,200,msg,strlen(msg));
 	XCopyArea(dpy,buffer,win,gc,0,0,sw,sh,0,0);
 	XFlush(dpy);
+}
+
+static void usage(int exit_code) {
+	fprintf(stderr,"\
+\nSlipper\n\
+=======\n\
+by Jesse McClure, copyright 2012\n\
+License: GPLv3\n\
+\n\
+USAGE: slipper <datafile>\n\
+\n\
+see `man slipper` for more information.\n\
+\n");
+	if (exit_code) exit(exit_code);
 }
 
 int main(int argc, const char **argv) {
@@ -187,7 +211,7 @@ int main(int argc, const char **argv) {
 
 	/* connect to slider */
 	cmd = (char *) calloc(32+strlen(pdf),sizeof(char));
-	sprintf(cmd,"slider -p -g %dx%d ",slider_w,slider_h);
+	sprintf(cmd,"./slider -p -g %dx%d ",slider_w,slider_h);
 	strcat(cmd,pdf);
 	slider = popen(cmd,"r"); //TODO: send to correct screen
 	free(cmd);
@@ -226,7 +250,7 @@ int main(int argc, const char **argv) {
 	fd_set rfds;
 	xfd = ConnectionNumber(dpy);
 	sfd = fileno(slider);
-	char *ret = line;
+	//char *ret = line;
 	running = True;
 	start_time = time(NULL);
 	draw();
@@ -244,13 +268,18 @@ int main(int argc, const char **argv) {
 			if (handler[ev.type]) handler[ev.type](&ev);
 		}
 		else if (FD_ISSET(sfd,&rfds)) { /* slider input */
+			msg[0] = '\0';
 			fgets(line,254,slider);
 			if (strncmp(line,"SLIDER END",9)==0) {
 				running = False;
 				break;
 			}
-			sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
-			/* process commands */
+			else if (strncmp(line,"SLIDER: ",7)==0)
+				sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
+			else if (strncmp(line,"MUTE: black",8)==0)
+				strcpy(msg,"== SCREEN BLACK MUTED ==");
+			else if (strncmp(line,"MUTE: white",8)==0)
+				strcpy(msg,"== SCREEN WHITE MUTED ==");
 			draw();
 		}
 	}

@@ -134,6 +134,7 @@ void die(const char *msg, ...) {
 }
 
 void draw(const char *arg) {
+	XDefineCursor(dpy,win,invisible_cursor);
 	if (presenter_mode)  {
 		if (show.num + 1 < show.count)
 			fprintf(stdout,"SLIDER: %d current=%lu, next=%lu\n",show.num,show.slide[show.num],show.slide[show.num+1]);
@@ -141,7 +142,6 @@ void draw(const char *arg) {
 			fprintf(stdout,"SLIDER: %d current=%lu, next=0\n",show.num,show.slide[show.num]);
 		fflush(stdout);
 	}
-	XDefineCursor(dpy,win,invisible_cursor);
 	if (white_muted || overview_mode) mute("black");
 	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
 	XFlush(dpy); /* or XSync(dpy,True|False); */
@@ -217,7 +217,8 @@ void move(const char *arg) {
 }
 
 void mute(const char *color) {
-	if (presenter_mode) fprintf(stdout,"MUTE: %s\n",color);
+	if (presenter_mode && !overview_mode) fprintf(stdout,"MUTE: %s\n",color);
+	fflush(stdout);
 	if (color[0] == 'w') { /* white */
 		XFillRectangle(dpy,win,wgc,0,0,sw,sh);
 		white_muted = True;
@@ -231,7 +232,6 @@ void mute(const char *color) {
 }
 
 void overview(const char *arg) {
-	if (presenter_mode) fprintf(stdout,"OVERVIEW: %d\n",show.num);
 	XDefineCursor(dpy,win,None);
 	XLockDisplay(dpy); /* incase render thread is still working */
 	XCopyArea(dpy,sorter.view,win,gc,0,0,sw,sh,0,0);
@@ -250,6 +250,9 @@ void overview(const char *arg) {
 	/* draw the highlighter box */
 	XDrawRectangle(dpy,win,hgc,x-1,y-1,sorter.w+2,sorter.h+2);
 	XFlush(dpy);
+	if (presenter_mode) fprintf(stdout,"SLIDER: %d current=%lu, next=%lu\n",
+		show.num,win,show.slide[show.num]);
+	fflush(stdout);
 	overview_mode = True;
 }
 
@@ -293,6 +296,7 @@ void quit(const char *arg) { running=False; }
 
 void warn() {
 	if (presenter_mode) fprintf(stdout,"WARN\n");
+	fflush(stdout);
 	XDrawRectangle(dpy,win,hgc,(sw-aspx*sw)/2+2,(sh-aspy*sh)/2+2,aspx*sw-4,aspy*sh-4);
 	XFlush(dpy);
 	usleep(150000);
@@ -333,16 +337,21 @@ void zoom(const char *arg) {
 	cairo_surface_t *target = cairo_xlib_surface_create(
 			dpy, region, DefaultVisual(dpy,scr), sw, sh);
 	cairo_t *cairo = cairo_create(target);
-	double xscale = show.scale * sw / (x2 - x1);
-	double yscale = show.scale * sh / (y2-y1);
-	double scale = (xscale > yscale ? yscale : xscale);
-	cairo_scale(cairo,scale,scale);
+
+
+/* TODO: problem is in the offsets */
+	double xscale = show.scale * sw/ (x2-x1);
+	double yscale = show.scale * sh/ (y2-y1);
+	double xoff = ((sw-aspx*sw)/2 - x1);
+	double yoff = ((sh-aspy*sh)/2 - y1);
+	cairo_translate(cairo,xoff,yoff);
+	cairo_scale(cairo,xscale,yscale);
 	poppler_page_render(page,cairo);
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
-	XCopyArea(dpy,region,win,gc,0,0,sw,sh,
-		(sw-(x2-x1)*scale/show.scale)/2,
-		(sh-(y2-y1)*scale/show.scale)/2	);
+	XCopyArea(dpy,region,win,gc,0,0,sw,sh,0,0);
+/* end problem area */
+
 	XFreePixmap(dpy,region);
 	XDefineCursor(dpy,win,invisible_cursor);
 	XFlush(dpy);
@@ -370,12 +379,14 @@ void *render_all(void *arg) {
 	float asph = sw/pdfw * pdfh;
 	if (aspw < sw) aspx=aspw/sw;
 	else aspy=asph/sh;
+
 	sorter.grid = (int) sqrt(show.count) + 1;
-	sorter.h = (aspy*sh-10)/sorter.grid - 10;
-	sorter.w = (aspx*sw-10)/sorter.grid - 10;
-	vsc = sorter.h * show.scale / sh;
-	hsc = sorter.w * show.scale / sw;
+	vsc = ((aspy*sh-10)/sorter.grid - 10) * show.scale / sh;
+	hsc = ((aspx*sw-10)/sorter.grid - 10) * show.scale / sw;
 	sorter.scale = (vsc > hsc ? vsc : hsc);
+	sorter.w = aspx*sw*sorter.scale/show.scale;
+	sorter.h = aspy*sh*sorter.scale/show.scale;
+
 	Pixmap thumbnail = XCreatePixmap(dpy,root,sorter.w,sorter.h,DefaultDepth(dpy,scr));
 	if (presenter_mode) {
 		fprintf(stdout,"SLIDER START (%dx%d) win=%lu slides=%d\n",(int) (aspx*sw),(int) (aspy*sh), win, show.count);
@@ -427,7 +438,6 @@ void *render_all(void *arg) {
 		}
 	}
 	XFreePixmap(dpy,thumbnail);
-	if (presenter_mode) fprintf(stdout,"RENDERING COMPLETE\n");
 }
 
 int main(int argc, const char **argv) {
