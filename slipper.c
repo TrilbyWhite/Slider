@@ -211,7 +211,7 @@ int main(int argc, const char **argv) {
 
 	/* connect to slider */
 	cmd = (char *) calloc(32+strlen(pdf),sizeof(char));
-	sprintf(cmd,"./slider -p -g %dx%d ",slider_w,slider_h);
+	sprintf(cmd,"slider -p -g %dx%d ",slider_w,slider_h);
 	strcat(cmd,pdf);
 	slider = popen(cmd,"r"); //TODO: send to correct screen
 	free(cmd);
