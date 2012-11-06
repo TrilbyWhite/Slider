@@ -514,9 +514,14 @@ int main(int argc, const char **argv) {
 	XEvent ev;
 	running = True;
 	while ( running && ! XNextEvent(dpy, &ev) ) {
-if (ev.type == 65) continue; /* WTF?  Why does this solve the segfault?! */
-							/* what is event type 65? */
-		if (handler[ev.type]) handler[ev.type](&ev);	
+		/* the following two lines replace the third as the third seemingly */
+		/* allows for uninitalized and non-zeroed-out memory locations */
+		/* within the handler array to be treated as valid function pointers */
+		/* The third line is the same as is used in programs like dwm */
+		/* without issue ... I must be missing something. */
+		if (ev.type == ButtonPress) buttonpress(&ev);
+		if (ev.type == KeyPress) keypress(&ev);
+		/* if (handler[ev.type]) handler[ev.type](&ev);	*/
 	}
 
 	/* clean up */
