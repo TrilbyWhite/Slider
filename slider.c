@@ -513,8 +513,11 @@ int main(int argc, const char **argv) {
 	draw(NULL);
 	XEvent ev;
 	running = True;
-	while ( running && ! XNextEvent(dpy, &ev) )
+	while ( running && ! XNextEvent(dpy, &ev) ) {
+if (ev.type == 65) continue; /* WTF?  Why does this solve the segfault?! */
+							/* what is event type 65? */
 		if (handler[ev.type]) handler[ev.type](&ev);	
+	}
 
 	/* clean up */
 	if (presenter_mode) {
