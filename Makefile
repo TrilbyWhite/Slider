@@ -12,7 +12,7 @@ ${APP2}: ${APP2}.c
 
 ${APP1}: ${APP1}.c config.h
 	@gcc -o ${APP1} ${APP1}.c ${LIBS1}
-	@strip ${APP1}
+#	@strip ${APP1}
 
 ${APP1}_forms: ${APP1}_forms.c config.h
 	@gcc -DSLIDER_FORMFILL -o ${APP1} ${APP1}.c ${LIBS1}

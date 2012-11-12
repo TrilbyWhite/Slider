@@ -193,9 +193,13 @@ int main(int argc, const char **argv) {
 		free(cmd);
 	}
 	int num_sizes;
-	XRRScreenSize *xrrs = XRRSizes(dpy,0,&num_sizes);
-	int slider_w = xrrs[0].width;
-	int slider_h = xrrs[0].height;
+	XRRScreenSize *xrrs = XRRSizes(dpy,scr,&num_sizes);
+	XRRScreenConfiguration *config;
+	Rotation rotation;
+	int sizeID = XRRConfigCurrentConfiguration(config,&rotation);
+	XRRFreeScreenConfigInfo(config);
+	int slider_w = xrrs[sizeID].width;
+	int slider_h = xrrs[sizeID].height;
 
 	/* set up Xlib graphics context(s) */
 	XGCValues val;
