@@ -183,7 +183,6 @@ int main(int argc, const char **argv) {
 		XChangeWindowAttributes(dpy,win,CWOverrideRedirect,&wa);
 	}
 	XMapWindow(dpy, win);
-
 	/* set up screens */
 	char *cmd;
 	if (useXrandr) {
@@ -194,7 +193,7 @@ int main(int argc, const char **argv) {
 	}
 	int num_sizes;
 	XRRScreenSize *xrrs = XRRSizes(dpy,scr,&num_sizes);
-	XRRScreenConfiguration *config;
+	XRRScreenConfiguration *config = XRRGetScreenInfo(dpy,root);
 	Rotation rotation;
 	int sizeID = XRRConfigCurrentConfiguration(config,&rotation);
 	XRRFreeScreenConfigInfo(config);
@@ -233,6 +232,7 @@ int main(int argc, const char **argv) {
 		XMoveWindow(dpy,slider_win,0,sh);
 		XMoveResizeWindow(dpy,win,0,0,sw,sh);
 		XRaiseWindow(dpy,win);
+//		XFlush(dpy);
 	}
 
 	/* mirror slider output scaled down */
@@ -254,7 +254,6 @@ int main(int argc, const char **argv) {
 	fd_set rfds;
 	xfd = ConnectionNumber(dpy);
 	sfd = fileno(slider);
-	//char *ret = line;
 	running = True;
 	start_time = time(NULL);
 	draw();
@@ -269,9 +268,10 @@ int main(int argc, const char **argv) {
 			draw();
 		if (FD_ISSET(xfd,&rfds)) while (XPending(dpy)) { /* x input */
 			XNextEvent(dpy,&ev);
-			if (handler[ev.type]) handler[ev.type](&ev);
+			if (ev.type < 33)
+				if (handler[ev.type]) handler[ev.type](&ev);
 		}
-		else if (FD_ISSET(sfd,&rfds)) { /* slider input */
+		if (FD_ISSET(sfd,&rfds)) { /* slider input */
 			msg[0] = '\0';
 			fgets(line,254,slider);
 			if (strncmp(line,"SLIDER END",9)==0) {
