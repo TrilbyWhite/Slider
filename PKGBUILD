@@ -2,7 +2,7 @@
 pkgname=slider-git
 pkgver=20120830
 pkgrel=1
-pkgdesc="PDF slideshow / presentation app [BETA!]"
+pkgdesc="PDF slideshow / presentation tool with xrandr support and presenter mode"
 url="http://github.com/TrilbyWhite/Slider.git"
 arch=('any')
 license=('GPLv3')
