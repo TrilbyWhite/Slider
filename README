@@ -41,3 +41,16 @@ Overview mode: ("slide sorter")
 before rendering is complete you will get a 'warning' flash on the border of the
 slide.  Once rendered, hit "z" then select a rectangle to zoom in on with the
 mouse.
+
+Slipper
+=======
+
+PDF presenter mode
+
+Usage: slipper [options] <data-filename|pdf-filename>
+
+If passed a pdf file, slipper will use default options to open a connection with an external monitor or projector, launch slider with the pdf on the external monitor, and run in presentor mode on the local screen.
+
+For best results, however, slipper should be passed a slipper data file formatted as outlined in the example slipper.dat file that is distributed with this package.
+
+This data file allows for customization of various options, and allows for the presentation of notes on the presenter mode (local) screen.
