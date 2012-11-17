@@ -30,7 +30,7 @@ static char fontstring[80] =
 static char msg[32];
 static int cur_slide, last_slide;
 static char *pdf = NULL,*video1=NULL,*video2=NULL;
-static int duration=2700; /* 45 min = 2700 seconds */
+static int duration=600; /* 10 min = 600 seconds */
 static Display *dpy;
 static int scr;
 static Window root,win,slider_win;
@@ -54,10 +54,10 @@ void buttonpress(XEvent *ev) {
 void command_line(int argc, const char **argv) {
 	int i;
 	char datfile[255] = "";
-	char xrand[10] = "off";
+	char xrand[10] = "on";
 	char pdfname[255] = "";
-	char tv1[255] = "";
-	char tv2[255] = "";
+	char tv1[255] = "LVDS1";
+	char tv2[255] = "VGA1";
 	for (i = 1; i < argc; i++) {
 		if (argv[i][0] == '-') {
 			/* switches */
@@ -68,9 +68,11 @@ void command_line(int argc, const char **argv) {
 	if (strlen(datfile) < 3) {
 		usage(1);
 	}
+	char *ext = strchr(datfile,'.');
+	if (ext && strncmp(ext,".pdf",4)==0) strcpy(pdfname,datfile);
 	dat = fopen(datfile,"r");
 	int bad_commands=0;
-	while (fgets(datfile,254,dat)) {
+	if (strlen(pdfname) < 2) while (fgets(datfile,254,dat)) {
 		if ( (datfile[0] == '#') || (datfile[0] == '\n') )
 			continue;
 		if ( strncmp(datfile,"slide",5) == 0 )
@@ -83,7 +85,8 @@ void command_line(int argc, const char **argv) {
 				! (sscanf(datfile,"set next view %f\n",&pfact))			&&
 				! (sscanf(datfile,"set font %s\n",fontstring))			&&
 				! (sscanf(datfile,"set pdf %s\n",pdfname))			)
-			fprintf(stderr,"(%d) ignoring unrecognized command \"%s\"\n",++bad_commands,datfile);
+			fprintf(stderr,"(%d) ignoring unrecognized command \"%s\"\n",
+				++bad_commands,datfile);
 		if (bad_commands > 9) {
 			fprintf(stderr,"Found %d bad commands in input file.  This is not likely a propper slipper data file.\n",
 				bad_commands);
