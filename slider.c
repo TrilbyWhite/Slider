@@ -224,7 +224,6 @@ void overview(const char *arg) {
 	XCopyArea(dpy,sorter.view,win,gc,0,0,sw,sh,0,0);
 	XUnlockDisplay(dpy);
 	/* calculate coordinates for highlighter box */
-	/* TODO: there has to be a better way of calculating these coordinates! */
 	int i, n = 0, x = (sw-sorter.grid*(sorter.w+10))/2, y = 10;
 	for (i = 0; i < show.num; i++) {
 		x += sorter.w + 10;
@@ -297,7 +296,7 @@ void zoom(const char *arg) {
 		warn();
 		return;
 	}
-	XDefineCursor(dpy,win,None); // TODO: Make crosshair cursor 
+	XDefineCursor(dpy,win,XCreateFontCursor(dpy,130));
 	XEvent ev;
 	int x1,y1,x2=-1,y2;
 	while ( !XNextEvent(dpy,&ev) && ev.type!=ButtonPress && ev.type!=KeyPress );

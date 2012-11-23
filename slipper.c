@@ -15,9 +15,9 @@
 #include <X11/extensions/Xrandr.h>
 
 
-static void draw();
 static void buttonpress(XEvent *);
 static void command_line(int,const char**);
+static void draw();
 static void expose(XEvent *);
 static void usage(int);
 
@@ -25,7 +25,7 @@ static FILE *dat;
 static Bool useXrandr;
 static time_t start_time;
 static float fact=0.7,pfact=0.4;
-static char fontstring[80] =
+static char fontstring[120] =
 	"-xos4-terminus-bold-r-normal--22-220-72-72-c-110-iso8859-2";
 static char msg[32];
 static int cur_slide, last_slide;
@@ -88,8 +88,8 @@ void command_line(int argc, const char **argv) {
 			fprintf(stderr,"(%d) ignoring unrecognized command \"%s\"\n",
 				++bad_commands,datfile);
 		if (bad_commands > 9) {
-			fprintf(stderr,"Found %d bad commands in input file.  This is not likely a propper slipper data file.\n",
-				bad_commands);
+			fprintf(stderr,"Found %d bad commands in input file.",bad_commands);
+			fprintf(stderr,"This is not likely a propper slipper data file.\n");
 			exit(1);
 		}
 	}
@@ -155,16 +155,9 @@ void draw() {
 }
 
 static void usage(int exit_code) {
-	fprintf(stderr,"\
-\nSlipper\n\
-=======\n\
-by Jesse McClure, copyright 2012\n\
-License: GPLv3\n\
-\n\
-USAGE: slipper <datafile>\n\
-\n\
-see `man slipper` for more information.\n\
-\n");
+	fprintf(stderr,"\nSlipper\n=======\nby Jesse McClure, copyright 2012\n");
+	fprintf(stderr,"License: GPLv3\n\nUSAGE: slipper <datafile>\n\nsee ");
+	fprintf(stderr,"`man slipper` for more information.\n\n");
 	if (exit_code) exit(exit_code);
 }
 
@@ -190,7 +183,8 @@ int main(int argc, const char **argv) {
 	char *cmd;
 	if (useXrandr) {
 		cmd = (char *) calloc(60+strlen(video1)+strlen(video2),sizeof(char));
-		sprintf(cmd,"xrandr --output %s --auto --output %s --auto --below %s",video1,video2,video1);
+		sprintf(cmd,"xrandr --output %s --auto --output %s --auto --below %s",
+			video1,video2,video1);
 		system(cmd);
 		free(cmd);
 	}
@@ -202,7 +196,6 @@ int main(int argc, const char **argv) {
 	XRRFreeScreenConfigInfo(config);
 	int slider_w = xrrs[sizeID].width;
 	int slider_h = xrrs[sizeID].height;
-
 	/* set up Xlib graphics context(s) */
 	XGCValues val;
 	XColor color;
@@ -214,17 +207,17 @@ int main(int argc, const char **argv) {
 	val.foreground = WhitePixel(dpy,scr);
 	val.font = XLoadFont(dpy,fontstring);
 	ngc = XCreateGC(dpy,root,GCForeground|GCFont,&val);
-
 	/* connect to slider */
 	cmd = (char *) calloc(32+strlen(pdf),sizeof(char));
 	sprintf(cmd,"slider -p -g %dx%d ",slider_w,slider_h);
 	strcat(cmd,pdf);
-	slider = popen(cmd,"r"); //TODO: send to correct screen
+	slider = popen(cmd,"r");
 	free(cmd);
 	char line[255];
 	fgets(line,254,slider);
 	while( strncmp(line,"SLIDER START",11) != 0) fgets(line,254,slider);
-	sscanf(line,"SLIDER START (%dx%d) win=%lu slides=%d",&aw,&ah,&slider_win,&last_slide);
+	sscanf(line,"SLIDER START (%dx%d) win=%lu slides=%d",
+		&aw,&ah,&slider_win,&last_slide);
 	last_slide--;
 	fgets(line,254,slider);
 	sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
@@ -237,7 +230,6 @@ int main(int argc, const char **argv) {
 		XRaiseWindow(dpy,win);
 //		XFlush(dpy);
 	}
-
 	/* mirror slider output scaled down */
 	target_current = cairo_xlib_surface_create(dpy,buffer,
 		DefaultVisual(dpy,scr),sw,sh);
@@ -248,21 +240,23 @@ int main(int argc, const char **argv) {
 	cairo_scale(cairo_current,sw*fact/aw,sh*fact/ah);
 	cairo_translate(cairo_preview,sw-sw*pfact-4,sh-sh*pfact-4);
 	cairo_scale(cairo_preview,sw*pfact/aw,sh*pfact/ah);
-	current_c = cairo_xlib_surface_create(dpy,pix_current,DefaultVisual(dpy,scr),aw,ah);
-	preview_c = cairo_xlib_surface_create(dpy,pix_preview,DefaultVisual(dpy,scr),aw,ah);
-
+	current_c = cairo_xlib_surface_create(dpy,pix_current,
+		DefaultVisual(dpy,scr),aw,ah);
+	preview_c = cairo_xlib_surface_create(dpy,pix_preview,
+		DefaultVisual(dpy,scr),aw,ah);
+	/* main loop */
 	XEvent ev;
 	int xfd,sfd,r;
 	struct timeval tv;
 	fd_set rfds;
 	xfd = ConnectionNumber(dpy);
 	sfd = fileno(slider);
-	running = True;
 	start_time = time(NULL);
+	running = True;
 	draw();
 	while (running) {
 		memset(&tv,0,sizeof(tv));
-		tv.tv_usec=500000; /* 0.5 sec */
+		tv.tv_sec=1;
 		FD_ZERO(&rfds);
 		FD_SET(xfd,&rfds);
 		FD_SET(sfd,&rfds);
@@ -282,7 +276,8 @@ int main(int argc, const char **argv) {
 				break;
 			}
 			else if (strncmp(line,"SLIDER: ",7)==0)
-				sscanf(line,"SLIDER: %d current=%lu, next=%lu",&cur_slide,&current,&preview);
+				sscanf(line,"SLIDER: %d current=%lu, next=%lu",
+					&cur_slide,&current,&preview);
 			else if (strncmp(line,"MUTE: black",8)==0)
 				strcpy(msg,"== SCREEN BLACK MUTED ==");
 			else if (strncmp(line,"MUTE: white",8)==0)
@@ -290,6 +285,7 @@ int main(int argc, const char **argv) {
 			draw();
 		}
 	}
+	/* clean up */
 	cairo_surface_destroy(current_c);
 	pclose(slider);
 	if (pdf) free(pdf);
