@@ -21,7 +21,6 @@
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
 
-
 typedef struct {
 	unsigned int mod;
 	KeySym keysym;
@@ -48,14 +47,9 @@ static GC gc,wgc,hgc,lgc;
 static Bool running;
 static int sw=0,sh=0;
 float aspx=1.0,aspy=1.0;
-static void (*handler[LASTEvent]) (XEvent *) = {
-	[ButtonPress]		= buttonpress,
-	[KeyPress]			= keypress,
-};
 static Bool netwm;
 static Cursor invisible_cursor;
 static Cursor highlight;
-
 static PopplerDocument *pdf;
 static Bool cancel_render = False;
 static Bool white_muted = False;
@@ -63,17 +57,12 @@ static Bool overview_mode = False;
 static Bool fullscreen_mode = True;
 static Bool presenter_mode = False;
 static char *uri;
-struct {
-	Pixmap *slide;
-	int count, num, rendered;
-	float scale;
-} show;
-struct {
-	Pixmap view;
-	int rendered, w, h, grid;
-	float scale;
-} sorter;
-
+static struct { Pixmap *slide; int count, num, rendered; float scale; } show;
+static struct { Pixmap view; int rendered, w, h, grid; float scale; } sorter;
+static void (*handler[LASTEvent]) (XEvent *) = {
+	[ButtonPress]		= buttonpress,
+	[KeyPress]			= keypress,
+};
 #include "config.h"
 
 void buttonpress(XEvent *e) {
@@ -137,14 +126,17 @@ void draw(const char *arg) {
 	XDefineCursor(dpy,win,invisible_cursor);
 	if (presenter_mode)  {
 		if (show.num + 1 < show.count)
-			fprintf(stdout,"SLIDER: %d current=%lu, next=%lu\n",show.num,show.slide[show.num],show.slide[show.num+1]);
+			fprintf(stdout,"SLIDER: %d current=%lu, next=%lu\n",
+				show.num,show.slide[show.num],show.slide[show.num+1]);
 		else
-			fprintf(stdout,"SLIDER: %d current=%lu, next=0\n",show.num,show.slide[show.num]);
+			fprintf(stdout,"SLIDER: %d current=%lu, next=0\n",
+				show.num,show.slide[show.num]);
 		fflush(stdout);
 	}
 	if (white_muted || overview_mode) mute("black");
-	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
-	XFlush(dpy); /* or XSync(dpy,True|False); */
+	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,
+		aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
+	XFlush(dpy);
 }
 
 void fullscreen(const char *arg) {
@@ -154,20 +146,15 @@ void fullscreen(const char *arg) {
 	XEvent xev;
 	Atom state = XInternAtom(dpy, "_NET_WM_STATE", False);
 	Atom full = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
-	if (netwm) {	/* NET_WM   !! Experimental !! */
-		xev.xclient.type=ClientMessage;
-		xev.xclient.serial = 0;
-		xev.xclient.send_event=True;
-		xev.xclient.window=win;
-		xev.xclient.message_type=state;
-		xev.xclient.format=32;
-		xev.xclient.data.l[0] = 2;
-		xev.xclient.data.l[1] = full;
+	if (netwm) { /* NEW_WM Window Manager */
+		xev.xclient.type=ClientMessage; xev.xclient.serial = 0;
+		xev.xclient.send_event=True; xev.xclient.window=win;
+		xev.xclient.message_type=state; xev.xclient.format=32;
+		xev.xclient.data.l[0] = 2; xev.xclient.data.l[1] = full;
 		xev.xclient.data.l[2] = 0;
 		XSendEvent(dpy,root, False, SubstructureRedirectMask |
 				SubstructureNotifyMask, &xev);
-		XSync(dpy,False);
-		usleep(10000);
+		XSync(dpy,False); usleep(10000);
 	}
 	else { /* not NET_WM */
 		if ( (fullscreen_mode=!fullscreen_mode) ) {
@@ -186,15 +173,15 @@ void fullscreen(const char *arg) {
 	}
 	draw(NULL);
 }
-	
 
 void keypress(XEvent *e) {
 	unsigned int i;
 	XKeyEvent *ev = &e->xkey;
 	KeySym keysym = XkbKeycodeToKeysym(dpy,(KeyCode)ev->keycode,0,0);
 	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++)
-		if ( (keysym == keys[i].keysym) && keys[i].func && keys[i].mod  == ((ev->state&~Mod2Mask)&~LockMask) )
-				keys[i].func(keys[i].arg);
+		if ( (keysym == keys[i].keysym) &&
+			keys[i].func && keys[i].mod  == ((ev->state&~Mod2Mask)&~LockMask) )
+			keys[i].func(keys[i].arg);
 }
 
 void move(const char *arg) {
@@ -237,7 +224,7 @@ void overview(const char *arg) {
 	XCopyArea(dpy,sorter.view,win,gc,0,0,sw,sh,0,0);
 	XUnlockDisplay(dpy);
 	/* calculate coordinates for highlighter box */
-	/* TOOD: there has to be a better way of calculating these coordinates! */
+	/* TODO: there has to be a better way of calculating these coordinates! */
 	int i, n = 0, x = (sw-sorter.grid*(sorter.w+10))/2, y = 10;
 	for (i = 0; i < show.num; i++) {
 		x += sorter.w + 10;
@@ -297,15 +284,20 @@ void quit(const char *arg) { running=False; }
 void warn() {
 	if (presenter_mode) fprintf(stdout,"WARN\n");
 	fflush(stdout);
-	XDrawRectangle(dpy,win,hgc,(sw-aspx*sw)/2+2,(sh-aspy*sh)/2+2,aspx*sw-4,aspy*sh-4);
+	XDrawRectangle(dpy,win,hgc,(sw-aspx*sw)/2+2,(sh-aspy*sh)/2+2,
+		aspx*sw-4,aspy*sh-4);
 	XFlush(dpy);
 	usleep(150000);
-	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
+	XCopyArea(dpy,show.slide[show.num],win,gc,0,0,
+		aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
 }
 
 void zoom(const char *arg) {
-	if (show.rendered < show.count - 1) { warn(); return; } /* ensure rendering is done */
-	XDefineCursor(dpy,win,None); // Make crosshair cursor 
+	if (show.rendered < show.count - 1) { /* ensure rendering is done */
+		warn();
+		return;
+	}
+	XDefineCursor(dpy,win,None); // TODO: Make crosshair cursor 
 	XEvent ev;
 	int x1,y1,x2=-1,y2;
 	while ( !XNextEvent(dpy,&ev) && ev.type!=ButtonPress && ev.type!=KeyPress );
@@ -318,8 +310,9 @@ void zoom(const char *arg) {
 		PointerMotionMask | ButtonReleaseMask, GrabModeAsync,
 		GrabModeAsync,None,None,CurrentTime);
 	x1 = ev.xbutton.x; y1 = ev.xbutton.y;
-	while ( !XNextEvent(dpy,&ev) && ev.type != ButtonRelease && ev.type!=KeyPress ) {
-		XCopyArea(dpy,show.slide[show.num],win,gc,0,0,aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
+	while (!XNextEvent(dpy,&ev) && ev.type != ButtonRelease && ev.type!=KeyPress) {
+		XCopyArea(dpy,show.slide[show.num],win,gc,0,0,
+			aspx*sw,aspy*sh,(sw-aspx*sw)/2,(sh-aspy*sh)/2);
 		XDrawRectangle(dpy,win,hgc,x1,y1,ev.xbutton.x-x1,ev.xbutton.y-y1);
 		XSync(dpy,True);
 	}
@@ -337,21 +330,16 @@ void zoom(const char *arg) {
 	cairo_surface_t *target = cairo_xlib_surface_create(
 			dpy, region, DefaultVisual(dpy,scr), sw, sh);
 	cairo_t *cairo = cairo_create(target);
-
-
-/* TODO: problem is in the offsets */
 	double xscale = show.scale * sw/ (x2-x1);
 	double yscale = show.scale * sh/ (y2-y1);
-	double xoff = ((sw-aspx*sw)/2 - x1);
-	double yoff = ((sh-aspy*sh)/2 - y1);
+	double xoff = ((sw-aspx*sw)/2 - x1)/show.scale*xscale;
+	double yoff = ((sh-aspy*sh)/2 - y1)/show.scale*yscale;
 	cairo_translate(cairo,xoff,yoff);
 	cairo_scale(cairo,xscale,yscale);
 	poppler_page_render(page,cairo);
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
 	XCopyArea(dpy,region,win,gc,0,0,sw,sh,0,0);
-/* end problem area */
-
 	XFreePixmap(dpy,region);
 	XDefineCursor(dpy,win,invisible_cursor);
 	XFlush(dpy);
@@ -379,20 +367,19 @@ void *render_all(void *arg) {
 	float asph = sw/pdfw * pdfh;
 	if (aspw < sw) aspx=aspw/sw;
 	else aspy=asph/sh;
-
 	sorter.grid = (int) sqrt(show.count) + 1;
 	vsc = ((aspy*sh-10)/sorter.grid - 10) * show.scale / sh;
 	hsc = ((aspx*sw-10)/sorter.grid - 10) * show.scale / sw;
 	sorter.scale = (vsc > hsc ? vsc : hsc);
 	sorter.w = aspx*sw*sorter.scale/show.scale;
 	sorter.h = aspy*sh*sorter.scale/show.scale;
-
-	Pixmap thumbnail = XCreatePixmap(dpy,root,sorter.w,sorter.h,DefaultDepth(dpy,scr));
+	Pixmap thumbnail = XCreatePixmap(dpy,root,sorter.w,sorter.h,
+		DefaultDepth(dpy,scr));
 	if (presenter_mode) {
-		fprintf(stdout,"SLIDER START (%dx%d) win=%lu slides=%d\n",(int) (aspx*sw),(int) (aspy*sh), win, show.count);
+		fprintf(stdout,"SLIDER START (%dx%d) win=%lu slides=%d\n",
+			(int) (aspx*sw),(int) (aspy*sh), win, show.count);
 		fflush(stdout);
 	}
-
 	/* create empty overview frame in sorter.view (dotted outlines for slides) */
 	XFillRectangle(dpy,sorter.view,gc,0,0,sw,sh);
 	int i,j, n=0, x=(sw-sorter.grid*(sorter.w+10))/2, y=10;
@@ -407,11 +394,12 @@ void *render_all(void *arg) {
 	n = 0; x = (sw-sorter.grid*(sorter.w+10))/2; y = 10;
 	for (i = 0; i < show.count; i++) {
 		/* show.slide[i] creation and rendering */
-		show.slide[i] = XCreatePixmap(dpy,root,aspx*sw,aspy*sh,DefaultDepth(dpy,scr));
+		show.slide[i] = XCreatePixmap(dpy,root,aspx*sw,aspy*sh,
+			DefaultDepth(dpy,scr));
 		XFillRectangle(dpy,show.slide[i],wgc,0,0,aspx*sw,aspy*sh);
 		page = poppler_document_get_page(pdf,i);
-		target = cairo_xlib_surface_create(
-				dpy, show.slide[i], DefaultVisual(dpy,scr), aspx*sw, aspy*sh);
+		target = cairo_xlib_surface_create(dpy, show.slide[i],
+			DefaultVisual(dpy,scr), aspx*sw, aspy*sh);
 		cairo = cairo_create(target);
 		cairo_scale(cairo,show.scale,show.scale);
 		poppler_page_render(page,cairo);
@@ -443,11 +431,9 @@ void *render_all(void *arg) {
 int main(int argc, const char **argv) {
 	/* process command line arguments */
 	command_line(argc,argv);
-
 	/* some ugly but needed initializations */
 	XInitThreads();
 	g_type_init();
-
 	/* open X connection & create window */
 	if (!(dpy= XOpenDisplay(NULL))) die("Failed opening X display\n");
 	scr = DefaultScreen(dpy);
@@ -461,7 +447,6 @@ int main(int argc, const char **argv) {
 	wa.event_mask =  ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
 	XChangeWindowAttributes(dpy,win,CWEventMask,&wa);
 	XMapWindow(dpy, win);
-
 	/* check for EWMH compliant WM */
 	Atom type, NET_CHECK = XInternAtom(dpy,"_NET_SUPPORTING_WM_CHECK",False);
 	Window *wins;
@@ -472,7 +457,6 @@ int main(int argc, const char **argv) {
 	if ( type == XA_WINDOW && nwins > 0 && wins[0] != None) netwm = True;
 	else netwm = False;
 	XFree(wins);
-
 	/* set up Xlib graphics contexts */
 	XGCValues val;
 	XColor color;
@@ -500,7 +484,6 @@ int main(int argc, const char **argv) {
 	Pixmap curs_map = XCreateBitmapFromData(dpy,win,&curs_data,1,1);
 	invisible_cursor = XCreatePixmapCursor(dpy,curs_map,curs_map,&color,&color,0,0);
 	XFreePixmap(dpy,curs_map);
-
 	/* start rendering thread */
 	pthread_t render_thread;
 	pthread_create(&render_thread,NULL,render_all,NULL);
@@ -508,18 +491,17 @@ int main(int argc, const char **argv) {
 	while (show.rendered < 1) usleep(50000);
 	if (fullscreen_mode) { fullscreen_mode = ! fullscreen_mode; fullscreen(NULL); }
 	XDefineCursor(dpy,win,invisible_cursor);
-
 	/* main loop */
 	draw(NULL);
 	XEvent ev;
 	running = True;
 	while ( running && ! XNextEvent(dpy, &ev) ) {
-		if (ev.type > 32) continue;
+		if (ev.type > 32) continue; /* workaround for cairo F(&* up. */
 		if (handler[ev.type]) handler[ev.type](&ev);
 	}
 
 	/* clean up */
-	if (presenter_mode) {
+	if (presenter_mode) { 
 		printf("SLIDER END\n");
 		fflush(stdout);
 	}
