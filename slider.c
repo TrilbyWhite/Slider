@@ -332,6 +332,10 @@ void zoom(const char *arg) {
 	cairo_t *cairo = cairo_create(target);
 	double xscale = show.scale * sw/ (x2-x1);
 	double yscale = show.scale * sh/ (y2-y1);
+	if (arg) {
+		if (xscale > yscale) xscale = yscale;
+		else yscale = xscale;
+	}
 	double xoff = ((sw-aspx*sw)/2 - x1)/show.scale*xscale;
 	double yoff = ((sh-aspy*sh)/2 - y1)/show.scale*yscale;
 	cairo_translate(cairo,xoff,yoff);

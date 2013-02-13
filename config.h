@@ -13,6 +13,7 @@ static Key keys[] = {
 	{ 0,			XK_r,			draw,			NULL			},
 	{ 0,			XK_Return,		draw,			NULL			},
 	{ 0,			XK_z,			zoom,			NULL			},
+	{ ShiftMask,	XK_z,			zoom,			"lock aspect"	},
 	/* keyboard movement controls */
 	{ 0,			XK_space,		move,			"right"			},
 	{ 0,			XK_Down,		move,			"down"			},
