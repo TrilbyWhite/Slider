@@ -254,7 +254,8 @@ void pen(const char *arg) {
 	XGCValues val;
 	val.foreground = color.pixel;
 	val.line_width = atoi(pw);
-	GC pgc = XCreateGC(dpy,win,GCForeground|GCLineWidth,&val);
+	val.cap_style = CapRound;
+	GC pgc = XCreateGC(dpy,win,GCForeground|GCLineWidth|GCCapStyle,&val);
 	for (;;) {
 		while ( !XNextEvent(dpy,&ev) && ev.type!=ButtonPress && ev.type!=KeyPress );
 		if (ev.type == KeyPress) {
