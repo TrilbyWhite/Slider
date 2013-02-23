@@ -56,6 +56,8 @@ static Bool white_muted = False;
 static Bool overview_mode = False;
 static Bool fullscreen_mode = True;
 static Bool presenter_mode = False;
+static Bool autoplay = False, autoloop = False;
+static int autoplaydelay = 0;
 static char *uri;
 static struct { Pixmap *slide; int count, num, rendered; float scale; } show;
 static struct { Pixmap view; int rendered, w, h, grid; float scale; } sorter;
@@ -93,9 +95,14 @@ void command_line(int argc, const char **argv) {
 	if (argc == 1) die("%s requires a filename or uri for a pdf\n",argv[0]);
 	int i,t1,t2;
 	for (i = 1; i < argc - 1; i++) {
-		if (argv[i][0] && argv[i][1] != '\0') {
+		if (argv[i][0] == '-' && argv[i][1] != '\0') {
 			if (argv[i][1] == 'f') fullscreen_mode = False;
 			else if (argv[i][1] == 'p') presenter_mode = True;
+			else if (argv[i][1] == 'l') autoloop = True;
+			else if (argv[i][1] == 't') {
+				if ( (sscanf(argv[++i],"%d",&autoplaydelay)) == 1 )
+					autoplay = True;
+			}
 			else if (argv[i][1] == 'g') {
 				if ( (sscanf(argv[++i],"%dx%d",&t1,&t2)) == 2 ) {
 					sw=t1;sh=t2;
@@ -198,7 +205,10 @@ void move(const char *arg) {
 		if (arg[0] == 'd' || arg[0] == 'r') show.num++;
 		else if (arg[0] == 'u' || arg[0] == 'l') show.num--;
 		if (show.num < 0) show.num = 0;
-		if (show.num > show.rendered) show.num = show.rendered;
+		if (show.num > show.rendered) {
+			if (autoloop) show.num = 0;
+			else show.num = show.rendered;
+		}
 		draw(NULL);
 	}
 }
@@ -499,7 +509,26 @@ int main(int argc, const char **argv) {
 	draw(NULL);
 	XEvent ev;
 	running = True;
-	while ( running && ! XNextEvent(dpy, &ev) ) {
+	if (autoplay && autoplaydelay > 0) {
+		int fd, r;
+		struct timeval tv;
+		fd_set rfds;
+		fd = ConnectionNumber(dpy);
+		while (running) {
+			memset(&tv,0,sizeof(tv));
+			tv.tv_sec = autoplaydelay;
+			FD_ZERO(&rfds);
+			FD_SET(fd,&rfds);
+			r = select(fd+1,&rfds,0,0,&tv);
+			if (r == 0) move("down");
+			while (XPending(dpy)) {
+				XNextEvent(dpy,&ev);
+				if (ev.type > 32) continue; /* workaround for cairo F(&* up. */
+				if (handler[ev.type]) handler[ev.type](&ev);
+			}
+		}
+	}
+	else while ( running && ! XNextEvent(dpy, &ev) ) {
 		if (ev.type > 32) continue; /* workaround for cairo F(&* up. */
 		if (handler[ev.type]) handler[ev.type](&ev);
 	}
