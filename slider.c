@@ -57,6 +57,7 @@ static Bool overview_mode = False;
 static Bool fullscreen_mode = True;
 static Bool presenter_mode = False;
 static Bool autoplay = False, autoloop = False;
+static Bool first_page_rendered = False;
 static int autoplaydelay = 0;
 static char *uri;
 static struct { Pixmap *slide; int count, num, rendered; float scale; } show;
@@ -431,6 +432,7 @@ void *render_all(void *arg) {
 		XCopyArea(dpy,thumbnail,sorter.view,gc,0,0,sorter.w,sorter.h,x,y);
 		/* increment show.rendered and calculate coordinates for next loop */
 		show.rendered = i;
+		first_page_rendered = True;
 		if (cancel_render) break;
 		x += sorter.w + 10;
 		if (++n == sorter.grid) {
@@ -502,7 +504,7 @@ int main(int argc, const char **argv) {
 	pthread_t render_thread;
 	pthread_create(&render_thread,NULL,render_all,NULL);
 	/* wait for first frame to render */
-	while (show.rendered < 1) usleep(50000);
+	while (!first_page_rendered) usleep(50000);
 	if (fullscreen_mode) { fullscreen_mode = ! fullscreen_mode; fullscreen(NULL); }
 	XDefineCursor(dpy,win,invisible_cursor);
 	/* main loop */
