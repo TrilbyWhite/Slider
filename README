@@ -1,3 +1,40 @@
+UPDATE (4 Apr 2013): A 'new' slider is coming.
+
+I've recoded slider completely from scratch with a cleaner design from the start.  The original slider did not do much, but as feature requests came in I tried to add them.  This became more and more impractical as slider (and slipper) ended up being held together by many layers of duct tape covered over with ugly wallpaper.
+
+I've started completely from scratch with a better picture of the end goal contributing to basic design decisions.  The new version feels much smoother and cleaner.  Changes you can expect include the following:
+
+1) Slipper is fully integrated - there is now only one program that will autodetect multiple monitors and accept multiple pdfs.  This provides several options for how it will run:
+    - `slider my.pdf` on a single monitor set up will simply display the pdf
+	- `slider my.pdf` on multimonitor will display the pdf in the highest
+	        numbered monitor and a current+preview slide in the local monitor
+	- `slider my.pdf notes.pdf` will display the my.pdf on the highest numbered
+	        numbered monitor and present notes.pdf on the local screen along with
+			a current and/or preview slide from my.pdf
+
+2) Presenter mode is customizable:
+	- pass the "-g WxH+X+Y" geometry flag from one to four times on the command line.
+	- each geometry pattern will create one preview pane with the following purposes
+	    1) current notes slide/page (if notes are provided)
+		2) current presentation slide
+        3) next presentation slide
+		4) overview (slide sorter)
+	- without "-g" geometries slider will default to what should be a useful setup
+	    with three panel if there are notes, or two without (current, next)
+
+3) Slider will no longer try to manage your monitors - it will only detect your settings
+    - Configure your own screen setup with xrandr or xorg.conf
+
+4) REMOVALS Slider will temporarily lack a few functions like zoom and pens.  Zoom will be easy to add back in, and the pens will be fully recoded to use cairo drawing rather than xlib - this will (should ... I think) allow for antialiased line drawing.
+
+TIMELINE: Most of this has been coded, but I'm ironing out a couple hefty bugs before I push the code here to github.  Be warned that if you regularly update to the latest git version of slider, you will soon lose many of the options and configuration methods you are used to.  These changes should be pushed by mid April at the latest.
+
+-J McClure
+
+-------- ORIGINAL README FOR CURRENT CODE BELOW --------
+
+
+
 Slider
 ======
 
