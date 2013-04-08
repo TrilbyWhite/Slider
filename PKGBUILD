@@ -1,35 +1,37 @@
-# Maintainer: Jesse McClure AKA "Trilby" <jmcclure [at] cns [dot] umass [dot] edu>
+# Maintainer: Jesse McClure AKA "Tribly" <jmcclure [at] cns [dot] umass [dot] edu>
 pkgname=slider-git
-pkgver=20120830
+_gitname="slider"
+pkgver=1.69.b14a772
 pkgrel=1
-pkgdesc="PDF slideshow / presentation tool with xrandr support and presenter mode"
-url="http://github.com/TrilbyWhite/Slider.git"
+pkgdesc="PDF presentation tool"
 arch=('any')
-license=('GPLv3')
-depends=('poppler-glib' 'xorg-xrandr')
+url="https://github.com/TrilbyWhite/Slider"
+license=('GPL3')
+depends=('poppler-glib' 'libxrandr')
 makedepends=('git')
-_gitroot="git://github.com/TrilbyWhite/Slider.git"
-_gitname="Slider"
+source=("$_gitname::git://github.com/TrilbyWhite/Slider.git")
+sha256sums=('SKIP')
+
+pkgver() {
+	cd "${srcdir}/$_gitname";
+	echo 1.$(git rev-list --count HEAD).$(git describe --always )
+}
+
+prepare() {
+	if [[ -f ${startdir}/config.h ]]; then
+		cp ${startdir}/config.h ${srcdir}/config.h
+		msg "Using configuration from ${startdir}/config.h"
+	else
+		msg "Using default configuration"
+	fi
+}
 
 build() {
-    cd "$srcdir"
-    msg "Connecting to GIT server...."
-    if [ -d $_gitname ] ; then
-        cd $_gitname && git pull origin
-        msg "The local files are updated."
-    else
-        git clone $_gitroot $_gitname
-    fi
-    msg "GIT checkout done or server timeout"
-    msg "Starting make..."
-    rm -rf "$srcdir/$_gitname-build"
-    git clone "$srcdir/$_gitname" "$srcdir/$_gitname-build"
-    cd "$srcdir/$_gitname-build"
+	cd ${_gitname}
 	make
 }
 
 package() {
-	cd "$srcdir/$_gitname-build"
-	make PREFIX=/usr DESTDIR=$pkgdir install
+	cd ${_gitname}
+	make DESTDIR="${pkgdir}" PREFIX=/usr install
 }
-

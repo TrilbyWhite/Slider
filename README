@@ -1,56 +1,42 @@
-Slider
-======
 
-PDF presentation program
+Slider has been reborn!
 
-Partially inspired by Impressive but coded entirely separately from scratch in pure C.
+Slider has been entirely recoded from scratch with many design choices informed by the after-the-fact adjustments I had to make in the previous version(s).
 
-Dependencies: poppler-glib
+The presenter mode tools (previous `Slipper`) have been incorporated into the main program.  Slider will now detect whether multiple screens are configured and display presenter notes on the local screen while the presentation is sent to the highest numbered monitor.
 
-Usage: slider [options] <pdf-filename>
-  options: -f  to *not* start in fullscreen mode.
+USAGE:
+	slider [-sN] [-pN] [-gWxH+X+Y [-gWxH+X+Y [-gWxH+X+Y [-gWxH+X+Y]]]] <presentation.pdf> [<notes.pdf>]
 
-See discussion here: https://bbs.archlinux.org/viewtopic.php?id=147952
+	-sN		Scales the primary view in presenter mode to N times larger than secondary views (default=1.8).  This is ignored if you specify any geometry strings.  Good values for default geometries range from 1.75-3 for presentations with separate notes, or 0.5-3 for presentations alone.
 
-Controls (default):
-===================
+	-pN		Prerenders N slides (default=1).  Rendering proceeds faster if the presentation is "prerendered", but then you have to wait for it to complete before interacting with slider.  For very large presentations, it may be useful to prerender many/all slides.  If N anything other than a positive integer, all slides are prerendered.
 
-Presentation mode:
-	<Arrow Keys>    - move as expected to advance or go back one slide
-	<Space>         - advance one slide
-	Tab             - change to overview mode
-	Alt+q           - exits.
-	b               - black mute
-	w               - white mute
-	f               - toggle fullscreen
-	z				- Zoom*
-	#1-9			- Drawing pens
-	r | <ENTER>     - redraw (unmute)
-	Left mouse      - move forward one slide
-	Right mouse     - move backward one slide
-	Middle mouse    - change to overview mode
+	-g		Geometry strings for view panes in presenter mode.  Set the width, height, and location of up to 4 panels with a notes.pdf or 3 panels without.  Panels display the following items on the local screen:
 
-Overview mode: ("slide sorter")
-	<Arrow Keys>    - navigate slides as expected
-	Left mouse      - select a slide
-	Middle mouse    - return to presentation mode
-	Right mouse     - select slider and return to presentation
-	r | <ENTER>     - return to presentation mode
+		PANEL #		DISPLAY w/Notes		DISPLAY w/o
+		1			Notes slide			Current slide
+		2			Current slide		Next slide
+		3			Next slide			Previous slide
+		4			Previous slide		N/A
 
-*You can only zoom once the rendering thread is complete.  If you try to zoom
-before rendering is complete you will get a 'warning' flash on the border of the
-slide.  Once rendered, hit "z" then select a rectangle to zoom in on with the
-mouse.
+		In the absense of geometry strings, what should be a useful default is selected based on whether a notes.pdf was provided.  Defaults can be adjusted with the -sN scaling factor.
 
-Slipper
-=======
+	<presentation.pdf>
+			Required pdf to display
 
-PDF presenter mode
+	<notes.pdf>
+			Optional pdf for presenter-mode notes.
 
-Usage: slipper [options] <data-filename|pdf-filename>
 
-If passed a pdf file, slipper will use default options to open a connection with an external monitor or projector, launch slider with the pdf on the external monitor, and run in presentor mode on the local screen.
+---------------
 
-For best results, however, slipper should be passed a slipper data file formatted as outlined in the example slipper.dat file that is distributed with this package.
+Several features have been removed in the new version.  Most of these are absent only because I recoded the new version from scratch and simply have not reimplemented them yet.  Features that will definitely return include:
 
-This data file allows for customization of various options, and allows for the presentation of notes on the presenter mode (local) screen.
+1) Zoom: both free zooming and locked-aspect-ratio zooming.
+
+Features that may return in a different form:
+
+1) Pens: I'd like to redo these using Cairo drawing functions to allow for prettier antialiased line drawing.
+
+
