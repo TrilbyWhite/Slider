@@ -38,9 +38,13 @@ static void move(const char *);
 static void mute(const char *);
 static void overview(const char *);
 static void quit(const char *);
+static void rectangle(const char *);
+static void zoom(const char *);
 
 static Window wshow, wnote;
 static Pixmap bshow, bnote;
+static Cursor invisible_cursor, crosshair_cursor;
+static XRectangle r;
 static int mode = RUNNING, v1 = 1;
 static Show *show;
 static Bool muted = False;
@@ -287,11 +291,12 @@ void init_X() {
 	XRRFreeScreenResources(xrr_sr);
 	/* Graphic context */
 	gc = DefaultGC(dpy,scr);
+	XSetLineAttributes(dpy,gc,2,LineSolid,CapButt,JoinRound);
 	XColor color;
 	char cursor_data = 0;
 	Pixmap curs_map = XCreateBitmapFromData(dpy,wshow,&cursor_data,1,1);
-	Cursor invisible_cursor = XCreatePixmapCursor(dpy,curs_map,curs_map,
-			&color,&color,0,0);
+	invisible_cursor = XCreatePixmapCursor(dpy,curs_map,curs_map,&color,&color,0,0);
+	crosshair_cursor = XCreateFontCursor(dpy,XC_crosshair);
 	XDefineCursor(dpy,wshow,invisible_cursor);
 	XMapWindow(dpy,wshow);
 	XFlush(dpy);
@@ -354,6 +359,46 @@ void quit(const char *arg) {
 	mode &= ~RUNNING;
 }
 
+void rectangle(const char *arg) {
+	XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
+	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
+	XDefineCursor(dpy,wshow,crosshair_cursor);
+	XFlush(dpy);
+	XEvent ev; XButtonEvent *e; Bool on = False;
+	memset(&r,0,sizeof(XRectangle));
+	while (!XNextEvent(dpy,&ev)) {
+		if (ev.type == KeyPress) break;
+		if (ev.type == ButtonPress) {
+			e = &ev.xbutton;
+			if (on) break;
+			r.x = e->x_root; r.y = e->y_root;
+			XGrabPointer(dpy,root,True,PointerMotionMask | ButtonPressMask,
+					GrabModeAsync,GrabModeAsync,None,None,CurrentTime);
+			on = True;
+		}
+		if (ev.type == MotionNotify && on) {
+			e = &ev.xbutton;
+			r.width = e->x_root - r.x; r.height = e->y_root - r.y;
+			if (arg && r.width && r.height) {
+				if (r.width/r.height < show->w/show->h)
+					r.width = r.height*show->w/show->h;
+				else
+					r.height = r.width*show->h/show->w;
+			}
+			XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
+			XDrawRectangle(dpy,wshow,cgc(Highlight),r.x,r.y,r.width,r.height);
+		}
+		XFlush(dpy);
+	}
+	XUngrabPointer(dpy,CurrentTime);
+	XDefineCursor(dpy,wshow,invisible_cursor);
+	XFlush(dpy);
+}
+
+void zoom(const char *arg) {
+	rectangle(arg);
+	// TODO zoom in to x1,y1 x2,y2
+}
 
 int main(int argc, const char **argv) {
 	command_line(argc,argv);
