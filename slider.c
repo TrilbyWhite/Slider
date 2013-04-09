@@ -396,8 +396,41 @@ void rectangle(const char *arg) {
 }
 
 void zoom(const char *arg) {
+	if (!(show->flag[show->count-1] & RENDERED)) {
+		// TODO warn;
+		return;
+	}
 	rectangle(arg);
-	// TODO zoom in to x1,y1 x2,y2
+	r.x-=5; r.y-=5; r.width+=10; r.height+=10;
+	int w,h;
+	if (arg) { w = show->w; h = show->h; }
+	else { w = sw; h = sh; }
+	Pixmap b = XCreatePixmap(dpy,wshow,w,h,DefaultDepth(dpy,scr));
+	XFillRectangle(dpy,b,cgc(SlideBG),0,0,w,h);
+
+	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
+	double pdfw, pdfh;
+	poppler_page_get_size(page,&pdfw,&pdfh);
+
+	cairo_surface_t *t=cairo_xlib_surface_create(dpy,b,DefaultVisual(dpy,scr),w,h);
+	cairo_t *c = cairo_create(t);
+	double xs = (double)(show->w*w)/(pdfw*(double)r.width);
+	double ys = (double)(show->h*h)/(pdfh*(double)r.height);
+	double xo = (double)(show->x - r.x)*(xs/show->scale);
+	double yo = (double)(show->y - r.y)*(ys/show->scale);
+	
+	cairo_translate(c,xo,yo);
+	cairo_scale(c,xs,ys);
+	
+	poppler_page_render(page,c);
+
+	cairo_surface_destroy(t);
+	cairo_destroy(c);
+	XFillRectangle(dpy,wshow,cgc(ScreenBG),0,0,sw,sh);
+	XCopyArea(dpy,b,wshow,gc,0,0,w,h,(sw-w)/2,(sh-h)/2);
+	XFreePixmap(dpy,b);
+	XFlush(dpy);
 }
 
 int main(int argc, const char **argv) {
