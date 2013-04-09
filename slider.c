@@ -120,7 +120,7 @@ static inline char *get_uri(const char *arg) {
 }
 
 void command_line(int argc, const char **argv) {
-	prerender = 1;
+	prerender = 2;
 	int i, nv = 0, n;
 	float f;
 	show = (Show *) calloc(1,sizeof(Show));

@@ -103,14 +103,15 @@ void *render_threaded(void *arg) {
 void render(Show *show) {
 	pthread_t show_render, note_render;
 	pthread_create(&show_render,NULL,&render_threaded,(void *) show);
-	while (!(show->flag)) usleep(5000);
-	if (prerender == 0 || prerender >= show->count) prerender = show->count - 1;
-	while (!(show->flag[(prerender>0?prerender:1)-1] & RENDERED)) usleep(50000);
-
-	if (show->notes && show->notes->uri) {
+	if (show->notes && show->notes->uri)
 		pthread_create(&note_render,NULL,render_threaded,(void *) show->notes);
-		while (!(show->notes->flag)) usleep(5000);
-		while (!(show->notes->flag[1] & RENDERED)) usleep(50000);
+	while (!(show->flag)) usleep(5000);
+	if (prerender == 0 || prerender > show->count) prerender = show->count;
+	while (!(show->flag[(prerender>0?prerender:1)-1] & RENDERED)) usleep(50000);
+	if (show->notes && show->notes->uri) {
+		if (prerender > show->notes->count) prerender = show->count;
+		while (!(show->notes->flag[(prerender>0?prerender:1)-1] & RENDERED))
+			usleep(50000);
 	}
 }
 
