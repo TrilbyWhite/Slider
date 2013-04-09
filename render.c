@@ -105,7 +105,7 @@ void render(Show *show) {
 	pthread_create(&show_render,NULL,&render_threaded,(void *) show);
 	while (!(show->flag)) usleep(5000);
 	if (prerender == 0 || prerender >= show->count) prerender = show->count - 1;
-	while (!(show->flag[(prerender>0?prerender:1)] & RENDERED)) usleep(50000);
+	while (!(show->flag[(prerender>0?prerender:1)-1] & RENDERED)) usleep(50000);
 
 	if (show->notes && show->notes->uri) {
 		pthread_create(&note_render,NULL,render_threaded,(void *) show->notes);
