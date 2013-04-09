@@ -11,6 +11,7 @@ static const char colors[][9] = {
 static Key keys[] = {
 	{ ControlMask,		XK_q,		quit,		NULL		},
 	{ 0,				XK_Tab,		overview,	NULL		},
+	{ 0,				XK_Return,	draw,		NULL		},
 	{ 0,				XK_space,	move,		"right"		},
 	{ 0,				XK_Right,	move,		"right"		},
 	{ 0,				XK_Left,	move,		"left"		},

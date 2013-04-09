@@ -40,8 +40,8 @@ void *render_threaded(void *arg) {
 		show->sorter->scale = (vsc > hsc ? hsc : vsc);
 		show->sorter->h = pdfh * show->sorter->scale;
 		show->sorter->w = pdfw * show->sorter->scale;
-		show->sorter->x = (sw - (show->sorter->w+10)*grid)/2;
-		show->sorter->y = (sh - (show->sorter->h+10)*grid)/2;
+		show->sorter->x = (sw - (show->sorter->w+10)*grid + 10)/2;
+		show->sorter->y = (sh - (show->sorter->h+10)*grid + 10)/2;
 		/* create empty sorter frame */
 		thumb = XCreatePixmap(dpy,root,show->sorter->w,
 				show->sorter->h,DefaultDepth(dpy,scr));
@@ -49,7 +49,7 @@ void *render_threaded(void *arg) {
 				DefaultDepth(dpy,scr));
 		XFillRectangle(dpy,show->sorter->slide[0],cgc(ScreenBG),0,0,sw,sh);
 		cgc(SlideBG);
-		n = 0; y = 10;
+		n = 0; y = show->sorter->y;
 		for (i = 0; i < grid; i++, y += show->sorter->h + 10) {
 			x = show->sorter->x;
 			for (j = 0; j < grid; j++, x+= show->sorter->w + 10) {
@@ -62,7 +62,8 @@ void *render_threaded(void *arg) {
 	/* render pages */
 	cairo_surface_t *target;
 	cairo_t *cairo;
-	n = 0; x = (show->sorter ? (sw-grid*(show->sorter->w+10))/2 : 0); y = 10;
+	n = 0; x = (show->sorter ? show->sorter->x : 0);
+	y = (show->sorter ? show->sorter->y : 0);
 	for (i = 0; i < show->count; i++) {
 		show->slide[i] = XCreatePixmap(dpy,root,show->w,show->h,
 				DefaultDepth(dpy,scr));
@@ -90,7 +91,7 @@ void *render_threaded(void *arg) {
 			x += show->sorter->w + 10;
 			if (++n == grid) {
 				n = 0;
-				x = (sw-grid*(show->sorter->w+10))/2;
+				x = show->sorter->x;
 				y += show->sorter->h + 10;
 			}
 		}

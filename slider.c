@@ -181,6 +181,7 @@ static inline void draw_view(Show *set,int vnum, int snum) {
 }
 
 void draw(const char *arg) {
+	if (mode & OVERVIEW) mode &= ~OVERVIEW;
 	/* draw show */
 	XFillRectangle(dpy,bshow,cgc(ScreenBG),0,0,sw,sh);
 	if (!muted) {
@@ -322,6 +323,7 @@ void move(const char *arg) {
 		if (show->cur < 0) show->cur = 0;
 		while (show->cur > show->count || !(show->flag[show->cur] & RENDERED))
 			show->cur--;
+		overview(NULL);
 	}
 	else {
 		if (arg[0] == 'd' || arg[0] == 'r') show->cur++;
@@ -347,12 +349,17 @@ void mute(const char *arg) {
 }
 
 void overview(const char *arg) {
+	mode |= OVERVIEW;
 	XDefineCursor(dpy,wshow,None);
 	XLockDisplay(dpy);
 	XCopyArea(dpy,show->sorter->slide[0],wshow,gc,0,0,sw,sh,0,0);
 	XUnlockDisplay(dpy);
+	int grid = show->sorter->flag[0];
+	int x = show->sorter->x + (show->cur % grid) * (show->sorter->w+10);
+	int y = show->sorter->y + (int)(show->cur/grid) * (show->sorter->h+10);
+	XDrawRectangle(dpy,wshow,cgc(Highlight),x-1,y-1,
+		show->sorter->w+2,show->sorter->h+2);
 	XFlush(dpy);
-	// TODO
 }
 
 void quit(const char *arg) {
