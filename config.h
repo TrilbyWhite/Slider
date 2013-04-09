@@ -26,11 +26,11 @@ static Key keys[] = {
 	{ ShiftMask,		XK_r,		rectangle,	"lock"		},
 	/* pen parameters in order: "w r,g,b a"
 		w: integer width, r,g,b,a: double (0-1) values for color */
-	{ 0,				XK_1,		polka,		"40 0,0.25,0.5 0.5"	},
-	{ 0,				XK_2,		polka,		"40 1,0.75,0.1 0.4"	},
+	{ 0,				XK_1,		polka,		"40 0,0.25,0.5 0.7"	},
+	{ 0,				XK_2,		polka,		"40 1,1,0.1 0.5"	},
 	{ 0,				XK_3,		polka,		"40 1,0,0 0.3"		},
-	{ 0,				XK_4,		polka,		"10 0,0.25,0.5 0.5"	},
-	{ 0,				XK_5,		polka,		"10 1,0.75,0.1 0.4"	},
+	{ 0,				XK_4,		polka,		"10 0,0.25,0.5 0.7"	},
+	{ 0,				XK_5,		polka,		"10 1,1,0.1 0.5"	},
 	{ 0,				XK_6,		polka,		"10 1,0,0 0.3"		},
 	{ 0,				XK_F1,		pen,		"4 1,0,0 0.9"	},
 	{ 0,				XK_F2,		pen,		"8 1,0,0 0.7"	},
