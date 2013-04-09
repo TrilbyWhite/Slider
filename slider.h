@@ -17,7 +17,7 @@
 
 #define RENDERED	0x0001
 
-enum { Black, White, ScreenBG, SlideBG, Empty, Highlight };
+enum { Black, White, ScreenBG, SlideBG, Empty, Highlight, Warn };
 
 typedef struct Show Show;
 struct Show {		// CREATE/FREE

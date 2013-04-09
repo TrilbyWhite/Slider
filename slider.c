@@ -36,9 +36,12 @@ static void init_X();
 static void keypress(XEvent *);
 static void move(const char *);
 static void mute(const char *);
+static void pen(const char *);
+static void polka(const char *);
 static void overview(const char *);
 static void quit(const char *);
 static void rectangle(const char *);
+static void warn();
 static void zoom(const char *);
 
 static Window wshow, wnote;
@@ -181,7 +184,10 @@ static inline void draw_view(Show *set,int vnum, int snum) {
 }
 
 void draw(const char *arg) {
-	if (mode & OVERVIEW) mode &= ~OVERVIEW;
+	if (mode & OVERVIEW) {
+		mode &= ~OVERVIEW;
+		XDefineCursor(dpy,wshow,invisible_cursor);
+	}
 	/* draw show */
 	XFillRectangle(dpy,bshow,cgc(ScreenBG),0,0,sw,sh);
 	if (!muted) {
@@ -362,6 +368,99 @@ void overview(const char *arg) {
 	XFlush(dpy);
 }
 
+void pen(const char *arg) {
+	int w; double r,g,b,a;
+	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&r,&g,&b,&a);
+	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
+	XDefineCursor(dpy,wshow,crosshair_cursor);
+	XFlush(dpy);
+	XEvent ev; XButtonEvent *e; Bool on = False;
+	int x=0,y=0;
+//int px=0,py=0;
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
+	cairo_t *c = cairo_create(t);
+	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
+	cairo_set_source_rgba(c,r,g,b,a);
+	cairo_set_line_width(c,w);
+Pixmap pbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
+XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
+	while (!XNextEvent(dpy,&ev)) {
+		if (ev.type == KeyPress) {
+			XPutBackEvent(dpy,&ev);
+			break;
+		}
+		if (ev.type == ButtonPress) {
+			e = &ev.xbutton;
+			x = e->x_root; y = e->y_root;
+			cairo_move_to(c,x,y);
+			XGrabPointer(dpy,root,True,PointerMotionMask | ButtonReleaseMask,
+					GrabModeAsync,GrabModeAsync,None,None,CurrentTime);
+			on = True;
+		}
+		if (ev.type == MotionNotify) {
+			if (!on) continue;
+			e = &ev.xbutton;
+			x = e->x_root; y = e->y_root;
+			cairo_line_to(c,x,y);
+			cairo_stroke_preserve(c);
+		}
+		if (ev.type == ButtonRelease) {
+			on = False;
+XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
+			cairo_stroke(c);
+XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
+			XUngrabPointer(dpy,CurrentTime);
+		}
+	}
+	cairo_surface_destroy(t);
+	cairo_destroy(c);
+	XDefineCursor(dpy,wshow,invisible_cursor);
+	XFreePixmap(dpy,pbuf);
+	XFlush(dpy);
+}
+
+void polka(const char *arg) {
+	int w; double r,g,b,a;
+	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&r,&g,&b,&a);
+	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
+	XFlush(dpy);
+	XEvent ev; XButtonEvent *e;
+Pixmap cbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
+Pixmap pbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
+XCopyArea(dpy,wshow,cbuf,gc,0,0,sw,sh,0,0);
+XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,pbuf,
+			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
+	cairo_t *c = cairo_create(t);
+	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
+	cairo_set_source_rgba(c,r,g,b,a);
+	XGrabPointer(dpy,root,True,PointerMotionMask | ButtonReleaseMask,
+			GrabModeAsync,GrabModeAsync,None,None,CurrentTime);
+	cairo_arc(c,sw/2,sh/2,(double)w,0,2*M_PI);
+	cairo_fill(c);
+XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
+	while (!XNextEvent(dpy,&ev)) {
+		if (ev.type == KeyPress) {
+			XPutBackEvent(dpy,&ev);
+			break;
+		}
+		if (ev.type == MotionNotify) {
+			e = &ev.xbutton;
+XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
+			cairo_arc(c,e->x_root,e->y_root,(double)w,0,2*M_PI);
+			cairo_fill(c);
+XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
+		}
+	}
+	cairo_surface_destroy(t);
+	cairo_destroy(c);
+	XUngrabPointer(dpy,CurrentTime);
+	XFreePixmap(dpy,pbuf);
+	XFreePixmap(dpy,cbuf);
+	draw(NULL);
+}
+
 void quit(const char *arg) {
 	mode &= ~RUNNING;
 }
@@ -402,36 +501,44 @@ void rectangle(const char *arg) {
 	XFlush(dpy);
 }
 
+void warn() {
+	Window w = wshow;
+	if (swnote && shnote) w = wnote;
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,w,DefaultVisual(dpy,scr),
+			sw+swnote,sh+shnote);
+	cairo_t *c = cairo_create(t);
+	cairo_pattern_t *p = cairo_pattern_create_rgb(1,0,0);
+	cairo_set_source(c,p);
+	cairo_paint_with_alpha(c,0.5);
+	cairo_surface_destroy(t); cairo_pattern_destroy(p); cairo_destroy(c);
+	XFlush(dpy);
+	usleep(500000);
+	draw(NULL);
+}
+
 void zoom(const char *arg) {
-	if (!(show->flag[show->count-1] & RENDERED)) {
-		// TODO warn;
-		return;
-	}
+	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	rectangle(arg);
+	if (r.width < 20 || r.height < 20) { warn(); return; }
 	r.x-=5; r.y-=5; r.width+=10; r.height+=10;
 	int w,h;
 	if (arg) { w = show->w; h = show->h; }
 	else { w = sw; h = sh; }
 	Pixmap b = XCreatePixmap(dpy,wshow,w,h,DefaultDepth(dpy,scr));
 	XFillRectangle(dpy,b,cgc(SlideBG),0,0,w,h);
-
 	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
 	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
 	double pdfw, pdfh;
 	poppler_page_get_size(page,&pdfw,&pdfh);
-
 	cairo_surface_t *t=cairo_xlib_surface_create(dpy,b,DefaultVisual(dpy,scr),w,h);
 	cairo_t *c = cairo_create(t);
 	double xs = (double)(show->w*w)/(pdfw*(double)r.width);
 	double ys = (double)(show->h*h)/(pdfh*(double)r.height);
 	double xo = (double)(show->x - r.x)*(xs/show->scale);
 	double yo = (double)(show->y - r.y)*(ys/show->scale);
-	
 	cairo_translate(c,xo,yo);
 	cairo_scale(c,xs,ys);
-	
 	poppler_page_render(page,c);
-
 	cairo_surface_destroy(t);
 	cairo_destroy(c);
 	XFillRectangle(dpy,wshow,cgc(ScreenBG),0,0,sw,sh);
