@@ -1,3 +1,5 @@
+/*  SLIDER by Jesse McClure, Copyright 2012-2013
+	See COPYING for license information */
 
 #include "slider.h"
 
