@@ -50,7 +50,7 @@ static Cursor invisible_cursor, crosshair_cursor;
 static XRectangle r;
 static int mode = RUNNING, v1 = 1;
 static Show *show;
-static Bool muted = False;
+static Bool muted = False, lock_zoom = False;
 static View *view;
 static float pscale = 1.8;
 #include "config.h"
@@ -136,6 +136,7 @@ void command_line(int argc, const char **argv) {
 						&view[nv].w,&view[nv].h,&view[nv].x,&view[nv].y))
 					nv++;
 				if (nv >= MAX_VIEW) nv = MAX_VIEW - 1;
+
 			}
 			else if (argv[i][1] == 's') {
 				if (sscanf(argv[i],"-s%f",&f) == 1) pscale = f;
@@ -175,12 +176,15 @@ static inline void draw_view(Show *set,int vnum, int snum) {
 	View *v = &view[vnum];
 	XFillRectangle(dpy,v->buf,cgc(ScreenBG),0,0,2*set->w,2*set->h);
 	int n = (snum > 0 ? snum : 0);
-	if ( !(n<set->count && (set->flag[n]&RENDERED)) )
-		XFillRectangle(dpy,v->buf,cgc(Empty),80,80,set->w-160,set->h-160);
-	else
+	if ( n<set->count && (set->flag[n]&RENDERED) ) {
 		XCopyArea(dpy, set->slide[n], v->buf,gc,0,0,set->w,set->h,0,0);
-	cairo_set_source_surface(v->cairo,v->src_c,0,0);
-	cairo_paint(v->cairo);
+		cairo_set_source_surface(v->cairo,v->src_c,0,0);
+		cairo_paint(v->cairo);
+	}
+	else {
+		cairo_rectangle(v->cairo,40,40,v->w-80,v->h-80);
+		cairo_fill(v->cairo);
+	}
 }
 
 void draw(const char *arg) {
@@ -238,6 +242,12 @@ void init_views() {
 				(float) v->h / (i ? show->h : show->notes->h) );
 		v->src_c = cairo_xlib_surface_create(dpy,v->buf,DefaultVisual(dpy,scr),
 				show->w,show->h);
+		cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+				DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
+		cairo_t *c = cairo_create(t);
+		cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
+		cairo_set_source_rgba(c,1,1,1,0.5);
+		cairo_set_line_width(c,10);
 	}
 }
 
@@ -363,30 +373,43 @@ void overview(const char *arg) {
 	int grid = show->sorter->flag[0];
 	int x = show->sorter->x + (show->cur % grid) * (show->sorter->w+10);
 	int y = show->sorter->y + (int)(show->cur/grid) * (show->sorter->h+10);
-	XDrawRectangle(dpy,wshow,cgc(Highlight),x-1,y-1,
-		show->sorter->w+2,show->sorter->h+2);
-	XFlush(dpy);
+
+	int w; double R,G,B,A;
+	sscanf(OVERVIEW_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
+	cairo_t *c = cairo_create(t);
+	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
+	cairo_set_source_rgba(c,R,G,B,A);
+	cairo_set_line_width(c,w);
+	cairo_rectangle(c,x,y,show->sorter->w,show->sorter->h);
+	cairo_stroke(c);
+	cairo_surface_destroy(t);
+	cairo_destroy(c);
 }
 
 
-static void pen_polka_common(const char *arg, Bool polka) {
-	int w; double r,g,b,a; Drawable d;
-	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&r,&g,&b,&a);
+#define PEN		0
+#define POLKA	1
+#define RECT	2
+static void pen_polka_rect(const char *arg, int type) {
+	int w; double R,G,B,A; Drawable d;
+	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
 	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
-	if (!polka) XDefineCursor(dpy,wshow,crosshair_cursor);
+	if (type != POLKA) XDefineCursor(dpy,wshow,crosshair_cursor);
 	XEvent ev; Bool on = False;
 	Pixmap pbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
 	Pixmap cbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
 	XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
 	XCopyArea(dpy,wshow,cbuf,gc,0,0,sw,sh,0,0);
-	if (polka) d = pbuf; else d = wshow;
+	if (type == PEN) d = wshow; else d = pbuf;
 	cairo_surface_t *t = cairo_xlib_surface_create(dpy,d,
 			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
-	cairo_set_source_rgba(c,r,g,b,a);
+	cairo_set_source_rgba(c,R,G,B,A);
 	cairo_set_line_width(c,w);
-	if (polka) {
+	if (type == POLKA) {
 		cairo_arc(c,sw/2,sh/2,(double)w,0,2*M_PI);
 		cairo_fill(c);
 		XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
@@ -394,30 +417,36 @@ static void pen_polka_common(const char *arg, Bool polka) {
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
 			ButtonReleaseMask,GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
 	while (!XNextEvent(dpy,&ev)) {
-		if (ev.type == KeyPress) {
-			XPutBackEvent(dpy,&ev);
-			break;
-		}
-		if (!polka && ev.type == ButtonPress) {
-			cairo_move_to(c,ev.xbutton.x,ev.xbutton.y);
+		if (ev.type == KeyPress) { XPutBackEvent(dpy,&ev); break; }
+		else if (type != POLKA && ev.type == ButtonPress) {
+			r.x = ev.xbutton.x; r.y = ev.xbutton.y;
+			cairo_move_to(c,r.x,r.y);
 			on = True;
 		}
-		if (!polka && ev.type == MotionNotify && on) {
+		else if (type == PEN && ev.type == MotionNotify && on) {
 			cairo_line_to(c,ev.xbutton.x,ev.xbutton.y);
 			cairo_stroke_preserve(c);
 		}
-		if (polka && ev.type == MotionNotify) {
+		else if (type == POLKA && ev.type == MotionNotify) {
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			cairo_arc(c,ev.xbutton.x,ev.xbutton.y,(double)w,0,2*M_PI);
 			cairo_fill(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
-		if (!polka && ev.type == ButtonRelease) {
+		else if (type == RECT && ev.type == MotionNotify && on) {
+			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
+			r.width = ev.xbutton.x - r.x; r.height = ev.xbutton.y - r.y;
+			cairo_rectangle(c,r.x,r.y,r.width,r.height);
+			cairo_stroke(c);
+			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
+		}
+		else if (type == PEN && ev.type == ButtonRelease) {
 			on = False;
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 			cairo_stroke(c);
 			XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
 		}
+		else if (type == RECT && ev.type == ButtonRelease) { break; }
 	}
 	XUngrabPointer(dpy,CurrentTime);
 	cairo_surface_destroy(t);
@@ -425,50 +454,17 @@ static void pen_polka_common(const char *arg, Bool polka) {
 	XDefineCursor(dpy,wshow,invisible_cursor);
 	XFreePixmap(dpy,pbuf);
 	XFreePixmap(dpy,cbuf);
-	if (polka) draw(NULL);
+	if (type == POLKA) draw(NULL);
 	else XFlush(dpy);
 }
 
-void pen(const char *arg) { pen_polka_common(arg, False); }
+void pen(const char *arg) { pen_polka_rect(arg, PEN); }
 
-void polka(const char *arg) { pen_polka_common(arg, True); }
+void polka(const char *arg) { pen_polka_rect(arg, POLKA); }
 
 void quit(const char *arg) { mode &= ~RUNNING; }
 
-void rectangle(const char *arg) {
-//TODO add double buffering
-	XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
-	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
-	XDefineCursor(dpy,wshow,crosshair_cursor);
-	XFlush(dpy);
-	XEvent ev; Bool on = False;
-	memset(&r,0,sizeof(XRectangle));
-	XGrabPointer(dpy,wshow,True,PointerMotionMask | ButtonPressMask,
-			GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
-	while (!XNextEvent(dpy,&ev)) {
-		if (ev.type == KeyPress) break;
-		if (ev.type == ButtonPress) {
-			if (on) break;
-			r.x = ev.xbutton.x; r.y = ev.xbutton.y;
-			on = True;
-		}
-		if (ev.type == MotionNotify && on) {
-			r.width = ev.xbutton.x - r.x; r.height = ev.xbutton.y - r.y;
-			if (arg && r.width && r.height) {
-				if (r.width/r.height < show->w/show->h)
-					r.width = r.height*show->w/show->h;
-				else
-					r.height = r.width*show->h/show->w;
-			}
-			XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
-			XDrawRectangle(dpy,wshow,cgc(Highlight),r.x,r.y,r.width,r.height);
-		}
-		XFlush(dpy);
-	}
-	XUngrabPointer(dpy,CurrentTime);
-	XDefineCursor(dpy,wshow,invisible_cursor);
-	XFlush(dpy);
-}
+void rectangle(const char *arg) { pen_polka_rect(arg, RECT); }
 
 void warn() {
 	Window w = wshow;
@@ -487,7 +483,8 @@ void warn() {
 
 void zoom(const char *arg) {
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
-	rectangle(arg);
+	if (arg) lock_zoom = True; else lock_zoom = False;
+	pen_polka_rect(ZOOM_RECT, RECT);
 	if (r.width < 20 || r.height < 20) { warn(); return; }
 	r.x-=5; r.y-=5; r.width+=10; r.height+=10;
 	int w,h;

@@ -17,7 +17,7 @@
 
 #define RENDERED	0x0001
 
-enum { Black, White, ScreenBG, SlideBG, Empty, Highlight, Warn };
+enum { Black, White, ScreenBG, SlideBG, Empty };
 
 typedef struct Show Show;
 struct Show {		// CREATE/FREE
@@ -36,8 +36,7 @@ void free_renderings(Show *);
 GC cgc(int);
 
 Display *dpy;
-int scr, sw, sh, swnote, shnote;
-int prerender;
+int scr, sw, sh, swnote, shnote, prerender;
 Window root;
 GC gc;
 
