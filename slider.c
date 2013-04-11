@@ -289,13 +289,22 @@ void init_X() {
 	XRROutputInfo *xrr_out_info = NULL;
 	XRRCrtcInfo *xrr_crtc_info;
 	swnote = 0; shnote = 0;
-	int i = xrr_sr->ncrtc;
-	while ( --i > -1 ) {
-		xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
-		if (xrr_out_info->crtc) break;
-		XRRFreeOutputInfo(xrr_out_info);
+	int i, low=-1, hi=-1;
+
+for (i = 0; i < xrr_sr->ncrtc; i++) {
+	xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
+	if (xrr_out_info->crtc) {
+		if (low == -1) low = i;
+		else hi = i;
 	}
+	XRRFreeOutputInfo(xrr_out_info);
+}
 	/* Presentation monitor */
+	if (hi == -1) {
+		if (low == -1) die("No monitors detected\n");
+		hi = low; low = -1;
+	}
+	xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[hi]);
 	xrr_crtc_info = XRRGetCrtcInfo(dpy,xrr_sr,xrr_out_info->crtc);
 	sw = xrr_crtc_info->width;
 	sh = xrr_crtc_info->height;
@@ -308,9 +317,9 @@ void init_X() {
 	XStoreName(dpy,wshow,"Slider");
 	XChangeWindowAttributes(dpy,wshow,CWEventMask|CWOverrideRedirect,&wa);
 	/* Notes monitor */
-	if (i) {
-		xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[0]);
-		if (!xrr_out_info->crtc) die("No RandR info for screen 1\n");
+	if (low != -1) {
+		xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[low]);
+		if (!xrr_out_info->crtc) die("No RandR info for monitor %d\n",low);
 		xrr_crtc_info = XRRGetCrtcInfo(dpy,xrr_sr,xrr_out_info->crtc);
 		swnote = xrr_crtc_info->width;
 		shnote = xrr_crtc_info->height;
