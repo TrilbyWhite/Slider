@@ -9,7 +9,7 @@ USAGE:
 
 	-c		Continous loop mode.  When the presentation finishes, it will loop back to slide number one.
 
-	-aN		Autoplay mode.  Slides will advance automatically at intervals of N seconds.  If N is not specified, a default of 30 is used. (NOT YET IMPLEMENTED)
+	-aN		Autoplay mode.  Slides will advance automatically at intervals of N seconds.  If N is not specified, a default of 30 is used.
 
 	-sN		Scales the primary view in presenter mode to N times larger than secondary views (default=1.8).  This is ignored if you specify any geometry strings.  Good values for default geometries range from 1.75-3 for presentations with separate notes, or 0.5-3 for presentations alone.
 

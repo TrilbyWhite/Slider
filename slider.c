@@ -72,7 +72,7 @@ static Window wshow, wnote;
 static Pixmap bshow, bnote;
 static Cursor invisible_cursor, crosshair_cursor;
 static XRectangle r;
-static int mode = RUNNING, v1 = 1, delay = 30;
+static int mode = RUNNING, v1 = 1, delay = 10;
 static Show *show;
 static Bool muted = False, lock_zoom = False;
 static View *view;
@@ -587,9 +587,24 @@ int main(int argc, const char **argv) {
 	init_views();
 	draw(NULL);
 	XEvent ev;
-	while ( (mode & RUNNING) && !XNextEvent(dpy,&ev) ) {
-		if (ev.type > 32) continue;
-		if (handler[ev.type]) handler[ev.type](&ev);
+	int xfd = ConnectionNumber(dpy);
+	time_t now = time(NULL);
+	struct timeval timeout;
+	fd_set fds;
+	while (mode & RUNNING) {
+		FD_ZERO(&fds); FD_SET(xfd,&fds);
+		memset(&timeout,0,sizeof(struct timeval));
+		timeout.tv_sec = delay;
+		select(xfd+1,&fds,0,0,(mode & AUTOPLAY ? &timeout : NULL));
+		if (FD_ISSET(xfd,&fds)) while (XPending(dpy)) {
+			XNextEvent(dpy,&ev);
+			if (ev.type < 33 && handler[ev.type])
+				handler[ev.type](&ev);
+		}
+		if ( (mode & AUTOPLAY) && (now + delay <= time(NULL)) ) {
+			now = time(NULL);
+			move("right");
+		}
 	}
 	cleanup();
 	return 0;
