@@ -77,6 +77,7 @@ static Show *show;
 static Bool muted = False, lock_zoom = False;
 static View *view;
 static float pscale = 1.8;
+static char *monShow = NULL, *monNote = NULL;
 #include "config.h"
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
@@ -134,6 +135,8 @@ void cleanup() {
 	XFreePixmap(dpy,bshow);
 	XDestroyWindow(dpy,wnote);
 	XDestroyWindow(dpy,wshow);
+	if (monShow) free(monShow);
+	if (monNote) free(monNote);
 }
 
 static inline char *get_uri(const char *arg) {
@@ -149,6 +152,7 @@ static inline char *get_uri(const char *arg) {
 void command_line(int argc, const char **argv) {
 	prerender = 2;
 	int i, nv = 0, n;
+	char s1[25],s2[25];
 	float f;
 	show = (Show *) calloc(1,sizeof(Show));
 	show->sorter = (Show *) calloc(1,sizeof(Show));
@@ -168,6 +172,11 @@ void command_line(int argc, const char **argv) {
 			else if (argv[i][1] == 'p') {
 				if (sscanf(argv[i],"-p%d",&n) == 1) prerender = n;
 				else prerender = 0;
+			}
+			else if (argv[i][1] == 'm') {
+				n = sscanf(argv[i],"-m%[^,],%s",s1,s2);
+				if (n == 2) monNote = strdup(s2);
+				if (n) monShow = strdup(s1);
 			}
 			else if (argv[i][1] == 'h') {
 				//	-h	help
@@ -291,14 +300,35 @@ void init_X() {
 	swnote = 0; shnote = 0;
 	int i;
 
-for (i = 0; i < xrr_sr->ncrtc; i++) {
-	xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrr_sr->crtcs[i]);
-	if (xrrT->mode != None) {
-		if (xrrNote) XRRFreeCrtcInfo(xrrNote);
-		if (xrrShow) xrrNote = xrrT;
-		else xrrShow = xrrT;
+XRROutputInfo *xrrOut;
+for (i = 0; i < xrr_sr->noutput; i++) {
+	xrrOut = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
+	if (xrrOut->crtc) {
+		xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrrOut->crtc);
+		if (monShow) {
+			if (strncmp(monShow,xrrOut->name,strlen(monShow))==0)
+				xrrShow = xrrT;
+			if (monNote && strncmp(monNote,xrrOut->name,strlen(monNote))==0)
+				xrrNote = xrrT;
+		}
+		else {
+			if (!xrrNote) xrrNote = xrrT;
+			else if (!xrrShow) xrrShow = xrrT;
+			else { XRRFreeCrtcInfo(xrrShow); xrrShow = xrrT; }
+		}
 	}
+	XRRFreeOutputInfo(xrrOut);
 }
+if (!xrrShow) { xrrShow = xrrNote; xrrNote = NULL; }
+
+//for (i = 0; i < xrr_sr->ncrtc; i++) {
+//	xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrr_sr->crtcs[i]);
+//	if (xrrT->mode != None) {
+//		if (xrrNote) XRRFreeCrtcInfo(xrrNote);
+//		if (xrrShow) xrrNote = xrrT;
+//		else xrrShow = xrrT;
+//	}
+//f }
 	/* Presentation monitor */
 	if (!xrrShow) die("No monitors detected\n");
 	sw = xrrShow->width;
