@@ -35,14 +35,42 @@ USAGE:
 			Optional pdf for presenter-mode notes.
 
 
----------------
+CONTROLS:
 
-Several features have been removed in the new version.  Most of these are absent only because I recoded the new version from scratch and simply have not reimplemented them yet.  Features that will definitely return include:
+	Key bindings can be customized by editing config.h and recompiling.  The listings below are the default settings.
 
-1) Zoom: both free zooming and locked-aspect-ratio zooming.
+	Ctrl-Q		Quit.
 
-Features that may return in a different form:
+	Tab			Overview mode.
 
-1) Pens: I'd like to redo these using Cairo drawing functions to allow for prettier antialiased line drawing.
+	Return		Refresh/Redraw.  Removes any pen/rectangle drawing, and "unzooms".
+
+	Space		Next slide.
+
+	Right		Next slide.
+
+	Left		Previous slide.
+
+	Up			Previous slide in normal mode, or up in overview mode.
+
+	Down		Next slide in normal mode, or down in overview mode.
+
+	b			Mute (black).
+
+	w			Mute (white).
+
+	z			Zoom in.
+
+	Shift-z		Zoom in with a fixed aspect ratio.
+
+	r			Draw a blue/cyan rectangle/box.  Colors, opacity, and line width can be customized in config.h.
+
+	Shift-r		Draw a green rectangle/box.
+
+	Ctrl-r		Draw a red rectanlge/box.
+
+	1-6			Polka-dot cursors of various sizes and colors.  Colors, opacity, and size can be customized in config.h.
+
+	F1-F6		Drawing pens of various sizes and colors.  Colors, opacity, and size can be customized in config.h.
 
 
