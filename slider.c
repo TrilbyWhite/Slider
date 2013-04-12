@@ -72,7 +72,7 @@ static Window wshow, wnote;
 static Pixmap bshow, bnote;
 static Cursor invisible_cursor, crosshair_cursor;
 static XRectangle r;
-static int mode = RUNNING, v1 = 1;
+static int mode = RUNNING, v1 = 1, delay = 30;
 static Show *show;
 static Bool muted = False, lock_zoom = False;
 static View *view;
@@ -165,6 +165,13 @@ void command_line(int argc, const char **argv) {
 					nv++;
 				if (nv >= MAX_VIEW) nv = MAX_VIEW - 1;
 
+			}
+			else if (argv[i][1] == 'c') {
+				mode |= CONTINUOUS;
+			}
+			else if (argv[i][1] == 'a') {
+				mode |= AUTOPLAY;
+				if (argv[i][2] != '\0') delay = atoi(argv[i] + 2);
 			}
 			else if (argv[i][1] == 's') {
 				if (sscanf(argv[i],"-s%f",&f) == 1) pscale = f;

@@ -5,11 +5,18 @@ Slider has been entirely recoded from scratch with many design choices informed 
 The presenter mode tools (previous `Slipper`) have been incorporated into the main program.  Slider will now detect whether multiple screens are configured and display presenter notes on the local screen while the presentation is sent to the highest numbered monitor.
 
 USAGE:
-	slider [-sN] [-pN] [-gWxH+X+Y [-gWxH+X+Y [-gWxH+X+Y [-gWxH+X+Y]]]] <presentation.pdf> [<notes.pdf>]
+	slider [-c] [-aN] [-sN] [-pN] [-m<VID1>[,<VID2>]] [-gWxH+X+Y [-gWxH+X+Y [-gWxH+X+Y [-gWxH+X+Y]]]] <presentation.pdf> [<notes.pdf>]
+
+	-c		Continous loop mode.  When the presentation finishes, it will loop back to slide number one.
+
+	-aN		Autoplay mode.  Slides will advance automatically at intervals of N seconds.  If N is not specified, a default of 30 is used. (NOT YET IMPLEMENTED)
 
 	-sN		Scales the primary view in presenter mode to N times larger than secondary views (default=1.8).  This is ignored if you specify any geometry strings.  Good values for default geometries range from 1.75-3 for presentations with separate notes, or 0.5-3 for presentations alone.
 
 	-pN		Prerenders N slides (default=1).  Rendering proceeds faster if the presentation is "prerendered", but then you have to wait for it to complete before interacting with slider.  For very large presentations, it may be useful to prerender many/all slides.  If N anything other than a positive integer, all slides are prerendered.
+
+	-mVID1 | -mVID1,VID2
+			Overrides default monitor detection and shows the presentation on output VID1.  The first form disables the presenter mode notes.  The second form sends the presentation to VID1 and the notes to VID2.
 
 	-g		Geometry strings for view panes in presenter mode.  Set the width, height, and location of up to 4 panels with a notes.pdf or 3 panels without.  Panels display the following items on the local screen:
 
