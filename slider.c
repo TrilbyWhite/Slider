@@ -287,61 +287,41 @@ void init_X() {
 	wa.override_redirect = True;
 	/* get RandR info */
 	XRRScreenResources *xrr_sr = XRRGetScreenResources(dpy,root);
-	XRROutputInfo *xrr_out_info = NULL;
-	XRRCrtcInfo *xrr_crtc_info;
+	XRRCrtcInfo *xrrShow = NULL, *xrrNote = NULL, *xrrT = NULL;
 	swnote = 0; shnote = 0;
-	int i, low=-1, hi=-1;
+	int i;
 
 for (i = 0; i < xrr_sr->ncrtc; i++) {
-	xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
-#ifdef DEBUG
-fprintf(stderr,"%d (%s)\n",i,xrr_out_info->name);
-#endif
-	if (xrr_out_info->crtc) {
-#ifdef DEBUG
-fprintf(stderr," -> found crtc for %d (%s)\n",i,xrr_out_info->name);
-#endif
-		if (low == -1) low = i;
-		else hi = i;
+	xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrr_sr->crtcs[i]);
+	if (xrrT->mode != None) {
+		if (xrrNote) XRRFreeCrtcInfo(xrrNote);
+		if (xrrShow) xrrNote = xrrT;
+		else xrrShow = xrrT;
 	}
-	XRRFreeOutputInfo(xrr_out_info);
 }
-#ifdef DEBUG
-fprintf(stderr,"\nhi=%d low=%d\n",hi,low);
-#endif
 	/* Presentation monitor */
-	if (hi == -1) {
-		if (low == -1) die("No monitors detected\n");
-		hi = low; low = -1;
-	}
-	xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[hi]);
-	xrr_crtc_info = XRRGetCrtcInfo(dpy,xrr_sr,xrr_out_info->crtc);
-	sw = xrr_crtc_info->width;
-	sh = xrr_crtc_info->height;
+	if (!xrrShow) die("No monitors detected\n");
+	sw = xrrShow->width;
+	sh = xrrShow->height;
 	show->w = sw; show->h = sh;
-	wshow = XCreateSimpleWindow(dpy,root,xrr_crtc_info->x,xrr_crtc_info->y,
+	wshow = XCreateSimpleWindow(dpy,root,xrrShow->x,xrrShow->y,
 			sw,sh,1,0,0);
 	bshow = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
-	XRRFreeCrtcInfo(xrr_crtc_info);
-	XRRFreeOutputInfo(xrr_out_info);
+	XRRFreeCrtcInfo(xrrShow);
 	XStoreName(dpy,wshow,"Slider");
 	XChangeWindowAttributes(dpy,wshow,CWEventMask|CWOverrideRedirect,&wa);
 	/* Notes monitor */
-	if (low != -1) {
-		xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[low]);
-		if (!xrr_out_info->crtc) die("No RandR info for monitor %d\n",low);
-		xrr_crtc_info = XRRGetCrtcInfo(dpy,xrr_sr,xrr_out_info->crtc);
-		swnote = xrr_crtc_info->width;
-		shnote = xrr_crtc_info->height;
+	if (xrrNote) {
+		swnote = xrrNote->width;
+		shnote = xrrNote->height;
 		if (show->notes) { show->notes->w = swnote; show->notes->h = shnote; }
-		wnote = XCreateSimpleWindow(dpy,root,xrr_crtc_info->x,xrr_crtc_info->y,
+		wnote = XCreateSimpleWindow(dpy,root,xrrNote->x,xrrNote->y,
 				swnote,shnote,1,0,0);
 		bnote = XCreatePixmap(dpy,wshow,swnote,shnote,DefaultDepth(dpy,scr));
-		XRRFreeCrtcInfo(xrr_crtc_info);
-		XRRFreeOutputInfo(xrr_out_info);
 		XStoreName(dpy,wnote,"Slipper");
 		XChangeWindowAttributes(dpy,wnote,CWEventMask|CWOverrideRedirect,&wa);
 		XMapWindow(dpy,wnote);
+		XRRFreeCrtcInfo(xrrNote);
 	}
 	else if (show->notes) {
 		free(show->notes->uri);
