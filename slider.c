@@ -30,9 +30,7 @@
 #define AUTOPLAY	0x00000004	
 #define OVERVIEW	0x00000010
 #define PRESENTER	0x00000020
-#define WHITEMUTE	0x00000100
-#define BLACKMUTE	0x00000200
-#define UNMUTE		0xFFFFFCFF
+#define MUTED		0x00000100
 
 #define MAX_VIEW	4
 
@@ -74,7 +72,6 @@ static Cursor invisible_cursor, crosshair_cursor;
 static XRectangle r;
 static int mode = RUNNING, v1 = 1, delay = 10;
 static Show *show;
-static Bool muted = False, lock_zoom = False;
 static View *view;
 static float pscale = 1.8;
 static char *monShow = NULL, *monNote = NULL;
@@ -234,7 +231,7 @@ void draw(const char *arg) {
 	}
 	/* draw show */
 	XFillRectangle(dpy,bshow,cgc(ScreenBG),0,0,sw,sh);
-	if (!muted) {
+	if (!(mode & MUTED)) {
 		XCopyArea(dpy,show->slide[show->cur],bshow,gc,0,0,
 				show->w,show->h,show->x,show->y);
 		XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
@@ -415,7 +412,7 @@ void move(const char *arg) {
 }
 
 void mute(const char *arg) {
-	if ( (muted = !muted) ) {
+	if ( (mode ^= MUTED) & MUTED ) {
 		XFillRectangle(dpy,wshow,(arg[0]=='w'?cgc(White):cgc(Black)),0,0,sw,sh);
 		XFlush(dpy);
 	}
@@ -543,8 +540,12 @@ void warn() {
 
 void zoom(const char *arg) {
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
-	if (arg) lock_zoom = True; else lock_zoom = False;
 	pen_polka_rect(ZOOM_RECT, RECT);
+	if (arg) { /* lock aspect ratio */
+		double w_h = (double)show->w/show->h;
+		if (r.width < w_h * r.height) r.width = w_h * r.height;
+		else r.height = (double) r.width / w_h;
+	}
 	if (r.width < 20 || r.height < 20) { warn(); return; }
 	r.x-=5; r.y-=5; r.width+=10; r.height+=10;
 	int w,h;
