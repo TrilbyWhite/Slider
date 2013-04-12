@@ -275,6 +275,7 @@ void init_views() {
 	}
 }
 
+
 void init_X() {
 	XInitThreads();
 	g_type_init();
@@ -293,12 +294,21 @@ void init_X() {
 
 for (i = 0; i < xrr_sr->ncrtc; i++) {
 	xrr_out_info = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
+#ifdef DEBUG
+fprintf(stderr,"%d (%s)\n",i,xrr_out_info->name);
+#endif
 	if (xrr_out_info->crtc) {
+#ifdef DEBUG
+fprintf(stderr," -> found crtc for %d (%s)\n",i,xrr_out_info->name);
+#endif
 		if (low == -1) low = i;
 		else hi = i;
 	}
 	XRRFreeOutputInfo(xrr_out_info);
 }
+#ifdef DEBUG
+fprintf(stderr,"\nhi=%d low=%d\n",hi,low);
+#endif
 	/* Presentation monitor */
 	if (hi == -1) {
 		if (low == -1) die("No monitors detected\n");

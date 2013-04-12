@@ -10,6 +10,9 @@ HEADER	= slider.h config.h
 ${PROG}: ${SOURCE} ${HEADER}
 	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS}
 
+debug: ${SOURCE} ${HEADER}
+	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS} -DDEBUG
+
 tarball: clean
 	@rm -f ${PROG}-${VER}.tar.gz
 	@tar -czf ${PROG}-${VER}.tar.gz *
