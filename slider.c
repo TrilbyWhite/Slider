@@ -523,7 +523,7 @@ void move(const char *arg) {
 		else if (arg[0] == 'd') show->cur += show->sorter->flag[0];
 		else if (arg[0] == 'u') show->cur -= show->sorter->flag[0];
 		if (show->cur < 0) show->cur = 0;
-		while (show->cur > show->count || !(show->flag[show->cur] & RENDERED))
+		while (show->cur >= show->count || !(show->flag[show->cur] & RENDERED))
 			show->cur--;
 		overview(NULL);
 	}
