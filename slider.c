@@ -83,6 +83,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
 };
 
 void action(const char *arg) {
+	if (mode & OVERVIEW) return;
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	/* create cairo contexts */
 	int w; double R,G,B,A; char sym[2] = "x";
@@ -141,11 +142,11 @@ void action(const char *arg) {
 			PopplerActionGotoDest *a = &act->goto_dest;
 			if (a->dest->type == POPPLER_DEST_NAMED) {
 				PopplerDest *d = poppler_document_find_dest(pdf,a->dest->named_dest);
-				show->cur = d->page_num;
+				show->cur = d->page_num - 1;
 				poppler_dest_free(d);
 			}
 			else {
-				show->cur = a->dest->page_num;
+				show->cur = a->dest->page_num - 1;
 			}
 			draw(NULL);
 		}
