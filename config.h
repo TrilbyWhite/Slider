@@ -7,6 +7,10 @@ static const char colors[][9] = {
 	[Empty]		= "#182436",
 };
 
+#define SHOW_URI		"luakit %s >/dev/null 2>&1 &"
+#define SHOW_MOV		"mplayer %s >/dev/null 2>&1 &"
+#define PLAY_AUD		"mplayer %s >/dev/null 2>&1 &"
+
 /*     CONFIG STRINGS:
   Each of the following sets a config-string for the rectangle in place of
   empty views, the zoom selection rectangle, and the overview highlighter.

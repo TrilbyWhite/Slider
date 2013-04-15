@@ -127,6 +127,7 @@ void action(const char *arg) {
 		cairo_stroke(ct);
 	}
 	/* get key */
+	if (!nact) return;
 	XEvent ev;
 	while (!XCheckTypedEvent(dpy,KeyPress,&ev));
 	XKeyEvent *e = &ev.xkey;
@@ -142,28 +143,48 @@ void action(const char *arg) {
 			PopplerActionGotoDest *a = &act->goto_dest;
 			if (a->dest->type == POPPLER_DEST_NAMED) {
 				PopplerDest *d = poppler_document_find_dest(pdf,a->dest->named_dest);
-				show->cur = d->page_num - 1;
-				poppler_dest_free(d);
+				if (d) {
+					show->cur = d->page_num - 1;
+					poppler_dest_free(d);
+				}
 			}
 			else {
 				show->cur = a->dest->page_num - 1;
 			}
-			draw(NULL);
+		}
+		else if (act->type == POPPLER_ACTION_NAMED) {
+			PopplerActionNamed *n = &act->named;
+			PopplerDest *d = poppler_document_find_dest(pdf,n->named_dest);
+			if (d) {
+				show->cur = d->page_num - 1;
+				poppler_dest_free(d);
+			}
 		}
 		else if (act->type == POPPLER_ACTION_LAUNCH) {
-	fprintf(stderr,"launch\n");
+			PopplerActionLaunch *l = &act->launch;
+	fprintf(stderr,"launch \"%s %s\"\n",l->file_name,l->params);
 		}
 		else if (act->type == POPPLER_ACTION_URI) {
-	fprintf(stderr,"uri\n");
+			PopplerActionUri *u = &act->uri;
+			char *cmd = calloc(strlen(u->uri)+strlen(SHOW_URI)+2,sizeof(char));
+			sprintf(cmd,SHOW_URI,u->uri);
+			system(cmd);
+		//	fprintf(stderr,"[%s]\n",cmd);
+			free(cmd);
 		}
 		else if (act->type == POPPLER_ACTION_MOVIE) {
-	fprintf(stderr,"movie\n");
+			PopplerActionMovie *m = &act->movie;
+			//PopplerActionMovieOperation m->operation
+	fprintf(stderr,"movie \"%s\"\n",poppler_movie_get_filename(m->movie));
 		}
 		else if (act->type == POPPLER_ACTION_RENDITION) {
+			PopplerActionRendition *r = &act->rendition;
+			//PopplerMedia r->meia
+			//guint r->op
 	fprintf(stderr,"rendition\n");
 		}
 		else {
-			fprintf(stderr,"unknown or unsupported action selected\n");
+			fprintf(stderr,"unsupported action selected (type=%d)\n",act->type);
 		}
 	}
 	poppler_page_free_link_mapping(lm);
