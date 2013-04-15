@@ -54,6 +54,7 @@ static void buttonpress(XEvent *);
 static void cleanup();
 static void command_line(int, const char **);
 static void draw(const char *);
+static void grab_keys(Bool);
 static void init_views();
 static void init_X();
 static void keypress(XEvent *);
@@ -139,10 +140,12 @@ void action(const char *arg) {
 	}
 	/* folow link */
 	if (act) {
+		grab_keys(False); /* release keyboard to interact with external prog. */
 		if (act->type == POPPLER_ACTION_GOTO_DEST) {
 			PopplerActionGotoDest *a = &act->goto_dest;
 			if (a->dest->type == POPPLER_DEST_NAMED) {
-				PopplerDest *d = poppler_document_find_dest(pdf,a->dest->named_dest);
+				PopplerDest *d = poppler_document_find_dest(pdf,
+						a->dest->named_dest);
 				if (d) {
 					show->cur = d->page_num - 1;
 					poppler_dest_free(d);
@@ -162,30 +165,32 @@ void action(const char *arg) {
 		}
 		else if (act->type == POPPLER_ACTION_LAUNCH) {
 			PopplerActionLaunch *l = &act->launch;
-	fprintf(stderr,"launch \"%s %s\"\n",l->file_name,l->params);
+fprintf(stderr,"launch \"%s %s\"\n",l->file_name,l->params);
+fprintf(stderr,"launch links not yet implemented\n");
 		}
 		else if (act->type == POPPLER_ACTION_URI) {
 			PopplerActionUri *u = &act->uri;
 			char *cmd = calloc(strlen(u->uri)+strlen(SHOW_URI)+2,sizeof(char));
-			sprintf(cmd,SHOW_URI,u->uri);
-			system(cmd);
-		//	fprintf(stderr,"[%s]\n",cmd);
-			free(cmd);
+			sprintf(cmd,SHOW_URI,u->uri); system(cmd); free(cmd);
 		}
 		else if (act->type == POPPLER_ACTION_MOVIE) {
 			PopplerActionMovie *m = &act->movie;
-			//PopplerActionMovieOperation m->operation
-	fprintf(stderr,"movie \"%s\"\n",poppler_movie_get_filename(m->movie));
+			const char *mov = poppler_movie_get_filename(m->movie);
+			char *cmd = calloc(strlen(mov)+strlen(SHOW_MOV)+2,sizeof(char));
+			sprintf(cmd,SHOW_MOV,mov); system(cmd); free(cmd);
 		}
 		else if (act->type == POPPLER_ACTION_RENDITION) {
 			PopplerActionRendition *r = &act->rendition;
-			//PopplerMedia r->meia
-			//guint r->op
-	fprintf(stderr,"rendition\n");
+			const char *med = poppler_media_get_filename(r->media);
+			char *cmd = calloc(strlen(med)+strlen(PLAY_AUD)+2,sizeof(char));
+			sprintf(cmd,PLAY_AUD,med); system(cmd); free(cmd);
 		}
 		else {
 			fprintf(stderr,"unsupported action selected (type=%d)\n",act->type);
 		}
+		grab_keys(True);
+		XRaiseWindow(dpy,wshow);
+		if (swnote) XRaiseWindow(dpy,wnote);
 	}
 	poppler_page_free_link_mapping(lm);
 	draw(NULL);
@@ -355,6 +360,20 @@ void draw(const char *arg) {
 	draw_view(show,2,show->cur + 1);
 	draw_view(show,3,show->cur - 1);
 	XCopyArea(dpy,bnote,wnote,gc,0,0,swnote,shnote,0,0);
+	XFlush(dpy);
+}
+
+void grab_keys(Bool grab) {
+	if (grab) {
+		int i; for (i = 0; i < 1000; i++) {
+			if (XGrabKeyboard(dpy,root,True,GrabModeAsync,GrabModeAsync,
+					CurrentTime) == GrabSuccess) break;
+			usleep(5000);
+		}
+	}
+	else {
+		XUngrabKeyboard(dpy,CurrentTime);
+	}
 	XFlush(dpy);
 }
 
@@ -689,12 +708,7 @@ int main(int argc, const char **argv) {
 	init_X();
 	render(show);
 	/* grab keys */
-	int i;
-	for (i = 0; i < 1000; i++) {
-		if (XGrabKeyboard(dpy,root,True,GrabModeAsync,GrabModeAsync,
-				CurrentTime) == GrabSuccess) break;
-		usleep(5000);
-	}
+	grab_keys(True);
 	init_views();
 	draw(NULL);
 	XEvent ev;

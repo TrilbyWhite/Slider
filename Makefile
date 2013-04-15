@@ -1,6 +1,6 @@
 
 PROG	= slider
-VER		= 0.1a
+VER		= 2.0a
 CFLAGS	= -Os -Wall
 PREFIX	?= /usr
 FLAGS	= `pkg-config --cflags --libs x11 xrandr poppler-glib cairo` -pthread -lm
@@ -22,4 +22,5 @@ clean:
 
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
+	@install -Dm666 ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
 

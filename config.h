@@ -7,8 +7,15 @@ static const char colors[][9] = {
 	[Empty]		= "#182436",
 };
 
-#define SHOW_URI		"luakit %s >/dev/null 2>&1 &"
-#define SHOW_MOV		"mplayer %s >/dev/null 2>&1 &"
+/* PLAY_AUD is backgrounded to allow the slideshow to continue
+   while the audio is playing.  You could also background the
+   other options, however you will then *NOT* be able to control
+   or interact with the external program.  Slider "ungrabs" the
+   keyboard only for the duration of the launched program - if
+   the launched program is backgrounded, it's duration is only
+   the time it takes to start. */
+#define SHOW_URI		"luakit %s >/dev/null 2>&1"
+#define SHOW_MOV		"mplayer -fs %s >/dev/null 2>&1"
 #define PLAY_AUD		"mplayer %s >/dev/null 2>&1 &"
 
 /*     CONFIG STRINGS:
