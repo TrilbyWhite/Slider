@@ -49,6 +49,7 @@ struct View {
 	Pixmap buf;
 };
 
+static void action(const char *);
 static void buttonpress(XEvent *);
 static void cleanup();
 static void command_line(int, const char **);
@@ -80,6 +81,93 @@ static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
 	[KeyPress]		= keypress,
 };
+
+void action(const char *arg) {
+	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
+	/* create cairo contexts */
+	int w; double R,G,B,A; char sym[2] = "x";
+	sscanf(ACTION_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
+	cairo_t *c = cairo_create(t);
+	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
+	cairo_set_source_rgba(c,R,G,B,A);
+	cairo_set_line_width(c,w);
+	cairo_t *ct = cairo_create(t);
+	sscanf(ACTION_FONT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
+	cairo_set_source_rgba(ct,R,G,B,A);
+	cairo_set_font_size(ct,w);
+	cairo_select_font_face(ct,"sans-serif",
+			CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
+	/* get pdf page and action links */
+	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
+	GList *lm, *li;
+	lm = poppler_page_get_link_mapping(page);
+	PopplerLinkMapping *map;
+	PopplerAction *act = NULL;
+	int nact, nsel = 0;
+	for (li = lm, nact = 0; li && nact < 26; li = li->next, nact++) {
+		map = (PopplerLinkMapping *)li->data;
+		r.x = map->area.x1 * show->scale;
+		r.width = map->area.x2 * show->scale - r.x;
+		r.x += show->x;
+		r.y = map->area.y1 * show->scale;
+		r.height = map->area.y2 * show->scale - r.y;
+		r.y = show->y + show->h - r.y - r.height;
+		/* draw links */
+		cairo_rectangle(c,r.x,r.y,r.width,r.height);
+		cairo_stroke(c);
+		cairo_arc(c,r.x,r.y,15,0,2*M_PI);
+		cairo_fill(c);
+		sym[0] = nact + 65;
+		cairo_move_to(ct,r.x-5,r.y+5);
+		cairo_show_text(ct,sym);
+		cairo_stroke(ct);
+	}
+	/* get key */
+	XEvent ev;
+	while (!XCheckTypedEvent(dpy,KeyPress,&ev));
+	XKeyEvent *e = &ev.xkey;
+	nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,(KeyCode)e->keycode,0,0))[0] - 97;
+	/* get selected action link */
+	for (li = lm, nact = 0; li; li = li->next, nact++) {
+		map = (PopplerLinkMapping *)li->data;
+		if (nact == nsel) act = map->action;
+	}
+	/* folow link */
+	if (act) {
+		if (act->type == POPPLER_ACTION_GOTO_DEST) {
+			PopplerActionGotoDest *a = &act->goto_dest;
+			if (a->dest->type == POPPLER_DEST_NAMED) {
+				PopplerDest *d = poppler_document_find_dest(pdf,a->dest->named_dest);
+				show->cur = d->page_num;
+				poppler_dest_free(d);
+			}
+			else {
+				show->cur = a->dest->page_num;
+			}
+			draw(NULL);
+		}
+		else if (act->type == POPPLER_ACTION_LAUNCH) {
+	fprintf(stderr,"launch\n");
+		}
+		else if (act->type == POPPLER_ACTION_URI) {
+	fprintf(stderr,"uri\n");
+		}
+		else if (act->type == POPPLER_ACTION_MOVIE) {
+	fprintf(stderr,"movie\n");
+		}
+		else if (act->type == POPPLER_ACTION_RENDITION) {
+	fprintf(stderr,"rendition\n");
+		}
+		else {
+			fprintf(stderr,"unknown or unsupported action selected\n");
+		}
+	}
+	poppler_page_free_link_mapping(lm);
+	draw(NULL);
+}
 
 void buttonpress(XEvent *ev) {
 	XButtonEvent *e = &ev->xbutton;

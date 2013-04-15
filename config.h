@@ -19,6 +19,8 @@ static const char colors[][9] = {
 #define EMPTY_RECT		"10  1.0, 1.0, 1.0  0.5"
 #define ZOOM_RECT		"10  0.0, 0.8, 1.0  0.8"
 #define OVERVIEW_RECT	"10  1.0, 1.0, 0.0  0.6"
+#define ACTION_RECT		"4   0.0, 0.2, 1.0  0.3"
+#define ACTION_FONT		"15  0.0, 0.4, 1.0  1.0"
 
 static Key keys[] = {
 	{ ControlMask,		XK_q,		quit,		NULL		},
@@ -31,6 +33,7 @@ static Key keys[] = {
 	{ 0,				XK_Down,	move,		"down"		},
 	{ 0,				XK_b,		mute,		"black"		},
 	{ 0,				XK_w,		mute,		"white"		},
+	{ 0,				XK_a,		action,		NULL		},
 	{ 0,				XK_z,		zoom,		NULL		},
 	{ ShiftMask,		XK_z,		zoom,		"lock"		},
 	/* the following bindings take config-strings as described above */
