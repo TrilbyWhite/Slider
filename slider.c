@@ -582,7 +582,7 @@ void overview(const char *arg) {
 #define POLKA	1
 #define RECT	2
 static void pen_polka_rect(const char *arg, int type) {
-	int w; double R,G,B,A; Drawable d;
+	int w; double R,G,B,A;
 	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
 	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
 	if (type != POLKA) XDefineCursor(dpy,wshow,crosshair_cursor);
@@ -591,8 +591,7 @@ static void pen_polka_rect(const char *arg, int type) {
 	Pixmap cbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
 	XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
 	XCopyArea(dpy,wshow,cbuf,gc,0,0,sw,sh,0,0);
-	if (type == PEN) d = wshow; else d = pbuf;
-	cairo_surface_t *t = cairo_xlib_surface_create(dpy,d,
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,pbuf,
 			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
@@ -614,7 +613,9 @@ static void pen_polka_rect(const char *arg, int type) {
 		}
 		else if (type == PEN && ev.type == MotionNotify && on) {
 			cairo_line_to(c,ev.xbutton.x,ev.xbutton.y);
+			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			cairo_stroke_preserve(c);
+			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
 		else if (type == POLKA && ev.type == MotionNotify) {
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
@@ -631,9 +632,10 @@ static void pen_polka_rect(const char *arg, int type) {
 		}
 		else if (type == PEN && ev.type == ButtonRelease) {
 			on = False;
-			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
+			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			cairo_stroke(c);
-			XCopyArea(dpy,wshow,pbuf,gc,0,0,sw,sh,0,0);
+			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
+			XCopyArea(dpy,wshow,cbuf,gc,0,0,sw,sh,0,0);
 		}
 		else if (type == RECT && ev.type == ButtonRelease) { break; }
 	}
