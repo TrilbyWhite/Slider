@@ -49,8 +49,11 @@ struct View {
 	Pixmap buf;
 };
 
+enum { Black, White, ScreenBG, SlideBG, Empty };
+
 static void action(const char *);
 static void buttonpress(XEvent *);
+static GC cgc(int);
 static void cleanup();
 static void command_line(int, const char **);
 static void draw(const char *);
@@ -706,7 +709,7 @@ void zoom(const char *arg) {
 int main(int argc, const char **argv) {
 	command_line(argc,argv);
 	init_X();
-	render(show);
+	render(show,colors[ScreenBG],colors[SlideBG],colors[Empty]);
 	/* grab keys */
 	grab_keys(True);
 	init_views();

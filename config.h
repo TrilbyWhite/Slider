@@ -1,5 +1,5 @@
 
-static const char colors[][9] = {
+const char colors[][9] = {
 	[Black]		= "#000000",
 	[White]		= "#FFFFFF",
 	[ScreenBG]	= "#000000",

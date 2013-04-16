@@ -17,8 +17,6 @@
 
 #define RENDERED	0x0001
 
-enum { Black, White, ScreenBG, SlideBG, Empty };
-
 typedef struct Show Show;
 struct Show {		// CREATE/FREE
 	Pixmap *slide;	// render.c
@@ -31,9 +29,8 @@ struct Show {		// CREATE/FREE
 };
 
 void die(const char *,...);
-void render(Show *);
+void render(Show *,const char *,const char *,const char *);
 void free_renderings(Show *);
-GC cgc(int);
 
 Display *dpy;
 int scr, sw, sh, swnote, shnote, prerender;

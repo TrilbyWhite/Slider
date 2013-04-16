@@ -3,6 +3,8 @@
 
 #include "slider.h"
 
+static GC bgc, sgc, egc;
+
 void *render_threaded(void *arg) {
 	Show *show = (Show *) arg;
 	int i, j, n, x, y, grid = 0;
@@ -49,14 +51,13 @@ void *render_threaded(void *arg) {
 				show->sorter->h,DefaultDepth(dpy,scr));
 		show->sorter->slide[0] = XCreatePixmap(dpy,root,sw,sh,
 				DefaultDepth(dpy,scr));
-		XFillRectangle(dpy,show->sorter->slide[0],cgc(ScreenBG),0,0,sw,sh);
-		cgc(SlideBG);
+		XFillRectangle(dpy,show->sorter->slide[0],bgc,0,0,sw,sh);
 		n = 0; y = show->sorter->y;
 		for (i = 0; i < grid; i++, y += show->sorter->h + 10) {
 			x = show->sorter->x;
 			for (j = 0; j < grid; j++, x+= show->sorter->w + 10) {
 				if (++n > show->count) break;
-				XFillRectangle(dpy,show->sorter->slide[0],cgc(Empty),x+2,y+2,
+				XFillRectangle(dpy,show->sorter->slide[0],egc,x+2,y+2,
 						show->sorter->w-5,show->sorter->h-5);
 			}
 		}
@@ -69,7 +70,7 @@ void *render_threaded(void *arg) {
 	for (i = 0; i < show->count; i++) {
 		show->slide[i] = XCreatePixmap(dpy,root,show->w,show->h,
 				DefaultDepth(dpy,scr));
-		XFillRectangle(dpy,show->slide[i],cgc(SlideBG),0,0,show->w,show->h);
+		XFillRectangle(dpy,show->slide[i],sgc,0,0,show->w,show->h);
 		page = poppler_document_get_page(pdf,i);
 		target = cairo_xlib_surface_create(dpy,show->slide[i],
 				DefaultVisual(dpy,scr),show->w,show->h);
@@ -80,15 +81,14 @@ void *render_threaded(void *arg) {
 		cairo_destroy(cairo);
 		show->flag[i] |= RENDERED;
 		if (show->sorter) {
-			XFillRectangle(dpy,thumb,cgc(SlideBG),0,0,
-					show->sorter->w,show->sorter->h);
+			XFillRectangle(dpy,thumb,sgc,0,0,show->sorter->w,show->sorter->h);
 			target = cairo_xlib_surface_create(dpy,thumb,DefaultVisual(dpy,scr),
 					show->sorter->w,show->sorter->h);
 			cairo = cairo_create(target);
 			cairo_scale(cairo,show->sorter->scale,show->sorter->scale);
 			poppler_page_render(page,cairo);
 			cairo_surface_destroy(target);
-			XCopyArea(dpy,thumb,show->sorter->slide[0],gc,0,0,show->sorter->w,
+			XCopyArea(dpy,thumb,show->sorter->slide[0],sgc,0,0,show->sorter->w,
 					show->sorter->h,x,y);
 			x += show->sorter->w + 10;
 			if (++n == grid) {
@@ -103,7 +103,20 @@ void *render_threaded(void *arg) {
 }
 
 
-void render(Show *show) {
+void render(Show *show,const char *cb, const char *cs, const char *ce) {
+	/* separate gcs are needed for threadsafeness */
+	XColor col;
+	XGCValues val;
+	XAllocNamedColor(dpy,DefaultColormap(dpy,scr),cb,&col,&col);
+	val.foreground = col.pixel;
+	bgc = XCreateGC(dpy,root,GCForeground,&val);
+	XAllocNamedColor(dpy,DefaultColormap(dpy,scr),cs,&col,&col);
+	val.foreground = col.pixel;
+	sgc = XCreateGC(dpy,root,GCForeground,&val);
+	XAllocNamedColor(dpy,DefaultColormap(dpy,scr),ce,&col,&col);
+	val.foreground = col.pixel;
+	egc = XCreateGC(dpy,root,GCForeground,&val);
+	/* render show */
 	pthread_t show_render, note_render;
 	pthread_create(&show_render,NULL,&render_threaded,(void *) show);
 	if (show->notes && show->notes->uri)
@@ -111,7 +124,9 @@ void render(Show *show) {
 	while (!(show->flag)) usleep(5000);
 	if (prerender == 0 || prerender > show->count) prerender = show->count;
 	while (!(show->flag[(prerender>0?prerender:1)-1] & RENDERED)) usleep(50000);
+	/* render notes */
 	if (show->notes && show->notes->uri) {
+		while (!(show->notes->flag)) usleep(5000);
 		if (prerender > show->notes->count) prerender = show->count;
 		while (!(show->notes->flag[(prerender>0?prerender:1)-1] & RENDERED))
 			usleep(50000);
@@ -120,6 +135,7 @@ void render(Show *show) {
 
 void free_renderings(Show *show) {
 	if (!show) return;
+	XFreeGC(dpy,bgc); XFreeGC(dpy,sgc); XFreeGC(dpy,egc);
 	int i;
 	for (i = 0; i < show->count; i++) {
 		XFreePixmap(dpy,show->slide[i]);
