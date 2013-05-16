@@ -6,6 +6,7 @@ PREFIX	?= /usr
 FLAGS	= `pkg-config --cflags --libs x11 xrandr poppler-glib cairo` -pthread -lm
 SOURCE	= slider.c render.c
 HEADER	= slider.h config.h
+DEFS	= -DFADE_TRANSITION
 
 ${PROG}: ${SOURCE} ${HEADER}
 	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS}
@@ -19,6 +20,9 @@ tarball: clean
 
 clean:
 	@rm -f ${PROG}
+
+experimental: ${SOURCE} ${HEADER}
+	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS} ${DEFS}
 
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}

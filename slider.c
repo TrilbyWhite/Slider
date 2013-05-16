@@ -238,8 +238,6 @@ void cleanup() {
 		XFreePixmap(dpy,view[i].buf);
 		cairo_destroy(view[i].cairo);
 	}
-	free(view);
-	free(show->sorter);
 	if (show->uri) {
 		free(show->uri);
 		free_renderings(show);
@@ -248,6 +246,8 @@ void cleanup() {
 		XDestroyWindow(dpy,wnote);
 		XDestroyWindow(dpy,wshow);
 	}
+	free(view);
+	free(show->sorter);
 	if (show->notes) {
 		free(show->notes->uri);
 		free(show->notes);
@@ -352,6 +352,25 @@ void draw(const char *arg) {
 		XDefineCursor(dpy,wshow,invisible_cursor);
 	}
 	/* draw show */
+#ifdef FADE_TRANSITION
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+			DefaultVisual(dpy,scr),sw,sh);
+	cairo_t *c = cairo_create(t);
+	cairo_translate(c,show->x,show->y);
+	cairo_surface_destroy(t);
+	int i;
+	t = cairo_xlib_surface_create(dpy,show->slide[show->cur],
+			DefaultVisual(dpy,scr),show->w,show->h);
+	for (i = 20; i > 0; i--) {
+		cairo_set_source_surface(c,t,0,0);
+		cairo_paint_with_alpha(c,1.0/(float)i);
+		cairo_fill(c);
+		XFlush(dpy);
+		usleep(5000);
+	}
+	cairo_surface_destroy(t);
+	cairo_destroy(c);
+#else /* FADE_TRANSITION */
 	XFillRectangle(dpy,bshow,cgc(ScreenBG),0,0,sw,sh);
 	if (!(mode & MUTED)) {
 		XCopyArea(dpy,show->slide[show->cur],bshow,gc,0,0,
@@ -359,6 +378,7 @@ void draw(const char *arg) {
 		XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
 		XFlush(dpy);
 	}
+#endif /* FADE_TRANSITION */
 	/* draw previews */
 	if (!swnote || !shnote) return;
 	XFillRectangle(dpy,bnote,cgc(ScreenBG),0,0,swnote,shnote);

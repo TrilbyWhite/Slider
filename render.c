@@ -140,7 +140,8 @@ void free_renderings(Show *show) {
 	for (i = 0; i < show->count; i++) {
 		XFreePixmap(dpy,show->slide[i]);
 	}
-	free(show->slide); free(show->flag);
+	free(show->slide);
+	free(show->flag);
 	if (show->sorter) {
 		XFreePixmap(dpy,show->sorter->slide[0]);
 		free(show->sorter->slide); free(show->sorter->flag);
