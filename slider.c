@@ -68,6 +68,7 @@ static void polka(const char *);
 static void overview(const char *);
 static void quit(const char *);
 static void rectangle(const char *);
+static void usage(const char *);
 static void warn();
 static void zoom(const char *);
 
@@ -237,19 +238,21 @@ void cleanup() {
 		XFreePixmap(dpy,view[i].buf);
 		cairo_destroy(view[i].cairo);
 	}
-	free_renderings(show);
-	free(show->uri);
+	free(view);
 	free(show->sorter);
+	if (show->uri) {
+		free(show->uri);
+		free_renderings(show);
+		XFreePixmap(dpy,bnote);
+		XFreePixmap(dpy,bshow);
+		XDestroyWindow(dpy,wnote);
+		XDestroyWindow(dpy,wshow);
+	}
 	if (show->notes) {
 		free(show->notes->uri);
 		free(show->notes);
 	}
-	free(view);
 	free(show);
-	XFreePixmap(dpy,bnote);
-	XFreePixmap(dpy,bshow);
-	XDestroyWindow(dpy,wnote);
-	XDestroyWindow(dpy,wshow);
 	if (monShow) free(monShow);
 	if (monNote) free(monNote);
 }
@@ -324,6 +327,7 @@ void command_line(int argc, const char **argv) {
 		view[i].w = view[i-1].w; view[i].h = view[i-1].h;
 		view[i].x = view[i-1].x; view[i].y = view[i-1].y;
 	}
+	if (!show->uri) { cleanup(); usage(argv[0]); exit(1); }
 }
 
 static inline void draw_view(Show *set,int vnum, int snum) {
@@ -423,7 +427,7 @@ void init_views() {
 
 void init_X() {
 	XInitThreads();
-	g_type_init();
+	//g_type_init(); /* DEPRECATED IN GLIB 2.36 */
 	if (!(dpy=XOpenDisplay(NULL))) die("Failed to open display\n");
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
@@ -435,36 +439,26 @@ void init_X() {
 	XRRCrtcInfo *xrrShow = NULL, *xrrNote = NULL, *xrrT = NULL;
 	swnote = 0; shnote = 0;
 	int i;
-
-XRROutputInfo *xrrOut;
-for (i = 0; i < xrr_sr->noutput; i++) {
-	xrrOut = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
-	if (xrrOut->crtc) {
-		xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrrOut->crtc);
-		if (monShow) {
-			if (strncmp(monShow,xrrOut->name,strlen(monShow))==0)
-				xrrShow = xrrT;
-			if (monNote && strncmp(monNote,xrrOut->name,strlen(monNote))==0)
-				xrrNote = xrrT;
+	XRROutputInfo *xrrOut;
+	for (i = 0; i < xrr_sr->noutput; i++) {
+		xrrOut = XRRGetOutputInfo(dpy,xrr_sr,xrr_sr->outputs[i]);
+		if (xrrOut->crtc) {
+			xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrrOut->crtc);
+			if (monShow) {
+				if (strncmp(monShow,xrrOut->name,strlen(monShow))==0)
+					xrrShow = xrrT;
+				if (monNote && strncmp(monNote,xrrOut->name,strlen(monNote))==0)
+					xrrNote = xrrT;
+			}
+			else {
+				if (!xrrNote) xrrNote = xrrT;
+				else if (!xrrShow) xrrShow = xrrT;
+				else { XRRFreeCrtcInfo(xrrShow); xrrShow = xrrT; }
+			}
 		}
-		else {
-			if (!xrrNote) xrrNote = xrrT;
-			else if (!xrrShow) xrrShow = xrrT;
-			else { XRRFreeCrtcInfo(xrrShow); xrrShow = xrrT; }
-		}
+		XRRFreeOutputInfo(xrrOut);
 	}
-	XRRFreeOutputInfo(xrrOut);
-}
-if (!xrrShow) { xrrShow = xrrNote; xrrNote = NULL; }
-
-//for (i = 0; i < xrr_sr->ncrtc; i++) {
-//	xrrT = XRRGetCrtcInfo(dpy,xrr_sr,xrr_sr->crtcs[i]);
-//	if (xrrT->mode != None) {
-//		if (xrrNote) XRRFreeCrtcInfo(xrrNote);
-//		if (xrrShow) xrrNote = xrrT;
-//		else xrrShow = xrrT;
-//	}
-//f }
+	if (!xrrShow) { xrrShow = xrrNote; xrrNote = NULL; }
 	/* Presentation monitor */
 	if (!xrrShow) die("No monitors detected\n");
 	sw = xrrShow->width;
@@ -656,6 +650,11 @@ void polka(const char *arg) { pen_polka_rect(arg, POLKA); }
 void quit(const char *arg) { mode &= ~RUNNING; }
 
 void rectangle(const char *arg) { pen_polka_rect(arg, RECT); }
+
+void usage(const char *prog) {
+	printf("Usage: %s [OPTION...] SHOW_FILE [NOTES_FILE]\n"
+			"See man page for details.\n",prog); 
+}
 
 void warn() {
 	Window w = wshow;
