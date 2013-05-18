@@ -5,6 +5,10 @@
 
 static GC bgc, sgc, egc;
 
+static int render_stop = 0;
+#define RENDER_STOP_REQUEST	0x01
+#define RENDER_STOP_DONE	0x02
+
 void *render_threaded(void *arg) {
 	Show *show = (Show *) arg;
 	int i, j, n, x, y, grid = 0;
@@ -68,6 +72,10 @@ void *render_threaded(void *arg) {
 	n = 0; x = (show->sorter ? show->sorter->x : 0);
 	y = (show->sorter ? show->sorter->y : 0);
 	for (i = 0; i < show->count; i++) {
+		if (render_stop) {
+			render_stop = RENDER_STOP_DONE;
+			return NULL;
+		}
 		show->slide[i] = XCreatePixmap(dpy,root,show->w,show->h,
 				DefaultDepth(dpy,scr));
 		XFillRectangle(dpy,show->slide[i],sgc,0,0,show->w,show->h);
@@ -134,7 +142,9 @@ void render(Show *show,const char *cb, const char *cs, const char *ce) {
 }
 
 void free_renderings(Show *show) {
+	render_stop = RENDER_STOP_REQUEST;
 	if (!show) return;
+	while (render_stop != RENDER_STOP_DONE) usleep(1000);
 	XFreeGC(dpy,bgc); XFreeGC(dpy,sgc); XFreeGC(dpy,egc);
 	int i;
 	for (i = 0; i < show->count; i++) {
