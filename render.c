@@ -135,7 +135,11 @@ void render(Show *show,const char *cb, const char *cs, const char *ce) {
 
 void free_renderings(Show *show) {
 	pthread_cancel(show_render);
-	pthread_cancel(note_render);
+	pthread_join(show_render,NULL);
+	if (note_render) {
+		pthread_cancel(note_render);
+		pthread_join(note_render,NULL);
+	}
 	if (!show) return;
 	XFreeGC(dpy,bgc); XFreeGC(dpy,sgc); XFreeGC(dpy,egc);
 	int i;
