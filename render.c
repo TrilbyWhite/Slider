@@ -68,7 +68,7 @@ void *render_threaded(void *arg) {
 	cairo_t *cairo;
 	n = 0; x = (show->sorter ? show->sorter->x : 0);
 	y = (show->sorter ? show->sorter->y : 0);
-	for (i = 0; i < show->count; i++) {
+	for (i = 0; i < show->count && !(show->flag[0] & STOP_RENDER); i++) {
 		show->slide[i] = XCreatePixmap(dpy,root,show->w,show->h,
 				DefaultDepth(dpy,scr));
 		XFillRectangle(dpy,show->slide[i],sgc,0,0,show->w,show->h);
@@ -134,13 +134,11 @@ void render(Show *show,const char *cb, const char *cs, const char *ce) {
 }
 
 void free_renderings(Show *show) {
-	pthread_cancel(show_render);
-	pthread_join(show_render,NULL);
-	if (note_render) {
-		pthread_cancel(note_render);
-		pthread_join(note_render,NULL);
-	}
 	if (!show) return;
+	show->flag[0] |= STOP_RENDER;
+	if (note_render) show->notes->flag[0] |= STOP_RENDER;
+	pthread_join(show_render,NULL);
+	if (note_render) pthread_join(note_render,NULL);
 	XFreeGC(dpy,bgc); XFreeGC(dpy,sgc); XFreeGC(dpy,egc);
 	int i;
 	for (i = 0; i < show->count; i++) {
