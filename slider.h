@@ -16,6 +16,7 @@
 #include <X11/extensions/Xrandr.h>
 
 #define RENDERED	0x0001
+#define STOP_RENDER	0x0010
 
 typedef struct Show Show;
 struct Show {		// CREATE/FREE
