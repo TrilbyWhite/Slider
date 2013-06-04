@@ -1,18 +1,20 @@
 
-PROG	= slider
-VER		= 2.0a
-CFLAGS	= -Os -Wall
-PREFIX	?= /usr
-FLAGS	= `pkg-config --cflags --libs x11 xrandr poppler-glib cairo` -pthread -lm
-SOURCE	= slider.c render.c
-HEADER	= slider.h config.h
-DEFS	= -DFADE_TRANSITION
+PROG	=	slider
+VER		=	2.0a
+CC		?=	gcc
+CFLAGS	+=	-Os `pkg-config --cflags x11 xrandr poppler-glib cairo`
+LDFLAGS	+=	`pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
+PREFIX	?=	/usr
+SOURCE	= 	slider.c render.c
+HEADER	= 	slider.h config.h
+OPTS	= 	-DFADE_TRANSITION
+EOPTS	=	${OPTS}
 
 ${PROG}: ${SOURCE} ${HEADER}
-	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS}
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS}
 
 debug: ${SOURCE} ${HEADER}
-	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS} -DDEBUG
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OTPS} -DDEBUG
 
 tarball: clean
 	@rm -f ${PROG}-${VER}.tar.gz
@@ -22,7 +24,7 @@ clean:
 	@rm -f ${PROG}
 
 experimental: ${SOURCE} ${HEADER}
-	@gcc -o ${PROG} ${SOURCE} ${CFLAGS} ${FLAGS} ${DEFS}
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${EOPTS}
 
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
