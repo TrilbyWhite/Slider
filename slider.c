@@ -4,10 +4,6 @@
 * Author: Jesse McClure, copyright 2012-2013
 * License: GPLv3
 *
-* Based on code from TinyWM by Nick Welch <mack@incise.org>, 2005,
-* with coode influence from DWM by the Suckless team (suckless.org),
-* and concepts inspired by i3 (i3wm.org).
-*
 *    This program is free software: you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
 *    the Free Software Foundation, either version 3 of the License, or
@@ -91,19 +87,18 @@ void action(const char *arg) {
 	if (mode & OVERVIEW) return;
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	/* create cairo contexts */
-	int w; double R,G,B,A; char sym[2] = "x";
+	int w,tw; double R,G,B,A,tR,tG,tB,tA; char sym[2] = "x";
 	sscanf(ACTION_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
+	sscanf(ACTION_FONT,"%d %lf,%lf,%lf %lf",&tw,&tR,&tG,&tB,&tA);
 	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
 			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
+	cairo_translate(c,show->x,show->y);
+	cairo_scale(c,show->scale,show->scale);
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
-	cairo_set_source_rgba(c,R,G,B,A);
 	cairo_set_line_width(c,w);
-	cairo_t *ct = cairo_create(t);
-	sscanf(ACTION_FONT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
-	cairo_set_source_rgba(ct,R,G,B,A);
-	cairo_set_font_size(ct,w);
-	cairo_select_font_face(ct,"sans-serif",
+	cairo_set_font_size(c,tw);
+	cairo_select_font_face(c,"sans-serif",
 			CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
 	/* get pdf page and action links */
 	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
@@ -112,31 +107,31 @@ void action(const char *arg) {
 	lm = poppler_page_get_link_mapping(page);
 	PopplerLinkMapping *map;
 	PopplerAction *act = NULL;
+	PopplerRectangle r;
 	int nact, nsel = 0;
 	for (li = lm, nact = 0; li && nact < 26; li = li->next, nact++) {
 		map = (PopplerLinkMapping *)li->data;
-		r.x = map->area.x1 * show->scale;
-		r.width = map->area.x2 * show->scale - r.x;
-		r.x += show->x;
-		r.y = map->area.y1 * show->scale;
-		r.height = map->area.y2 * show->scale - r.y;
-		r.y = show->y + show->h - r.y - r.height;
+		r = map->area;
+		r.y1 = show->h / show->scale - r.y1;
+		r.y2 = show->h / show->scale - r.y2;
 		/* draw links */
-		cairo_rectangle(c,r.x,r.y,r.width,r.height);
+		cairo_set_source_rgba(c,R,G,B,A);
+		cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 		cairo_stroke(c);
-		cairo_arc(c,r.x,r.y,15,0,2*M_PI);
+		cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
 		cairo_fill(c);
 		sym[0] = nact + 65;
-		cairo_move_to(ct,r.x-5,r.y+5);
-		cairo_show_text(ct,sym);
-		cairo_stroke(ct);
+		cairo_set_source_rgba(c,tR,tG,tB,tA);
+		cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
+		cairo_show_text(c,sym);
+		cairo_stroke(c);
 	}
 	/* get key */
 	if (!nact) return;
 	XEvent ev;
 	while (!XCheckTypedEvent(dpy,KeyPress,&ev));
 	XKeyEvent *e = &ev.xkey;
-	nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,(KeyCode)e->keycode,0,0))[0] - 97;
+	nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0] - 97;
 	/* get selected action link */
 	for (li = lm, nact = 0; li; li = li->next, nact++) {
 		map = (PopplerLinkMapping *)li->data;
@@ -169,8 +164,20 @@ void action(const char *arg) {
 		}
 		else if (act->type == POPPLER_ACTION_LAUNCH) {
 			PopplerActionLaunch *l = &act->launch;
-fprintf(stderr,"launch \"%s %s\"\n",l->file_name,l->params);
-fprintf(stderr,"launch links not yet implemented\n");
+/* Action Launch Links will never be allowed by default as they
+   can potentially pose a security risk.  If you are sure your
+   pdfs can all be trusted, and you want to activate this feature
+   yourself, simply compile Slider with the -DALLOW_PDF_ACTION_LAUNCH
+   flag.  Do this only AT YOUR OWN RISK.
+       - J McClure (10 June 2013)    */
+#ifdef ALLOW_PDF_ACTION_LAUNCH
+			char *cmd = calloc(strlen(l->file_name)+strlen(l->params)+2,
+					sizeof(char));
+			sprintf(cmd,"%s %s",l->file_name,l->params); system(cmd);free(cmd);
+#else
+		fprintf(stderr,"[SLIDER] blocked launch of \"%s %s\"\n",
+				l->file_name,l->params);
+#endif /* ALLOW_PDF_ACTION_LAUNCH */
 		}
 		else if (act->type == POPPLER_ACTION_URI) {
 			PopplerActionUri *u = &act->uri;
@@ -197,6 +204,7 @@ fprintf(stderr,"launch links not yet implemented\n");
 		if (swnote) XRaiseWindow(dpy,wnote);
 	}
 	poppler_page_free_link_mapping(lm);
+	cairo_destroy(c);
 	draw(NULL);
 }
 
@@ -356,8 +364,14 @@ void draw(const char *arg) {
 	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
 			DefaultVisual(dpy,scr),sw,sh);
 	cairo_t *c = cairo_create(t);
-	cairo_translate(c,show->x,show->y);
 	cairo_surface_destroy(t);
+	cairo_set_source_rgba(c,0,0,0,1);
+	cairo_rectangle(c,0,0,show->x,sh);
+	cairo_rectangle(c,show->x+show->w,0,show->x,sh);
+	cairo_rectangle(c,0,0,sw,show->y);
+	cairo_rectangle(c,0,show->y+show->h,sw,show->y);
+	cairo_fill(c);
+	cairo_translate(c,show->x,show->y);
 	int i;
 	t = cairo_xlib_surface_create(dpy,show->slide[show->cur],
 			DefaultVisual(dpy,scr),show->w,show->h);
@@ -452,7 +466,8 @@ void init_X() {
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
 	XSetWindowAttributes wa;
-	wa.event_mask = ExposureMask|KeyPressMask|ButtonPressMask|StructureNotifyMask;
+	wa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | 
+			StructureNotifyMask;
 	wa.override_redirect = True;
 	/* get RandR info */
 	XRRScreenResources *xrr_sr = XRRGetScreenResources(dpy,root);
@@ -590,7 +605,6 @@ void overview(const char *arg) {
 	cairo_surface_destroy(t);
 	cairo_destroy(c);
 }
-
 
 #define PEN		0
 #define POLKA	1

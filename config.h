@@ -30,8 +30,8 @@ const char colors[][9] = {
 #define EMPTY_RECT		"10  1.0, 1.0, 1.0  0.5"
 #define ZOOM_RECT		"10  0.0, 0.8, 1.0  0.8"
 #define OVERVIEW_RECT	"10  1.0, 1.0, 0.0  0.6"
-#define ACTION_RECT		"2   0.0, 0.2, 1.0  0.3"
-#define ACTION_FONT		"15  0.0, 0.4, 1.0  1.0"
+#define ACTION_RECT		"1   0.0, 0.2, 1.0  0.3"
+#define ACTION_FONT		"8   0.0, 0.4, 1.0  1.0"
 
 static Key keys[] = {
 	{ ControlMask,		XK_q,		quit,		NULL		},
