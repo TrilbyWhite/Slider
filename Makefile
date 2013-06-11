@@ -33,3 +33,4 @@ install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
 	@install -Dm666 ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
 
+.PHONY: debug minimal experimental clean tarball install
