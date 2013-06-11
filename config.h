@@ -1,5 +1,6 @@
 
 const char colors[][9] = {
+/* soon all colors will be replaced by config strings */
 	[Black]		= "#000000",
 	[White]		= "#FFFFFF",
 	[ScreenBG]	= "#000000",
@@ -37,6 +38,7 @@ static Key keys[] = {
 	{ ControlMask,		XK_q,		quit,		NULL		},
 	{ 0,				XK_Tab,		overview,	NULL		},
 	{ 0,				XK_Return,	draw,		NULL		},
+	{ ShiftMask,		XK_Return,	draw,		"render"	},
 	{ 0,				XK_space,	move,		"right"		},
 	{ 0,				XK_Right,	move,		"right"		},
 	{ 0,				XK_Left,	move,		"left"		},
@@ -44,14 +46,31 @@ static Key keys[] = {
 	{ 0,				XK_Down,	move,		"down"		},
 	{ 0,				XK_b,		mute,		"black"		},
 	{ 0,				XK_w,		mute,		"white"		},
+
+/* ------------ CONDITIONALLY COMPILED FEATURES: ------------ */
+#ifdef ACTION_LINKS
 	{ 0,				XK_a,		action,		NULL		},
+#endif /* ACTION_LINKS */
+
+#ifdef FORM_FILL
+	{ 0,				XK_f,		fillfield,	NULL		},
+#endif /* FORM_FILL */
+
+#ifdef ZOOMING
 	{ 0,				XK_z,		zoom,		NULL		},
 	{ ShiftMask,		XK_z,		zoom,		"lock"		},
-	/* the following bindings take config-strings as described above */
+#endif /*ZOOMING */
+
+#ifdef DRAWING
+	/* the following bindings take config-strings as described above
+	   the perm_pen or perm_rect makes the drawing persistent for the
+	   duration of the presentation session.
+	   Such persistent drawings can be "erased" with draw("render")  */
 	/* draw a rectanle */
 	{ 0,				XK_r,		rectangle,	"20  0.0, 0.8, 1.0  0.8" },
 	{ ShiftMask,		XK_r,		rectangle,	"20  0.0, 1.0, 0.2  0.8" },
 	{ ControlMask,		XK_r,		rectangle,	"20  1.0, 0.0, 0.0  0.8" },
+	{ Mod1Mask,			XK_r,		perm_rect,	"20  0.0, 0.8, 1.0  0.8" },
 	/* "Polka-dot" cursor/pointers */
 	{ 0,				XK_1,		polka,		"40  0.0, 0.2, 0.5  0.7" },
 	{ 0,				XK_2,		polka,		"40  1.0, 1.0, 0.1  0.5" },
@@ -66,4 +85,14 @@ static Key keys[] = {
 	{ 0,				XK_F4,		pen,		"4   0.0, 0.2, 0.5  0.9" },
 	{ 0,				XK_F5,		pen,		"8   0.0, 0.2, 0.5  0.7" },
 	{ 0,				XK_F6,		pen,		"24  0.0, 0.2, 0.5  0.5" },
-};
+	{ ShiftMask,		XK_F1,		perm_pen,	"4   1.0, 0.0, 0.0  0.9" },
+	{ ShiftMask,		XK_F2,		perm_pen,	"8   1.0, 0.0, 0.0  0.7" },
+	{ ShiftMask,		XK_F3,		perm_pen,	"24  1.0, 0.0, 0.0  0.5" },
+	{ ShiftMask,		XK_F4,		perm_pen,	"4   0.0, 0.2, 0.5  0.9" },
+	{ ShiftMask,		XK_F5,		perm_pen,	"8   0.0, 0.2, 0.5  0.7" },
+	{ ShiftMask,		XK_F6,		perm_pen,	"24  0.0, 0.2, 0.5  0.5" },
+#endif /* DRAWING */
+/* --------------------- END FEATURES: ---------------------- */
+
+}; /* end keys */
+

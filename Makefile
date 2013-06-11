@@ -7,14 +7,17 @@ LDFLAGS	+=	`pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
 PREFIX	?=	/usr
 SOURCE	= 	slider.c render.c
 HEADER	= 	slider.h config.h
-OPTS	= 	-DFADE_TRANSITION
-EOPTS	=	${OPTS}
+OPTS	= 	-DFADE_TRANSITION -DACTION_LINKS -DDRAWING -DZOOMING
+EX_OPTS	=	${OPTS} -DFORM_FILL
 
 ${PROG}: ${SOURCE} ${HEADER}
 	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS}
 
 debug: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OTPS} -DDEBUG
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DDEBUG
+
+minimal: ${SOURCE} ${HEADER}
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS}
 
 tarball: clean
 	@rm -f ${PROG}-${VER}.tar.gz
@@ -24,7 +27,7 @@ clean:
 	@rm -f ${PROG}
 
 experimental: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${EOPTS}
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${EX_OPTS}
 
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}

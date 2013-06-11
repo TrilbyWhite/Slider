@@ -47,26 +47,37 @@ struct View {
 
 enum { Black, White, ScreenBG, SlideBG, Empty };
 
+#ifdef ACTION_LINKS
 static void action(const char *);
+#endif /* ACTION_LINKS */
 static void buttonpress(XEvent *);
 static GC cgc(int);
 static void cleanup();
 static void command_line(int, const char **);
 static void draw(const char *);
+#ifdef FORM_FILL
+static void fillfield(const char *);
+#endif /* FORM_FILL */
 static void grab_keys(Bool);
 static void init_views();
 static void init_X();
 static void keypress(XEvent *);
 static void move(const char *);
 static void mute(const char *);
-static void pen(const char *);
-static void polka(const char *);
 static void overview(const char *);
-static void quit(const char *);
+#ifdef DRAWING
+static void pen(const char *);
+static void perm_pen(const char *);
+static void polka(const char *);
+static void perm_rect(const char *);
 static void rectangle(const char *);
+#endif /* DRAWING */
+static void quit(const char *);
 static void usage(const char *);
 static void warn();
+#ifdef ZOOMING
 static void zoom(const char *);
+#endif /* ZOOMING */
 
 static Window wshow, wnote;
 static Pixmap bshow, bnote;
@@ -83,10 +94,11 @@ static void (*handler[LASTEvent])(XEvent *) = {
 	[KeyPress]		= keypress,
 };
 
+#ifdef ACTION_LINKS
 void action(const char *arg) {
 	if (mode & OVERVIEW) return;
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
-	/* create cairo contexts */
+	/* create cairo context */
 	int w,tw; double R,G,B,A,tR,tG,tB,tA; char sym[2] = "x";
 	sscanf(ACTION_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
 	sscanf(ACTION_FONT,"%d %lf,%lf,%lf %lf",&tw,&tR,&tG,&tB,&tA);
@@ -207,6 +219,7 @@ void action(const char *arg) {
 	cairo_destroy(c);
 	draw(NULL);
 }
+#endif /* ACTION_LINKS */
 
 void buttonpress(XEvent *ev) {
 	XButtonEvent *e = &ev->xbutton;
@@ -355,15 +368,33 @@ static inline void draw_view(Show *set,int vnum, int snum) {
 }
 
 void draw(const char *arg) {
+	cairo_surface_t *t;
+	cairo_t *c;
+	if (arg && arg[0] == 'r') { /* rerender */
+		if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
+		t = cairo_xlib_surface_create(dpy,show->slide[show->cur],
+				DefaultVisual(dpy,scr),sw,sh);
+		c = cairo_create(t);
+		cairo_surface_destroy(t);
+		cairo_set_source_rgba(c,1,1,1,1);
+			cairo_rectangle(c,0,0,sw,sh);
+		cairo_fill(c);
+		cairo_scale(c,show->scale,show->scale);
+		PopplerDocument *pdf;
+		PopplerPage *page;
+		pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+		page = poppler_document_get_page(pdf,show->cur);
+		poppler_page_render(page,c);
+		cairo_destroy(c);
+	}
 	if (mode & OVERVIEW) {
 		mode &= ~OVERVIEW;
 		XDefineCursor(dpy,wshow,invisible_cursor);
 	}
 	/* draw show */
 #ifdef FADE_TRANSITION
-	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
-			DefaultVisual(dpy,scr),sw,sh);
-	cairo_t *c = cairo_create(t);
+	t = cairo_xlib_surface_create(dpy,wshow,DefaultVisual(dpy,scr),sw,sh);
+	c = cairo_create(t);
 	cairo_surface_destroy(t);
 	cairo_set_source_rgba(c,0,0,0,1);
 	cairo_rectangle(c,0,0,show->x,sh);
@@ -403,6 +434,102 @@ void draw(const char *arg) {
 	XCopyArea(dpy,bnote,wnote,gc,0,0,swnote,shnote,0,0);
 	XFlush(dpy);
 }
+
+#ifdef FORM_FILL
+void fillfield(const char *arg) {
+	if (mode & OVERVIEW) return;
+	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
+	/* create cairo context */
+	int w, tw; double R,G,B,A;
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+			DefaultVisual(dpy,scr),sw,sh);
+	cairo_t *c = cairo_create(t);
+	cairo_surface_destroy(t);
+	cairo_translate(c,show->x,show->y);
+	cairo_scale(c,show->scale,show->scale);
+	/* font ? */
+	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
+	GList *fmap, *list;
+	PopplerRectangle r;
+	PopplerFormField *f;
+	fmap = poppler_page_get_form_field_mapping(page);
+	for (list = fmap; list; list = list->next) {
+		f = ((PopplerFormFieldMapping *)list->data)->field;
+		r = ((PopplerFormFieldMapping *)list->data)->area;
+		r.y1 = show->h / show->scale - r.y1;
+		r.y2 = show->h / show->scale - r.y2;
+		cairo_set_source_rgba(c,0.0,1.0,1.0,0.4);
+		cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
+		cairo_fill(c);
+		/* key shortcuts ? */
+	}
+	/* get a location from the mouse */
+	int mx=0, my=0;
+	XDefineCursor(dpy,wshow,crosshair_cursor);
+	XGrabPointer(dpy,wshow,True,ButtonPressMask,GrabModeAsync,GrabModeAsync,
+			wshow,None,CurrentTime);
+	XEvent ev;
+	while (!XNextEvent(dpy,&ev)) {
+		if (ev.type == KeyPress) { XPutBackEvent(dpy,&ev); break; }
+		if (ev.type == ButtonPress) {
+			//mx = (float) ev.xbutton.x * show->scale;
+			//my = (float) (show->h - ev.xbutton.y) * show->scale;
+			mx = (ev.xbutton.x - show->x) / show->scale;
+			my = (ev.xbutton.y - show->y) / show->scale;
+			break;
+		}
+	}
+	XUngrabPointer(dpy,CurrentTime);
+	XDefineCursor(dpy,wshow,invisible_cursor);
+	/* match coordinates to field */
+	list = NULL;
+	if (mx || my) for (list = fmap; list; list = list->next) {
+		f = ((PopplerFormFieldMapping *)list->data)->field;
+		r = ((PopplerFormFieldMapping *)list->data)->area;
+		r.y1 = show->h / show->scale - r.y1;
+		r.y2 = show->h / show->scale - r.y2;
+		if (mx > r.x1 && mx < r.x2 && my > r.y2 && my < r.y1) break;
+	}
+	if (!list) {
+		cairo_destroy(c);
+		poppler_page_free_form_field_mapping(fmap);
+		return;
+	}
+	/* get field type and call appropriate function */
+	PopplerFormFieldType ft = poppler_form_field_get_field_type(f);
+	KeySym key;
+	if (ft == POPPLER_FORM_FIELD_BUTTON) {
+		// TODO
+	}
+	else if (ft == POPPLER_FORM_FIELD_CHOICE) {
+		// TODO
+	}
+	else if (ft == POPPLER_FORM_FIELD_SIGNATURE) {
+		// TODO
+	}
+	else if (ft == POPPLER_FORM_FIELD_TEXT) { /* text fill */
+		float sz = poppler_form_field_get_font_size(f);
+		cairo_set_font_size(c,(sz ? sz : 12));
+		cairo_select_font_face(c,"sans-serif",
+				CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
+		//draw white background!
+		//while (XMaskEvent(dpy,KeyPressMask,&ev){
+		//	
+		//}
+cairo_set_source_rgba(c,0,0,0,1);
+cairo_move_to(c,r.x1,r.y1);
+cairo_show_text(c,"Hello");
+XFlush(dpy);
+poppler_form_field_text_set_text(f,"hello");
+	}
+	cairo_destroy(c);
+	poppler_page_free_form_field_mapping(fmap);
+sleep(1);
+	return;
+}
+#endif /* FORM_FILL */
+
 
 void grab_keys(Bool grab) {
 	if (grab) {
@@ -606,14 +733,16 @@ void overview(const char *arg) {
 	cairo_destroy(c);
 }
 
-#define PEN		0
-#define POLKA	1
-#define RECT	2
+#ifdef DRAWING
+#define PEN		0x01
+#define POLKA	0x02
+#define RECT	0x04
+#define PERM	0x08
 static void pen_polka_rect(const char *arg, int type) {
 	int w; double R,G,B,A;
 	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
 	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
-	if (type != POLKA) XDefineCursor(dpy,wshow,crosshair_cursor);
+	if (!(type & POLKA)) XDefineCursor(dpy,wshow,crosshair_cursor);
 	XEvent ev; Bool on = False;
 	Pixmap pbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
 	Pixmap cbuf = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
@@ -625,47 +754,48 @@ static void pen_polka_rect(const char *arg, int type) {
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
 	cairo_set_source_rgba(c,R,G,B,A);
 	cairo_set_line_width(c,w);
-	if (type == POLKA) {
+	if (type & POLKA) {
 		cairo_arc(c,sw/2,sh/2,(double)w,0,2*M_PI);
 		cairo_fill(c);
 		XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 	}
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
-			ButtonReleaseMask,GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
+			ButtonReleaseMask,GrabModeAsync,GrabModeAsync,wshow,None,
+			CurrentTime);
 	while (!XNextEvent(dpy,&ev)) {
 		if (ev.type == KeyPress) { XPutBackEvent(dpy,&ev); break; }
-		else if (type != POLKA && ev.type == ButtonPress) {
+		else if ( !(type & POLKA) && ev.type == ButtonPress) {
 			r.x = ev.xbutton.x; r.y = ev.xbutton.y;
 			cairo_move_to(c,r.x,r.y);
 			on = True;
 		}
-		else if (type == PEN && ev.type == MotionNotify && on) {
+		else if ( (type & PEN) && ev.type == MotionNotify && on) {
 			cairo_line_to(c,ev.xbutton.x,ev.xbutton.y);
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			cairo_stroke_preserve(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
-		else if (type == POLKA && ev.type == MotionNotify) {
+		else if ( (type & POLKA) && ev.type == MotionNotify) {
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			cairo_arc(c,ev.xbutton.x,ev.xbutton.y,(double)w,0,2*M_PI);
 			cairo_fill(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
-		else if (type == RECT && ev.type == MotionNotify && on) {
+		else if ( (type & RECT) && ev.type == MotionNotify && on) {
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			r.width = ev.xbutton.x - r.x; r.height = ev.xbutton.y - r.y;
 			cairo_rectangle(c,r.x,r.y,r.width,r.height);
 			cairo_stroke(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
-		else if (type == PEN && ev.type == ButtonRelease) {
+		else if ( (type & PEN) && ev.type == ButtonRelease) {
 			on = False;
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
 			cairo_stroke(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 			XCopyArea(dpy,wshow,cbuf,gc,0,0,sw,sh,0,0);
 		}
-		else if (type == RECT && ev.type == ButtonRelease) { break; }
+		else if ( (type & RECT) && ev.type == ButtonRelease) { break; }
 	}
 	XUngrabPointer(dpy,CurrentTime);
 	cairo_surface_destroy(t);
@@ -673,17 +803,19 @@ static void pen_polka_rect(const char *arg, int type) {
 	XDefineCursor(dpy,wshow,invisible_cursor);
 	XFreePixmap(dpy,pbuf);
 	XFreePixmap(dpy,cbuf);
-	if (type == POLKA) draw(NULL);
+	if (type & PERM) XCopyArea(dpy,wshow,show->slide[show->cur],gc,
+			show->x,show->y,show->w,show->h,0,0);
+	if (type & POLKA) draw(NULL);
 	else XFlush(dpy);
 }
-
 void pen(const char *arg) { pen_polka_rect(arg, PEN); }
-
+void perm_pen(const char *arg) { pen_polka_rect(arg, PEN | PERM ); }
+void perm_rect(const char *arg) { pen_polka_rect(arg, RECT | PERM ); }
 void polka(const char *arg) { pen_polka_rect(arg, POLKA); }
+void rectangle(const char *arg) { pen_polka_rect(arg, RECT); }
+#endif /* DRAWING */
 
 void quit(const char *arg) { mode &= ~RUNNING; }
-
-void rectangle(const char *arg) { pen_polka_rect(arg, RECT); }
 
 void usage(const char *prog) {
 	printf("Usage: %s [OPTION...] SHOW_FILE [NOTES_FILE]\n"
@@ -705,6 +837,7 @@ void warn() {
 	draw(NULL);
 }
 
+#ifdef ZOOMING
 void zoom(const char *arg) {
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	pen_polka_rect(ZOOM_RECT, RECT);
@@ -740,6 +873,7 @@ void zoom(const char *arg) {
 	XFreePixmap(dpy,b);
 	XFlush(dpy);
 }
+#endif /* ZOOMING */
 
 int main(int argc, const char **argv) {
 	command_line(argc,argv);
