@@ -187,8 +187,8 @@ void action(const char *arg) {
 					sizeof(char));
 			sprintf(cmd,"%s %s",l->file_name,l->params); system(cmd);free(cmd);
 #else
-		fprintf(stderr,"[SLIDER] blocked launch of \"%s %s\"\n",
-				l->file_name,l->params);
+			fprintf(stderr,"[SLIDER] blocked launch of \"%s %s\"\n",
+					l->file_name,l->params);
 #endif /* ALLOW_PDF_ACTION_LAUNCH */
 		}
 		else if (act->type == POPPLER_ACTION_URI) {
@@ -437,6 +437,13 @@ void draw(const char *arg) {
 
 #ifdef FORM_FILL
 void fillfield(const char *arg) {
+	static PopplerDocument *modPDF = NULL;
+	if (!modPDF) {
+		PopplerDocument *pdf;
+		pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+		poppler_document_save_a_copy(pdf,"file:///tmp/fill.pdf",NULL);
+		modPDF = poppler_document_new_from_file("file:///tmp/fill.pdf",NULL,NULL);
+	}
 	if (mode & OVERVIEW) return;
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	/* create cairo context */
@@ -448,8 +455,8 @@ void fillfield(const char *arg) {
 	cairo_translate(c,show->x,show->y);
 	cairo_scale(c,show->scale,show->scale);
 	/* font ? */
-	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
-	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
+	//PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerPage *page = poppler_document_get_page(modPDF,show->cur);
 	GList *fmap, *list;
 	PopplerRectangle r;
 	PopplerFormField *f;
@@ -467,21 +474,19 @@ void fillfield(const char *arg) {
 	/* get a location from the mouse */
 	int mx=0, my=0;
 	XDefineCursor(dpy,wshow,crosshair_cursor);
-	XGrabPointer(dpy,wshow,True,ButtonPressMask,GrabModeAsync,GrabModeAsync,
-			wshow,None,CurrentTime);
+	XGrabPointer(dpy,wshow,True,ButtonPressMask,
+			GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
 	XEvent ev;
-	while (!XNextEvent(dpy,&ev)) {
-		if (ev.type == KeyPress) { XPutBackEvent(dpy,&ev); break; }
-		if (ev.type == ButtonPress) {
-			//mx = (float) ev.xbutton.x * show->scale;
-			//my = (float) (show->h - ev.xbutton.y) * show->scale;
-			mx = (ev.xbutton.x - show->x) / show->scale;
-			my = (ev.xbutton.y - show->y) / show->scale;
-			break;
-		}
+	XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
+	if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
+	else if (ev.type == ButtonPress) {
+		mx = (ev.xbutton.x - show->x) / show->scale;
+		my = (ev.xbutton.y - show->y) / show->scale;
 	}
-	XUngrabPointer(dpy,CurrentTime);
 	XDefineCursor(dpy,wshow,invisible_cursor);
+	XSync(dpy,True);
+	draw(NULL);
+	XUngrabPointer(dpy,CurrentTime);
 	/* match coordinates to field */
 	list = NULL;
 	if (mx || my) for (list = fmap; list; list = list->next) {
@@ -496,7 +501,7 @@ void fillfield(const char *arg) {
 		poppler_page_free_form_field_mapping(fmap);
 		return;
 	}
-	/* get field type and call appropriate function */
+	/* get field type and allow entry */
 	PopplerFormFieldType ft = poppler_form_field_get_field_type(f);
 	KeySym key;
 	if (ft == POPPLER_FORM_FIELD_BUTTON) {
@@ -509,23 +514,90 @@ void fillfield(const char *arg) {
 		// TODO
 	}
 	else if (ft == POPPLER_FORM_FIELD_TEXT) { /* text fill */
+		/* set up locale and input context */
+		if (	!setlocale(LC_CTYPE,"") ||
+				!XSupportsLocale() ||
+				!XSetLocaleModifiers("") )
+			fprintf(stderr,"locale failure\n");
+		XIM xim = XOpenIM(dpy,NULL,NULL,NULL);
+		XIC xic = XCreateIC(xim,XNInputStyle,XIMPreeditNothing|XIMStatusNothing,
+				XNClientWindow, wshow, XNFocusWindow, wshow, NULL);
+		/* get field info */
 		float sz = poppler_form_field_get_font_size(f);
-		cairo_set_font_size(c,(sz ? sz : 12));
+		sz = (sz ? sz : 12);
+		cairo_set_font_size(c,sz);
 		cairo_select_font_face(c,"sans-serif",
 				CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
-		//draw white background!
-		//while (XMaskEvent(dpy,KeyPressMask,&ev){
-		//	
-		//}
-cairo_set_source_rgba(c,0,0,0,1);
-cairo_move_to(c,r.x1,r.y1);
-cairo_show_text(c,"Hello");
-XFlush(dpy);
-poppler_form_field_text_set_text(f,"hello");
+		int len = poppler_form_field_text_get_max_len(f);
+		if (!len) len = 255;
+		char *txt = malloc((len+1)*sizeof(char));
+		gchar *temp = poppler_form_field_text_get_text(f);
+		if (temp) { strncpy(txt,temp,len); g_free(temp); }
+		else txt[0] = '\0';
+		/* event loop */
+		KeySym key; Status stat;
+		int inlen;
+		char *ch = &txt[strlen(txt)], *ts;
+		char in[8];
+		cairo_set_line_width(c,1);
+		cairo_text_extents_t ext;
+		while (key != XK_Escape) {
+			/* draw text and cursor */
+			cairo_set_source_rgba(c,0.8,1.0,1.0,1.0); // TODO get a back color?
+			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
+			cairo_fill(c);
+			cairo_set_source_rgba(c,0.0,0.0,0.0,1.0); // TODO get a font color?
+			cairo_move_to(c,r.x1,r.y1-sz/10.0);
+			cairo_show_text(c,txt);
+			// an ugly cursor
+			cairo_text_extents(c,ch,&ext);
+			cairo_rel_move_to(c,-ext.x_advance,sz/10.0);
+			cairo_rel_line_to(c,0,-sz);
+			cairo_stroke(c);
+			XFlush(dpy);
+			/* wait for keypress and process event */
+			XMaskEvent(dpy,KeyPressMask,&ev);
+			key = NoSymbol;
+			inlen = XmbLookupString(xic,&ev.xkey,in,sizeof(in),&key,&stat);
+			if (stat == XBufferOverflow) continue;
+			else if (!iscntrl(*in)) {
+				ts = strdup(ch); *ch = '\0';
+				strcat(txt,in); strcat(txt,ts);
+				free(ts); ch += strlen(in);
+			}
+			else if (key == XK_Return) {
+				if (poppler_form_field_text_get_text_type(f) != 
+						POPPLER_FORM_TEXT_MULTILINE) break;
+				ts = strdup(ch); *ch = '\0';
+				strcat(txt,"\n"); strcat(txt,ts);
+				free(ts); ch += strlen(in);
+			}
+			else if (key == XK_Delete && *ch != '\0') {
+				ts = strdup(ch+1); *ch = '\0';
+				strcat(txt,ts); free(ts); 
+			}
+			else if (key == XK_Left) { ch--; if (ch < txt) ch = txt; }
+			else if (key == XK_Right && *ch != '\0') ch++;
+		}
+		poppler_form_field_text_set_text(f,txt);
+		/* clean up */
+		free(txt);
+		XDestroyIC(xic);
 	}
 	cairo_destroy(c);
 	poppler_page_free_form_field_mapping(fmap);
-sleep(1);
+	/* rerender page changes */
+	t = cairo_xlib_surface_create(dpy,show->slide[show->cur],
+			DefaultVisual(dpy,scr),sw,sh);
+	c = cairo_create(t);
+	cairo_surface_destroy(t);
+	cairo_set_source_rgba(c,1,1,1,1);
+		cairo_rectangle(c,0,0,sw,sh);
+	cairo_fill(c);
+	cairo_scale(c,show->scale,show->scale);
+	poppler_page_render(page,c);
+	cairo_destroy(c);
+	draw(NULL);
 	return;
 }
 #endif /* FORM_FILL */

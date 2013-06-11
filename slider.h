@@ -14,6 +14,7 @@
 #include <X11/XKBlib.h>
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
+#include <locale.h>
 
 #define RENDERED	0x0001
 #define STOP_RENDER	0x0010
