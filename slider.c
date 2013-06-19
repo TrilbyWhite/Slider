@@ -660,7 +660,9 @@ void init_views() {
 
 void init_X() {
 	XInitThreads();
-	//g_type_init(); /* DEPRECATED IN GLIB 2.36 */
+#if !defined(GLIB_VERSION_2_36)
+        g_type_init();
+#endif
 	if (!(dpy=XOpenDisplay(NULL))) die("Failed to open display\n");
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);

@@ -35,7 +35,8 @@ const char colors[][9] = {
 #define ACTION_FONT		"8   0.0, 0.4, 1.0  1.0"
 
 static Key keys[] = {
-	{ ControlMask,		XK_q,		quit,		NULL		},
+	{ 0,		XK_Escape,		quit,		NULL		},
+	{ 0,		XK_q,		quit,		NULL		},
 	{ 0,				XK_Tab,		overview,	NULL		},
 	{ 0,				XK_Return,	draw,		NULL		},
 	{ ShiftMask,		XK_Return,	draw,		"render"	},
