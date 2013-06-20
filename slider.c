@@ -505,55 +505,80 @@ void fillfield(const char *arg) {
 	PopplerFormFieldType ft = poppler_form_field_get_field_type(f);
 	KeySym key;
 	if (ft == POPPLER_FORM_FIELD_BUTTON) {
-		// TODO
+		poppler_form_field_button_set_state(f,
+				!poppler_form_field_button_get_state(f));
 	}
 	else if (ft == POPPLER_FORM_FIELD_CHOICE) {
+printf("form fill type=choice not implemented yet\n");
 		// TODO
 	}
 	else if (ft == POPPLER_FORM_FIELD_SIGNATURE) {
+printf("form fill type=signature not implemented yet\n");
 		// TODO
 	}
 	else if (ft == POPPLER_FORM_FIELD_TEXT) { /* text fill */
 		/* set up locale and input context */
 		if (	!setlocale(LC_CTYPE,"") ||
 				!XSupportsLocale() ||
-				!XSetLocaleModifiers("") )
+				!XSetLocaleModifiers("") ) {
 			fprintf(stderr,"locale failure\n");
+			return;
+		}
 		XIM xim = XOpenIM(dpy,NULL,NULL,NULL);
-		XIC xic = XCreateIC(xim,XNInputStyle,XIMPreeditNothing|XIMStatusNothing,
-				XNClientWindow, wshow, XNFocusWindow, wshow, NULL);
+		XIC xic = XCreateIC(xim,XNInputStyle,
+				XIMPreeditNothing|XIMStatusNothing, XNClientWindow,
+				wshow, XNFocusWindow, wshow, NULL);
 		/* get field info */
 		float sz = poppler_form_field_get_font_size(f);
-		sz = (sz ? sz : 12);
-		cairo_set_font_size(c,sz);
+		cairo_set_font_size(c, (sz = (sz ? sz : 12)) );
 		cairo_select_font_face(c,"sans-serif",
 				CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
 		int len = poppler_form_field_text_get_max_len(f);
-		if (!len) len = 255;
-		char *txt = malloc((len+1)*sizeof(char));
+		char *txt = malloc(((len=(len?len:255))+1)*sizeof(char));
 		gchar *temp = poppler_form_field_text_get_text(f);
 		if (temp) { strncpy(txt,temp,len); g_free(temp); }
 		else txt[0] = '\0';
 		/* event loop */
 		KeySym key; Status stat;
+		Bool multi = (poppler_form_field_text_get_text_type(f) ==
+				POPPLER_FORM_TEXT_MULTILINE);
 		int inlen;
 		char *ch = &txt[strlen(txt)], *ts;
 		char in[8];
 		cairo_set_line_width(c,1);
 		cairo_text_extents_t ext;
+		cairo_font_extents_t fext;
+		cairo_font_extents(c,&fext);
 		while (key != XK_Escape) {
-			/* draw text and cursor */
+			/* draw text */
 			cairo_set_source_rgba(c,0.8,1.0,1.0,1.0); // TODO get a back color?
 			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
-			cairo_fill(c);
+			cairo_fill_preserve(c);
 			cairo_set_source_rgba(c,0.0,0.0,0.0,1.0); // TODO get a font color?
-			cairo_move_to(c,r.x1,r.y1-sz/10.0);
-			cairo_show_text(c,txt);
-			// an ugly cursor
-			cairo_text_extents(c,ch,&ext);
-			cairo_rel_move_to(c,-ext.x_advance,sz/10.0);
-			cairo_rel_line_to(c,0,-sz);
 			cairo_stroke(c);
+			cairo_move_to(c,r.x1,r.y2+fext.height);
+			if (multi) {
+				char *nl, *part = strdup(txt);
+				while ( (nl=strchr(part,'\n')) ) {
+					if (*(nl+1) == '\0') break;
+					*nl = '\0';
+					cairo_show_text(c,part);
+					cairo_text_extents(c,part,&ext);
+					cairo_rel_move_to(c,-ext.x_advance,fext.height);
+					free(part); part = strdup(nl+1);
+				}
+				if (nl) *nl = '\0';
+				cairo_show_text(c,part);
+				free(part);
+			}
+			else cairo_show_text(c,txt);
+			/* draw a (ugly) cursor */
+			if (ch > txt) {
+				cairo_text_extents(c,ch,&ext);
+				cairo_rel_move_to(c,-ext.x_advance,sz/10.0);
+				cairo_rel_line_to(c,0,-sz);
+				cairo_stroke(c);
+			}
 			XFlush(dpy);
 			/* wait for keypress and process event */
 			XMaskEvent(dpy,KeyPressMask,&ev);
@@ -566,14 +591,17 @@ void fillfield(const char *arg) {
 				free(ts); ch += strlen(in);
 			}
 			else if (key == XK_Return) {
-				if (poppler_form_field_text_get_text_type(f) != 
-						POPPLER_FORM_TEXT_MULTILINE) break;
+				if (!multi) break;
 				ts = strdup(ch); *ch = '\0';
 				strcat(txt,"\n"); strcat(txt,ts);
 				free(ts); ch += strlen(in);
 			}
 			else if (key == XK_Delete && *ch != '\0') {
 				ts = strdup(ch+1); *ch = '\0';
+				strcat(txt,ts); free(ts); 
+			}
+			else if (key == XK_BackSpace && ch > txt) {
+				ts = strdup(ch); *(--ch) = '\0';
 				strcat(txt,ts); free(ts); 
 			}
 			else if (key == XK_Left) { ch--; if (ch < txt) ch = txt; }
