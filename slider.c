@@ -98,6 +98,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
 void action(const char *arg) {
 	if (mode & OVERVIEW) return;
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
+	char input = (arg ? arg[0] : 'm');
 	/* create cairo context */
 	int w,tw; double R,G,B,A,tR,tG,tB,tA; char sym[2] = "x";
 	sscanf(ACTION_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
@@ -115,43 +116,67 @@ void action(const char *arg) {
 	/* get pdf page and action links */
 	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
 	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
-	GList *lm, *li;
-	lm = poppler_page_get_link_mapping(page);
-	PopplerLinkMapping *map;
+	GList *amap, *list;
+	amap = poppler_page_get_link_mapping(page);
 	PopplerAction *act = NULL;
 	PopplerRectangle r;
-	int nact, nsel = 0;
-	for (li = lm, nact = 0; li && nact < 26; li = li->next, nact++) {
-		map = (PopplerLinkMapping *)li->data;
-		r = map->area;
+	int n, nsel = 0;
+	for (list = amap, n = 0; list && n < 26; list = list->next, n++) {
+		r = ((PopplerLinkMapping *)list)->area;
 		r.y1 = show->h / show->scale - r.y1;
 		r.y2 = show->h / show->scale - r.y2;
 		/* draw links */
 		cairo_set_source_rgba(c,R,G,B,A);
 		cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 		cairo_stroke(c);
-		cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
-		cairo_fill(c);
-		sym[0] = nact + 65;
-		cairo_set_source_rgba(c,tR,tG,tB,tA);
-		cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
-		cairo_show_text(c,sym);
-		cairo_stroke(c);
+		if (input == 'k') {
+			cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
+			cairo_fill(c);
+			sym[0] = n + 65;
+			cairo_set_source_rgba(c,tR,tG,tB,tA);
+			cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
+			cairo_show_text(c,sym);
+			cairo_stroke(c);
+		}
 	}
-	/* get key */
-	if (!nact) return;
+	if (!n) return;
 	XEvent ev;
-	while (!XCheckTypedEvent(dpy,KeyPress,&ev));
-	XKeyEvent *e = &ev.xkey;
-	nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0] - 97;
-	/* get selected action link */
-	for (li = lm, nact = 0; li; li = li->next, nact++) {
-		map = (PopplerLinkMapping *)li->data;
-		if (nact == nsel) act = map->action;
+	if (input == 'k') { /* get key */
+		while (!XCheckTypedEvent(dpy,KeyPress,&ev));
+		XKeyEvent *e = &ev.xkey;
+		nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0]-97;
+		/* get selected action link */
+		for (list = amap, n = 0; list; list = list->next, n++) {
+			if (n == nsel) act = ((PopplerLinkMapping *)list->data)->action;
+		}
+	}
+	else { /* get mouse click */
+		int mx=0,my=0;
+		XDefineCursor(dpy,wshow,crosshair_cursor);
+		XGrabPointer(dpy,wshow,True,ButtonPressMask,
+				GrabModeAsync, GrabModeAsync, wshow, None, CurrentTime);
+		XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
+		if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
+		else if (ev.type == ButtonPress) {
+			mx = (ev.xbutton.x - show->x) / show->scale;
+			my = (ev.xbutton.y - show->y) / show->scale;
+		}
+		XDefineCursor(dpy,wshow,invisible_cursor);
+		XSync(dpy,True);
+		draw(NULL);
+		XUngrabPointer(dpy,CurrentTime);
+		/* get selected action link */
+		if (mx || my) for (list = amap; list; list = list->next) {
+			act = ((PopplerLinkMapping *)list->data)->action;
+			r = ((PopplerLinkMapping *)list->data)->area;
+			r.y1 = show->h / show->scale - r.y1;
+			r.y2 = show->h / show->scale - r.y2;
+			if (mx > r.x1 && mx < r.x2 && my > r.y2 && my < r.y1) break;
+		}
 	}
 	/* folow link */
 	if (act) {
-		grab_keys(False); /* release keyboard to interact with external prog. */
+		grab_keys(False); /* release keyboard for external prog. */
 		if (act->type == POPPLER_ACTION_GOTO_DEST) {
 			PopplerActionGotoDest *a = &act->goto_dest;
 			if (a->dest->type == POPPLER_DEST_NAMED) {
@@ -200,7 +225,9 @@ void action(const char *arg) {
 			PopplerActionMovie *m = &act->movie;
 			const char *mov = poppler_movie_get_filename(m->movie);
 			char *cmd = calloc(strlen(mov)+strlen(SHOW_MOV)+2,sizeof(char));
-			sprintf(cmd,SHOW_MOV,mov); system(cmd); free(cmd);
+			sprintf(cmd,SHOW_MOV,mov);
+	printf("[%s]\n",cmd);
+			system(cmd); free(cmd);
 		}
 		else if (act->type == POPPLER_ACTION_RENDITION) {
 			PopplerActionRendition *r = &act->rendition;
@@ -215,7 +242,7 @@ void action(const char *arg) {
 		XRaiseWindow(dpy,wshow);
 		if (swnote) XRaiseWindow(dpy,wnote);
 	}
-	poppler_page_free_link_mapping(lm);
+	poppler_page_free_link_mapping(amap);
 	cairo_destroy(c);
 	draw(NULL);
 }
@@ -455,14 +482,12 @@ void fillfield(const char *arg) {
 	cairo_translate(c,show->x,show->y);
 	cairo_scale(c,show->scale,show->scale);
 	/* font ? */
-	//PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
 	PopplerPage *page = poppler_document_get_page(modPDF,show->cur);
 	GList *fmap, *list;
 	PopplerRectangle r;
 	PopplerFormField *f;
 	fmap = poppler_page_get_form_field_mapping(page);
 	for (list = fmap; list; list = list->next) {
-		f = ((PopplerFormFieldMapping *)list->data)->field;
 		r = ((PopplerFormFieldMapping *)list->data)->area;
 		r.y1 = show->h / show->scale - r.y1;
 		r.y2 = show->h / show->scale - r.y2;
@@ -534,6 +559,7 @@ printf("form fill type=signature not implemented yet\n");
 		cairo_select_font_face(c,"sans-serif",
 				CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
 		int len = poppler_form_field_text_get_max_len(f);
+		//char *txt = malloc(((len=(len?len:255))+1)*sizeof(char));
 		char *txt = malloc(((len=(len?len:255))+1)*sizeof(char));
 		gchar *temp = poppler_form_field_text_get_text(f);
 		if (temp) { strncpy(txt,temp,len); g_free(temp); }
@@ -549,6 +575,7 @@ printf("form fill type=signature not implemented yet\n");
 		cairo_text_extents_t ext;
 		cairo_font_extents_t fext;
 		cairo_font_extents(c,&fext);
+		double x,y;
 		while (key != XK_Escape) {
 			/* draw text */
 			cairo_set_source_rgba(c,0.8,1.0,1.0,1.0); // TODO get a back color?
@@ -558,22 +585,27 @@ printf("form fill type=signature not implemented yet\n");
 			cairo_stroke(c);
 			cairo_move_to(c,r.x1,r.y2+fext.height);
 			if (multi) {
-				char *nl, *part = strdup(txt);
+				char *nl, *start = strdup(txt), *part;
+				part = start;
 				while ( (nl=strchr(part,'\n')) ) {
-					if (*(nl+1) == '\0') break;
 					*nl = '\0';
 					cairo_show_text(c,part);
 					cairo_text_extents(c,part,&ext);
 					cairo_rel_move_to(c,-ext.x_advance,fext.height);
-					free(part); part = strdup(nl+1);
+					for (++nl; *nl == '\n'; *nl = '\0', nl++)
+						cairo_rel_move_to(c,0,fext.height);
+					part = nl;
 				}
 				if (nl) *nl = '\0';
 				cairo_show_text(c,part);
-				free(part);
+				free(start);
 			}
 			else cairo_show_text(c,txt);
+			cairo_get_current_point(c,&x,&y);
+			if (y > r.y1) r.y1 = y+sz/9.0;
 			/* draw a (ugly) cursor */
 			if (ch > txt) {
+				cairo_set_source_rgba(c,1.0,0.0,0.0,0.8);
 				cairo_text_extents(c,ch,&ext);
 				cairo_rel_move_to(c,-ext.x_advance,sz/10.0);
 				cairo_rel_line_to(c,0,-sz);
@@ -606,6 +638,11 @@ printf("form fill type=signature not implemented yet\n");
 			}
 			else if (key == XK_Left) { ch--; if (ch < txt) ch = txt; }
 			else if (key == XK_Right && *ch != '\0') ch++;
+			if (strlen(txt) > len - 2) {
+				warn();
+				txt[strlen(txt)-1] = '\0';
+				if (ch > txt+strlen(txt)) ch=txt+strlen(txt);
+			}
 		}
 		poppler_form_field_text_set_text(f,txt);
 		/* clean up */

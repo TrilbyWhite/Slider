@@ -49,11 +49,13 @@ static Key keys[] = {
 
 /* ------------ CONDITIONALLY COMPILED FEATURES: ------------ */
 #ifdef ACTION_LINKS
-	{ 0,				XK_a,		action,		NULL		},
+	{ 0,				XK_a,		action,		"mouse"		},
+	{ ShiftMask,		XK_a,		action,		"keys"		},
 #endif /* ACTION_LINKS */
 
 #ifdef FORM_FILL
-	{ 0,				XK_f,		fillfield,	NULL		},
+	{ 0,				XK_f,		fillfield,	"mouse"		},
+	{ ShiftMask,		XK_f,		fillfield,	"keys"		},
 #endif /* FORM_FILL */
 
 #ifdef ZOOMING
