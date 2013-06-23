@@ -127,7 +127,7 @@ void render(Show *show,const char *cb, const char *cs, const char *ce) {
 	/* render notes */
 	if (show->notes && show->notes->uri) {
 		while (!(show->notes->flag)) usleep(5000);
-		if (prerender > show->notes->count) prerender = show->count;
+		if (prerender > show->notes->count) prerender = show->notes->count;
 		while (!(show->notes->flag[(prerender>0?prerender:1)-1] & RENDERED))
 			usleep(50000);
 	}
