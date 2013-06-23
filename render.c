@@ -7,6 +7,9 @@ static GC bgc, sgc, egc;
 static pthread_t show_render, note_render;
 
 void *render_threaded(void *arg) {
+#ifdef DEBUG
+fprintf(stderr,"[slider] render_threaded: arg=[%d]\n",arg);
+#endif
 	Show *show = (Show *) arg;
 	int i, j, n, x, y, grid = 0;
 	int sw = show->w, sh = show->h;
@@ -105,6 +108,9 @@ void *render_threaded(void *arg) {
 
 
 void render(Show *show,const char *cb, const char *cs, const char *ce) {
+#ifdef DEBUG
+fprintf(stderr,"[slider] render: show=%d show->notes=%d\n",show,show->notes);
+#endif
 	/* separate gcs are needed for threadsafeness */
 	XColor col;
 	XGCValues val;
