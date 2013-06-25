@@ -19,6 +19,7 @@
 *
 \**************************************************************************/
 
+
 #include "slider.h"
 
 #define RUNNING		0x00000001
@@ -555,7 +556,7 @@ printf("form fill type=signature not implemented yet\n");
 				wshow, XNFocusWindow, wshow, NULL);
 		/* get field info */
 		float sz = poppler_form_field_get_font_size(f);
-		cairo_set_font_size(c, (sz = (sz ? sz : 12)) );
+		cairo_set_font_size(c, (sz = (sz ? sz : 10)) );
 		cairo_select_font_face(c,"sans-serif",
 				CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
 		int len = poppler_form_field_text_get_max_len(f);
@@ -643,6 +644,13 @@ printf("form fill type=signature not implemented yet\n");
 				txt[strlen(txt)-1] = '\0';
 				if (ch > txt+strlen(txt)) ch=txt+strlen(txt);
 			}
+if (multi) {
+	char *nl;
+	if ( !(nl=strrchr(txt,'\n')) ) nl=txt;
+	cairo_text_extents(c,nl,&ext);
+	if (ext.width > r.x2-r.x1 && (nl=strrchr(nl,' ')) )
+		*nl = '\n';
+}
 		}
 		poppler_form_field_text_set_text(f,txt);
 		/* clean up */
