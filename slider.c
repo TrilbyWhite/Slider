@@ -72,6 +72,7 @@ static void perm_pen(const char *);
 static void polka(const char *);
 static void perm_rect(const char *);
 static void rectangle(const char *);
+static void string(const char *);
 #endif /* DRAWING */
 static void quit(const char *);
 static void usage(const char *);
@@ -883,9 +884,10 @@ void overview(const char *arg) {
 #define POLKA	0x02
 #define RECT	0x04
 #define PERM	0x08
+#define STRING	0x10
 static void pen_polka_rect(const char *arg, int type) {
-	int w; double R,G,B,A;
-	sscanf(arg,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
+	int w; double R,G,B,A; char str[CURSOR_STRING_MAX] = "";
+	sscanf(arg,"%d %lf,%lf,%lf %lf %s",&w,&R,&G,&B,&A,str);
 	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
 	if (!(type & POLKA)) XDefineCursor(dpy,wshow,crosshair_cursor);
 	XEvent ev; Bool on = False;
@@ -900,8 +902,17 @@ static void pen_polka_rect(const char *arg, int type) {
 	cairo_set_source_rgba(c,R,G,B,A);
 	cairo_set_line_width(c,w);
 	if (type & POLKA) {
-		cairo_arc(c,sw/2,sh/2,(double)w,0,2*M_PI);
-		cairo_fill(c);
+		if ( (type & STRING) ) {
+			cairo_set_font_size(c, w);
+			cairo_select_font_face(c,"sans-serif",
+					CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
+			cairo_move_to(c,sw/2.0,sh/2.0);
+			cairo_show_text(c,str);
+		}
+		else {
+			cairo_arc(c,sw/2.0,sh/2.0,(double)w,0,2*M_PI);
+			cairo_fill(c);
+		}
 		XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 	}
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
@@ -922,7 +933,12 @@ static void pen_polka_rect(const char *arg, int type) {
 		}
 		else if ( (type & POLKA) && ev.type == MotionNotify) {
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
-			cairo_arc(c,ev.xbutton.x,ev.xbutton.y,(double)w,0,2*M_PI);
+			if ( (type & STRING) ) {
+				cairo_move_to(c,ev.xbutton.x,ev.xbutton.y);
+				cairo_show_text(c,str);
+			}
+			else /* SHAPE_DOT */
+				cairo_arc(c,ev.xbutton.x,ev.xbutton.y,(double)w,0,2*M_PI);
 			cairo_fill(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
@@ -958,6 +974,7 @@ void perm_pen(const char *arg) { pen_polka_rect(arg, PEN | PERM ); }
 void perm_rect(const char *arg) { pen_polka_rect(arg, RECT | PERM ); }
 void polka(const char *arg) { pen_polka_rect(arg, POLKA); }
 void rectangle(const char *arg) { pen_polka_rect(arg, RECT); }
+void string(const char *arg) { pen_polka_rect(arg, POLKA | STRING); }
 #endif /* DRAWING */
 
 void quit(const char *arg) { mode &= ~RUNNING; }

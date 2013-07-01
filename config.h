@@ -8,6 +8,8 @@ const char colors[][9] = {
 	[Empty]		= "#182436",
 };
 
+#define CURSOR_STRING_MAX	12
+
 /* PLAY_AUD is backgrounded to allow the slideshow to continue
    while the audio is playing.  You could also background the
    other options, however you will then *NOT* be able to control
@@ -80,6 +82,16 @@ static Key keys[] = {
 	{ 0,				XK_4,		polka,		"10  0.0, 0.2, 0.5  0.7" },
 	{ 0,				XK_5,		polka,		"10  1.0, 1.0, 0.1  0.5" },
 	{ 0,				XK_6,		polka,		"10  1.0, 0.0, 0.0  0.3" },
+	/* String cursor/pointers: Put any text string at the end of the config string */
+	/*   Strings for cursors must be less that CURSOR_STRING_MAX bytes.
+	     Note that unicode characters may count for more than one byte each. */
+	{ ShiftMask,		XK_1,		string,		"60   0.0, 0.3, 1.0  0.7 ↖" },
+	{ ShiftMask,		XK_2,		string,		"80   0.0, 0.3, 1.0  0.7 ↖" },
+	{ ShiftMask,		XK_3,		string,		"100  0.0, 0.3, 1.0  0.7 ↖" },
+	{ ShiftMask,		XK_4,		string,		"60   1.0, 0.0, 0.0  0.7 ↗" },
+	{ ShiftMask,		XK_5,		string,		"80   1.0, 0.0, 0.0  0.7 ↗" },
+	{ ShiftMask,		XK_6,		string,		"100  1.0, 0.0, 0.0  0.7 ↗" },
+	{ ShiftMask,		XK_7,		string,		"80   0.0, 1.0, 0.0  0.8 SLIDER" },
 	/* Drawing pens */
 	{ 0,				XK_F1,		pen,		"4   1.0, 0.0, 0.0  0.9" },
 	{ 0,				XK_F2,		pen,		"8   1.0, 0.0, 0.0  0.7" },
