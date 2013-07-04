@@ -501,8 +501,8 @@ void fillfield(const char *arg) {
 	/* get a location from the mouse */
 	int mx=0, my=0;
 	XDefineCursor(dpy,wshow,crosshair_cursor);
-	XGrabPointer(dpy,wshow,True,ButtonPressMask,
-			GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
+	//XGrabPointer(dpy,wshow,True,ButtonPressMask,
+	//		GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
 	XEvent ev;
 	XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
 	if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
@@ -511,9 +511,9 @@ void fillfield(const char *arg) {
 		my = (ev.xbutton.y - show->y) / show->scale;
 	}
 	XDefineCursor(dpy,wshow,invisible_cursor);
-	XSync(dpy,True);
+	//XSync(dpy,True);
 	draw(NULL);
-	XUngrabPointer(dpy,CurrentTime);
+	//XUngrabPointer(dpy,CurrentTime);
 	/* match coordinates to field */
 	list = NULL;
 	if (mx || my) for (list = fmap; list; list = list->next) {
