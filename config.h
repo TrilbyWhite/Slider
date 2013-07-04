@@ -37,16 +37,21 @@ const char colors[][9] = {
 #define ACTION_FONT		"8   0.0, 0.4, 1.0  1.0"
 
 static Key keys[] = {
-	{ ControlMask,		XK_q,		quit,		NULL		},
+	{ ControlMask,			XK_q,		quit,		NULL		},
+	{ 0,				XK_Escape,	quit,		NULL		},
+	{ 0,				XK_F5,		quit,		NULL		},
 	{ 0,				XK_Tab,		overview,	NULL		},
 	{ 0,				XK_Return,	draw,		NULL		},
-	{ ShiftMask,		XK_Return,	draw,		"render"	},
+	{ ShiftMask,			XK_Return,	draw,		"render"	},
 	{ 0,				XK_space,	move,		"right"		},
 	{ 0,				XK_Right,	move,		"right"		},
 	{ 0,				XK_Left,	move,		"left"		},
 	{ 0,				XK_Up,		move,		"up"		},
 	{ 0,				XK_Down,	move,		"down"		},
+	{ 0,				XK_Next,	move,		"right"		},
+	{ 0, 				XK_Prior,	move,		"left"		},
 	{ 0,				XK_b,		mute,		"black"		},
+	{ 0,				XK_period,	mute,		"black"		},
 	{ 0,				XK_w,		mute,		"white"		},
 
 /* ------------ CONDITIONALLY COMPILED FEATURES: ------------ */
