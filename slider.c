@@ -532,8 +532,14 @@ void fillfield(const char *arg) {
 	PopplerFormFieldType ft = poppler_form_field_get_field_type(f);
 	KeySym key;
 	if (ft == POPPLER_FORM_FIELD_BUTTON) {
+		PopplerFormButtonType bt = poppler_form_field_button_get_button_type(f);
+		if (bt == POPPLER_FORM_BUTTON_PUSH) printf("push button: ");
+		else if (bt == POPPLER_FORM_BUTTON_RADIO) printf("radio button: ");
+		else if (bt == POPPLER_FORM_BUTTON_CHECK) printf("check button: ");
+		printf("%d -> ",poppler_form_field_button_get_state(f));
 		poppler_form_field_button_set_state(f,
 				!poppler_form_field_button_get_state(f));
+		printf("%d\n",poppler_form_field_button_get_state(f));
 	}
 	else if (ft == POPPLER_FORM_FIELD_CHOICE) {
 printf("form fill type=choice not implemented yet\n");
