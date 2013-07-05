@@ -8,16 +8,26 @@ PREFIX	?=	/usr
 SOURCE	= 	slider.c render.c
 HEADER	= 	slider.h config.h
 OPTS	= 	-DFADE_TRANSITION -DACTION_LINKS -DDRAWING -DZOOMING
-EX_OPTS	=	${OPTS} -DFORM_FILL
+EX_OPTS	=	${OPTS} -DFORM_FILL -DRC_CONFIG
+
+##################################################################
 
 ${PROG}: ${SOURCE} ${HEADER}
 	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS}
 
 debug: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DDEBUG
+	@${CC} -g -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DDEBUG
 
 minimal: ${SOURCE} ${HEADER}
 	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS}
+
+forms: ${SOURCE} ${HEADER}
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DFORM_FILL
+
+experimental: ${SOURCE} ${HEADER}
+	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${EX_OPTS}
+
+##################################################################
 
 tarball: clean
 	@rm -f ${PROG}-${VER}.tar.gz
@@ -26,11 +36,9 @@ tarball: clean
 clean:
 	@rm -f ${PROG}
 
-experimental: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${EX_OPTS}
 
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
 	@install -Dm666 ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
 
-.PHONY: debug minimal experimental clean tarball install
+.PHONY: debug minimal experimental forms clean tarball install

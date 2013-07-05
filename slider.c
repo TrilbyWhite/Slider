@@ -55,6 +55,9 @@ static void buttonpress(XEvent *);
 static GC cgc(int);
 static void cleanup();
 static void command_line(int, const char **);
+#ifdef RC_CONFIG
+static void config(const char *);
+#endif /* RC_CONFIG */
 static void draw(const char *);
 #ifdef FORM_FILL
 static void fillfield(const char *);
@@ -90,7 +93,14 @@ static Show *show;
 static View *view;
 static float pscale = 1.8;
 static char *monShow = NULL, *monNote = NULL;
+#ifdef RC_CONFIG
+char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
+char *EMPTY_RECT, *ZOOM_RECT, *OVERVIEW_RECT, *ACTION_RECT, *ACTION_FONT;
+#define CURSOR_STRING_MAX	12
+Key *keys = NULL;
+#else /* RC_CONFIG */
 #include "config.h"
+#endif /* RC_CONFIG */
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
 	[KeyPress]		= keypress,
@@ -379,6 +389,63 @@ void command_line(int argc, const char **argv) {
 	}
 	if (!show->uri) { cleanup(); usage(argv[0]); exit(1); }
 }
+
+#ifdef RC_CONFIG
+#define MAX_LINE 255
+void config(const char *fname) {
+	FILE *rc = NULL;
+	if (fname && !(rc=fopen(fname,"r")))
+		die("unable to open \"%s\"\n",fname);
+	const char *cwd = getenv("PWD");
+	const char *cfg = getenv("XDG_CONFIG_HOME");
+	const char *hom = getenv("HOME");
+	if (!rc && cfg && chdir(cfg) && chdir("slider"))
+		rc = fopen("config","r");
+	if (!rc && hom && chdir(hom) && chdir(".config/slider"))
+		rc = fopen("config","r");
+	if (!rc && hom && chdir(hom))
+		rc = fopen(".sliderrc","r");
+	if (!rc && chdir("/usr/share/slider/"))
+		rc = fopen("config","r");
+	if (cwd) chdir(cwd);
+	if (!rc) die("unable to find configuration file");
+	int ln = 0;
+	char in[5][MAX_LINE+1];
+	while (fgets(in[0],MAX_LINE,rc)) {
+		ln++;
+		if (in[0][0] == '#' || in[0][0] == '\n') continue;
+		else if (in[0][0] == 'c') { /* COLOR */
+			if (sscanf(in[0],"color %s %s",in[1],in[2]) == 2) {
+// TODO
+			}
+			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+		}
+		else if (in[0][0] == 's') { /* SET */
+			if (sscanf(in[0],"set %s = %[^\n]",in[1],in[2]) == 2) {
+// TODO
+			}
+			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+		}
+		else if (in[0][0] == 'd') { /* DRAW */
+			if (sscanf(in[0],"draw %s %[^\n]",in[1],in[2]) == 2) {
+// TODO
+			}
+			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+		}
+		else if (in[0][0] == 'b') { /* BIND */
+			in[1][0] = '\0';
+			if ((sscanf(in[0],"bind %s %s = %s %[^\n]",in[1],in[2],
+						in[3],in[4]) == 4) ||
+				(sscanf(in[0],"bind %s = %s %[^\n]",in[2],in[3],
+						in[4]) == 3) ) {
+// TODO
+			}
+			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+		}
+	}
+	fclose(rc);
+}
+#endif /* RC_CONFIG */
 
 static inline void draw_view(Show *set,int vnum, int snum) {
 	if (!view[vnum].w || !view[vnum].h) return;
