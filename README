@@ -1,20 +1,6 @@
-CAUTION: pull requests for changing key bindings will from now on be rejected without comment.  I am *TIRED* of users
-whining about the default key bindings.  In almost every case some user is upset with my choices and claims that
-their desired preferences are *the* standard across all computer systems (absolute nonsense).  Once I even changed the
-defaults to meet these alleged 'standards', only to then be confronted by some other user who claimed the new bindings
-were ridiculous and I should use what they wanted as their desires were *the* standard across all computer systems.
-It is your config.h - modify it to suit your tastes.  Stop claiming you have the one and only true knowledge of what
-key bindings are standards across all computer programs.  Just stop.
+rc files are ready for testing.  More info comming soon ... it's late.
 
-Unfortunately the above rant may make users second guess making feature requests.  I welcome requests for new
-behaviors of functions you would want implemented.  But rearraging key bindings adds no functionality, and will
-only serve to confuse existing users as they have to check whether they need to merge changes into their config.h
-You config.h is your place to set up your personal preferences.  You should be able to reuse your config.h through
-many revisions of slider.  While it has have a few substantial changes, I try to limit minor revisions to config.h
-for this very purpose: any change will require user's to assess how to merge their previously tailored config to thee
-new format.  So changing a couple of key bindings may make things ever so slightly easier for the one person who
-liked those bindings, while providing a minor hassle for every other user.
-
+------------------------------
 
 Slider has been entirely recoded from scratch with many design choices informed by the after-the-fact adjustments I had to make in the previous version(s).
 
