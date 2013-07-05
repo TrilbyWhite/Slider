@@ -1,23 +1,59 @@
 # RC files are being implemented in the experimental build target
 # This file will not be used by standard builds
 # Current the experimental build is functional, but not well tested
+#-------------------------------------------------------------------
 
+## | SliderRC - runtime configuration for slider pdf presenter
+## | Lines starting with # are ignored, but this file is not
+## | parsed by any shell interpreter
+
+# | COLORS
+# | Use RGB color codes
 color blackMute #000000
 color whiteMute #FFFFFF
 color screenBG  #000000
 color slideBG   #FFFFFF
 color empty     #182436
 
-set showURI          = firefox %s > /dev/null 2>&1
+# | EXTERNAL HANDLERS
+# | The audio handler is backgrounded to allow interaction with slider
+# |   to continue.
+# | Other handlers should not be backgrounded, otherwise slider will
+# |   maintain the keyboard and mouse focus and you will not be able
+# |   to control the external program
+set showURI          = dwb %s > /dev/null 2>&1
+#set showURI          = firefox %s > /dev/null 2>&1
 set showMovie        = mplayer -fs %s >/dev/null 2>&1
 set playAudio        = mplayer %s >/dev/null 2>&1 &
 
+# | DRAWING OPTIONS
+# | Each of the following sets the drawing option for the given object
+# | The options are as follows:
+# |   W:     line Width, font size, or radius (integer)
+# |   R,G,B: Red,Green,Blue (floating point from 0.00 - 1.00)
+# |   A:     Alpha opacity level (floating point from 0.00 - 1.00)
+# |                W    R    G    B     A
 draw emptyRect     10   1.0, 1.0, 1.0   0.5
 draw zoomRect      10   0.0, 0.8, 1.0   0.8
 draw overviewRect  10   1.0, 1.0, 0.0   0.6
 draw actionRect    1    0.0, 0.2, 1.0   0.3
 draw actionFont    8    0.0, 0.4, 1.0   1.0
 
+# | KEY BINDINGS
+# | Key bindings follow the following format
+# |   bind [<mods>] <key> = <function> [<options>]
+# | Modifiers are case insensitive.
+# | For readability, multiple modifers may be separated by commas,
+# |   pluses, any other symbol, or nothing at all, but *not* spaces.
+# | Any of the following would work:
+# |   bind Shift+Alt+Control q = quit
+# |   bind shift,alt,CONTROL q = quit
+# |   bind sHIft:ALT+Control q = quit
+# |   bind shiftALTControl   q = quit
+# | The following would *not* work:
+# |   bind Shift Alt Control q = quit
+
+# | Basic controls:
 bind Control q       = quit
 bind Tab             = overview
 bind Return          = draw
@@ -30,6 +66,7 @@ bind Down            = move down
 bind b               = mute black
 bind w               = mute white
 
+# | Action links, form filling (conditionally compiled option), and zooming
 bind a               = action mouse
 bind Shift a         = action keys
 bind f               = form mouse
@@ -37,11 +74,19 @@ bind Shift f         = form keys
 bind z               = zoom
 bind Shift z         = zoom lock
 
+# | Drawing
 bind r               = rectangle     20   0.0, 0.8, 1.0   0.8
 bind Shift r         = rectangle     20   0.0, 1.0, 0.2   0.8
 bind Control r       = rectangle     20   1.0, 0.0, 0.0   0.8
 bind Alt r           = Rectangle     20   0.0, 0.8, 1.0   0.8
+bind F1              = pen           4    1.0, 0.0, 0.0   0.9
+bind F2              = pen           8    1.0, 0.0, 0.0   0.7
+bind F3              = pen           24   1.0, 0.0, 0.0   0.5
+bind Shift F1        = Pen           4    1.0, 0.0, 0.0   0.9
+bind Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
+bind Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
 
+# | Fun mouse cursors
 bind 1               = string        60   0.0, 0.3, 1.0   0.7 blue
 bind 2               = string       120   0.0, 0.3, 1.0   0.7 BLUE
 bind 3               = string        60   1.0, 0.0, 0.0   0.7 red
@@ -49,12 +94,6 @@ bind 4               = string       120   1.0, 0.0, 0.0   0.7 RED
 bind Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
 bind Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
 
-bind F1              = pen           4    1.0, 0.0, 0.0   0.9
-bind F2              = pen           8    1.0, 0.0, 0.0   0.7
-bind F3              = pen           24   1.0, 0.0, 0.0   0.5
-bind Shift F1        = Pen           4    1.0, 0.0, 0.0   0.9
-bind Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
-bind Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
 
 
 
