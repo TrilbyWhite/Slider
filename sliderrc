@@ -1,8 +1,6 @@
-# DO NOT USE THIS FILE
-# This is not yet functional
 # RC files are being implemented in the experimental build target
 # This file will not be used by standard builds
-# Current the experimental build is entirely non-functional
+# Current the experimental build is functional, but not well tested
 
 color blackMute #000000
 color whiteMute #FFFFFF
@@ -24,7 +22,7 @@ bind Control q       = quit
 bind Tab             = overview
 bind Return          = draw
 bind Shift Return    = draw render
-bind Space           = move next
+bind space           = move next
 bind Right           = move next
 bind Left            = move prev
 bind Up              = move up
@@ -34,27 +32,29 @@ bind w               = mute white
 
 bind a               = action mouse
 bind Shift a         = action keys
-bind f               = fillfield mouse
-bind Shift f         = fillfield keys
+bind f               = form mouse
+bind Shift f         = form keys
 bind z               = zoom
 bind Shift z         = zoom lock
 
 bind r               = rectangle     20   0.0, 0.8, 1.0   0.8
 bind Shift r         = rectangle     20   0.0, 1.0, 0.2   0.8
 bind Control r       = rectangle     20   1.0, 0.0, 0.0   0.8
-bind Alt r           = perm_rect     20   0.0, 0.8, 1.0   0.8
+bind Alt r           = Rectangle     20   0.0, 0.8, 1.0   0.8
 
-bind 1               = string        60   0.0, 0.3, 1.0   0.7 blah
-bind 2               = string        60   0.0, 0.3, 1.0   0.7 blue
+bind 1               = string        60   0.0, 0.3, 1.0   0.7 blue
+bind 2               = string       120   0.0, 0.3, 1.0   0.7 BLUE
+bind 3               = string        60   1.0, 0.0, 0.0   0.7 red
+bind 4               = string       120   1.0, 0.0, 0.0   0.7 RED
 bind Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
 bind Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
 
 bind F1              = pen           4    1.0, 0.0, 0.0   0.9
 bind F2              = pen           8    1.0, 0.0, 0.0   0.7
 bind F3              = pen           24   1.0, 0.0, 0.0   0.5
-bind Shift F1        = perm_pen      4    1.0, 0.0, 0.0   0.9
-bind Shift F2        = perm_pen      8    1.0, 0.0, 0.0   0.7
-bind Shift F3        = perm_pen      24   1.0, 0.0, 0.0   0.5
+bind Shift F1        = Pen           4    1.0, 0.0, 0.0   0.9
+bind Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
+bind Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
 
 
 

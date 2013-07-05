@@ -94,6 +94,7 @@ static View *view;
 static float pscale = 1.8;
 static char *monShow = NULL, *monNote = NULL;
 #ifdef RC_CONFIG
+int nkeys = 0;
 char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
 char *EMPTY_RECT, *ZOOM_RECT, *OVERVIEW_RECT, *ACTION_RECT, *ACTION_FONT;
 #define CURSOR_STRING_MAX	12
@@ -332,6 +333,7 @@ void command_line(int argc, const char **argv) {
 	int i, nv = 0, n;
 	char s1[25],s2[25];
 	float f;
+	const char *rc = NULL;
 	show = (Show *) calloc(1,sizeof(Show));
 	show->sorter = (Show *) calloc(1,sizeof(Show));
 	view = (View *) calloc(MAX_VIEW,sizeof(View));
@@ -388,6 +390,7 @@ void command_line(int argc, const char **argv) {
 		view[i].x = view[i-1].x; view[i].y = view[i-1].y;
 	}
 	if (!show->uri) { cleanup(); usage(argv[0]); exit(1); }
+	config(rc);
 }
 
 #ifdef RC_CONFIG
@@ -399,51 +402,116 @@ void config(const char *fname) {
 	const char *cwd = getenv("PWD");
 	const char *cfg = getenv("XDG_CONFIG_HOME");
 	const char *hom = getenv("HOME");
-	if (!rc && cfg && chdir(cfg) && chdir("slider"))
+	if (!rc && cfg && !chdir(cfg) && !chdir("slider"))
 		rc = fopen("config","r");
-	if (!rc && hom && chdir(hom) && chdir(".config/slider"))
+	if (!rc && hom && !chdir(hom) && !chdir(".config/slider"))
 		rc = fopen("config","r");
-	if (!rc && hom && chdir(hom))
+	if (!rc && hom && !chdir(hom))
 		rc = fopen(".sliderrc","r");
 	if (!rc && chdir("/usr/share/slider/"))
 		rc = fopen("config","r");
 	if (cwd) chdir(cwd);
-	if (!rc) die("unable to find configuration file");
-	int ln = 0;
+	if (!rc) die("unable to find configuration file\n");
+	int ln = 0, n = 0;
 	char in[5][MAX_LINE+1];
+	KeySym keysym;
 	while (fgets(in[0],MAX_LINE,rc)) {
+		in[0][strlen(in[0])-1] = '\0';
 		ln++;
 		if (in[0][0] == '#' || in[0][0] == '\n') continue;
 		else if (in[0][0] == 'c') { /* COLOR */
 			if (sscanf(in[0],"color %s %s",in[1],in[2]) == 2) {
-// TODO
+				if (strncmp("blackMute",in[1],strlen(in[1]))==0)
+					strncpy(colors[Black],in[2],8);
+				else if (strncmp("whiteMute",in[1],strlen(in[1]))==0)
+					strncpy(colors[White],in[2],8);
+				else if (strncmp("screenBG",in[1],strlen(in[1]))==0)
+					strncpy(colors[ScreenBG],in[2],8);
+				else if (strncmp("slideBG",in[1],strlen(in[1]))==0)
+					strncpy(colors[SlideBG],in[2],8);
+				else if (strncmp("empty",in[1],strlen(in[1]))==0)
+					strncpy(colors[Empty],in[2],8);
+				else
+					fprintf(stderr,"config [%d]: color target \"%s\" not recognized\n",
+							ln,in[1]);
 			}
-			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
 		}
 		else if (in[0][0] == 's') { /* SET */
 			if (sscanf(in[0],"set %s = %[^\n]",in[1],in[2]) == 2) {
-// TODO
+				if (strncmp("showURI",in[1],strlen(in[1]))==0)
+					SHOW_URI = strdup(in[2]);
+				else if (strncmp("showMovie",in[1],strlen(in[1]))==0)
+					SHOW_MOV = strdup(in[2]);
+				else if (strncmp("playAudio",in[1],strlen(in[1]))==0)
+					PLAY_AUD = strdup(in[2]);
+				else
+					fprintf(stderr,"config [%d]: cannot set \"%s\"\n",ln,in[1]);
 			}
-			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
 		}
 		else if (in[0][0] == 'd') { /* DRAW */
 			if (sscanf(in[0],"draw %s %[^\n]",in[1],in[2]) == 2) {
-// TODO
+				if (strncmp("emptyRect",in[1],strlen(in[1]))==0)
+					EMPTY_RECT = strdup(in[2]);
+				else if (strncmp("zoomRect",in[1],strlen(in[1]))==0)
+					ZOOM_RECT = strdup(in[2]);
+				else if (strncmp("overviewRect",in[1],strlen(in[1]))==0)
+					OVERVIEW_RECT = strdup(in[2]);
+				else if (strncmp("actionRect",in[1],strlen(in[1]))==0)
+					ACTION_RECT = strdup(in[2]);
+				else if (strncmp("actionFont",in[1],strlen(in[1]))==0)
+					ACTION_FONT = strdup(in[2]);
+				else
+					fprintf(stderr,"config [%d]: \"%s\" is not a drawable\n",ln,in[1]);
 			}
-			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
 		}
 		else if (in[0][0] == 'b') { /* BIND */
-			in[1][0] = '\0';
-			if ((sscanf(in[0],"bind %s %s = %s %[^\n]",in[1],in[2],
-						in[3],in[4]) == 4) ||
-				(sscanf(in[0],"bind %s = %s %[^\n]",in[2],in[3],
-						in[4]) == 3) ) {
-// TODO
+			in[1][0] = in[4][0] = '\0';
+			if (
+	((sscanf(in[0],"bind %s %s = %s %[^\n]",in[1],in[2],in[3],in[4])== 4)	||
+	 (sscanf(in[0],"bind %s %s = %s",		in[1],in[2],in[3])		== 3)	||
+	 (sscanf(in[0],"bind %s = %s %[^\n]",	in[2],in[3],in[4])		== 3)	||
+	 (sscanf(in[0],"bind %s = %s",			in[2],in[3])			== 2))	&&
+	((keysym=XStringToKeysym(in[2])) != NoSymbol ) ) {
+				keys = realloc(keys,(n+1) * sizeof(Key));
+				keys[n].key = keysym;
+				keys[n].mod = 0;
+				if (in[1][0] != '\0') {
+					if (strcasestr(in[1],"Shift"))		keys[n].mod |= ShiftMask;
+					if (strcasestr(in[1],"Control"))	keys[n].mod |= ControlMask;
+					if (strcasestr(in[1],"Alt"))		keys[n].mod |= Mod2Mask;
+					if (strcasestr(in[1],"Super"))		keys[n].mod |= Mod4Mask;
+				}
+				if (strstr(in[3],"quit"))			keys[n].func = quit;
+				else if (strstr(in[3],"overview"))	keys[n].func = overview;
+				else if (strstr(in[3],"draw"))		keys[n].func = draw;
+				else if (strstr(in[3],"move"))		keys[n].func = move;
+				else if (strstr(in[3],"mute"))		keys[n].func = mute;
+				else if (strstr(in[3],"action"))	keys[n].func = action;
+				else if (strstr(in[3],"form"))		keys[n].func = fillfield;
+				else if (strstr(in[3],"zoom"))		keys[n].func = zoom;
+				else if (strstr(in[3],"rectangle"))	keys[n].func = rectangle;
+				else if (strstr(in[3],"Rectangle"))	keys[n].func = perm_rect;
+				else if (strstr(in[3],"string"))	keys[n].func = string;
+				else if (strstr(in[3],"polka"))		keys[n].func = polka;
+				else if (strstr(in[3],"pen"))		keys[n].func = pen;
+				else if (strstr(in[3],"Pen"))		keys[n].func = perm_pen;
+				else {
+					fprintf(stderr,"config [%d]: %s is not a bindable function\n",
+							ln,in[3]);
+					keys[n].func = NULL;
+				}
+				if (in[4][0] != '\0') keys[n].arg = strdup(in[4]);
+				else keys[n].arg = NULL;
+				n++;
 			}
-			else printf("error in rc file at line %d:\n\t%s\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
 		}
 	}
 	fclose(rc);
+	nkeys = n;
 }
 #endif /* RC_CONFIG */
 
@@ -889,9 +957,14 @@ void keypress(XEvent *ev) {
 	int i;
 	KeySym key = XkbKeycodeToKeysym(dpy,(KeyCode)e->keycode,0,0);
 	unsigned int mod = (e->state&~Mod2Mask)&~LockMask;
-	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++)
+#ifdef RC_CONFIG
+	for (i = 0; i < nkeys; i++) {
+#else
+	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++) {
+#endif
 		if ( (key==keys[i].key) && keys[i].func && (keys[i].mod==mod) )
 			keys[i].func(keys[i].arg);
+	}
 }
 
 void move(const char *arg) {
