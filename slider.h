@@ -1,5 +1,3 @@
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -10,6 +8,7 @@
 #include <cairo.h>
 #include <cairo-xlib.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
 #include <X11/cursorfont.h>
@@ -38,5 +37,3 @@ Display *dpy;
 int scr, sw, sh, swnote, shnote, prerender;
 Window root;
 GC gc;
-
-
