@@ -503,11 +503,16 @@ void config(const char *fname) {
 				}
 				if (strstr(in[3],"quit"))			keys[n].func = quit;
 				else if (strstr(in[3],"overview"))	keys[n].func = overview;
+				else if (strstr(in[3],"mute"))		keys[n].func = mute;
+#ifdef ACTION_LINKS
 				else if (strstr(in[3],"draw"))		keys[n].func = draw;
 				else if (strstr(in[3],"move"))		keys[n].func = move;
-				else if (strstr(in[3],"mute"))		keys[n].func = mute;
 				else if (strstr(in[3],"action"))	keys[n].func = action;
+#endif /* ACTION_LINKS */
+#ifdef FORM_FILL
 				else if (strstr(in[3],"form"))		keys[n].func = fillfield;
+#endif /* FORM_FILL */
+#ifdef DRAWING
 				else if (strstr(in[3],"zoom"))		keys[n].func = zoom;
 				else if (strstr(in[3],"rectangle"))	keys[n].func = rectangle;
 				else if (strstr(in[3],"Rectangle"))	keys[n].func = perm_rect;
@@ -515,6 +520,7 @@ void config(const char *fname) {
 				else if (strstr(in[3],"polka"))		keys[n].func = polka;
 				else if (strstr(in[3],"pen"))		keys[n].func = pen;
 				else if (strstr(in[3],"Pen"))		keys[n].func = perm_pen;
+#endif /* DRAWING */
 				else {
 					fprintf(stderr,"config [%d]: %s is not a bindable function\n",
 							ln,in[3]);
