@@ -1003,8 +1003,8 @@ void move(const char *arg) {
 		overview(NULL);
 	}
 	else {
-		if (arg[0] == 'd' || arg[0] == 'r') show->cur++;
-		else if (arg[0] == 'u' || arg[0] == 'l') show->cur--;
+		if (arg[0] == 'd' || arg[0] == 'r' || arg[0] == 'n') show->cur++;
+		else if (arg[0] == 'u' || arg[0] == 'l' || arg[0] == 'p') show->cur--;
 		if (show->cur < 0) show->cur = 0;
 		if (show->cur >= show->count) {
 			if (mode & CONTINUOUS) show->cur = 0;
