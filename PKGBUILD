@@ -17,15 +17,6 @@ pkgver() {
 	echo 1.$(git rev-list --count HEAD).$(git describe --always )
 }
 
-prepare() {
-	if [[ -f ${startdir}/config.h ]]; then
-		cp ${startdir}/config.h ${srcdir}/config.h
-		msg "Using configuration from ${startdir}/config.h"
-	else
-		msg "Using default configuration"
-	fi
-}
-
 build() {
 	cd ${_gitname}
 	make
