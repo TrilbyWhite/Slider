@@ -425,7 +425,7 @@ void config(const char *fname) {
 		rc = fopen("config","r");
 	if (!rc && hom && !chdir(hom))
 		rc = fopen(".sliderrc","r");
-	if (!rc && chdir("/usr/share/slider/"))
+	if (!rc && !chdir("/usr/share/slider"))
 		rc = fopen("config","r");
 	if (cwd) chdir(cwd);
 	if (!rc) die("unable to find configuration file\n");
