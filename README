@@ -1,4 +1,5 @@
-rc files are ready for testing.  More info comming soon ... it's late.
+RC files have had minimal testing and caused no problems.  They are now the default compile option.  If no major issue arrise from this, the previous config.h code will be removed from the master branch soon.
+
 
 ------------------------------
 

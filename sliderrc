@@ -1,8 +1,3 @@
-# RC files are being implemented in the experimental build target
-# This file will not be used by standard builds
-# Current the experimental build is functional, but not well tested
-#-------------------------------------------------------------------
-
 ## | SliderRC - runtime configuration for slider pdf presenter
 ## | Lines starting with # are ignored, but this file is not
 ## | parsed by any shell interpreter
@@ -69,8 +64,8 @@ bind w               = mute white
 # | Action links, form filling (conditionally compiled option), and zooming
 bind a               = action mouse
 bind Shift a         = action keys
-bind f               = form mouse
-bind Shift f         = form keys
+#bind f               = form mouse
+#bind Shift f         = form keys
 bind z               = zoom
 bind Shift z         = zoom lock
 
@@ -87,9 +82,11 @@ bind Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
 bind Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
 
 # | Fun mouse cursors
-bind 1               = string        60   0.0, 0.3, 1.0   0.7 blue
-bind 2               = string       120   0.0, 0.3, 1.0   0.7 BLUE
-bind 3               = string        60   1.0, 0.0, 0.0   0.7 red
-bind 4               = string       120   1.0, 0.0, 0.0   0.7 RED
+bind 1               = string        60   0.0, 0.3, 1.0   0.7 <-
+bind 2               = string       120   0.0, 0.3, 1.0   0.7 ^
+bind 3               = string        60   1.0, 0.0, 0.0   0.7 X
+bind 4               = string       120   1.0, 0.0, 0.0   0.7 ----
+bind 5               = string       120   0.0, 0.4, 1.0   0.8 Slider
 bind Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
 bind Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
+
