@@ -171,8 +171,6 @@ void action(const char *arg) {
 	else { /* get mouse click */
 		int mx=0,my=0;
 		XDefineCursor(dpy,wshow,crosshair_cursor);
-		XGrabPointer(dpy,wshow,True,ButtonPressMask,
-				GrabModeAsync, GrabModeAsync, wshow, None, CurrentTime);
 		XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
 		if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
 		else if (ev.type == ButtonPress) {
@@ -182,8 +180,6 @@ void action(const char *arg) {
 		XDefineCursor(dpy,wshow,invisible_cursor);
 		XSync(dpy,True);
 		draw(NULL);
-		XUngrabPointer(dpy,CurrentTime);
-		/* get selected action link */
 		if (mx || my) for (list = amap; list; list = list->next) {
 			act = ((PopplerLinkMapping *)list->data)->action;
 			r = ((PopplerLinkMapping *)list->data)->area;
@@ -997,8 +993,8 @@ void keypress(XEvent *ev) {
 
 void move(const char *arg) {
 	if (mode & OVERVIEW) {
-		if (arg[0] == 'r') show->cur++;
-		else if (arg[0] == 'l') show->cur--;
+		if (arg[0] == 'r' || arg[0] == 'n') show->cur++;
+		else if (arg[0] == 'l' || arg[0] == 'p') show->cur--;
 		else if (arg[0] == 'd') show->cur += show->sorter->flag[0];
 		else if (arg[0] == 'u') show->cur -= show->sorter->flag[0];
 		if (show->cur < 0) show->cur = 0;
