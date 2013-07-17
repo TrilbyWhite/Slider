@@ -24,7 +24,7 @@
 
 #define RUNNING		0x00000001
 #define CONTINUOUS	0x00000002
-#define AUTOPLAY	0x00000004	
+#define AUTOPLAY	0x00000004
 #define OVERVIEW	0x00000010
 #define PRESENTER	0x00000020
 #define MUTED		0x00000100
@@ -135,7 +135,7 @@ void action(const char *arg) {
 	PopplerRectangle r;
 	int n, nsel = 0;
 	for (list = amap, n = 0; list && n < 26; list = list->next, n++) {
-		r = ((PopplerLinkMapping *)list)->area;
+		r = ((PopplerLinkMapping *)list->data)->area;
 		r.y1 = show->h / show->scale - r.y1;
 		r.y2 = show->h / show->scale - r.y2;
 		/* draw links */
@@ -160,7 +160,12 @@ void action(const char *arg) {
 		nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0]-97;
 		/* get selected action link */
 		for (list = amap, n = 0; list; list = list->next, n++) {
-			if (n == nsel) act = ((PopplerLinkMapping *)list->data)->action;
+		  if (n == nsel) {
+		    act = ((PopplerLinkMapping *)list->data)->action;
+		    r = ((PopplerLinkMapping *)list->data)->area;
+		    r.y1 = show->h / show->scale - r.y1;
+		    r.y2 = show->h / show->scale - r.y2;
+		  }
 		}
 	}
 	else { /* get mouse click */
@@ -221,12 +226,22 @@ void action(const char *arg) {
    flag.  Do this only AT YOUR OWN RISK.
        - J McClure (10 June 2013)    */
 #ifdef ALLOW_PDF_ACTION_LAUNCH
+			/* fashion the area coordinates as params */
+			if (!l->params) {
+			  l->params = calloc(20,sizeof(char));
+			  /* topl_x topl_y width height */
+			  sprintf(l->params,"%04g %04g %04g %04g",
+				  round(r.x1*show->scale),
+				  round(r.y2*show->scale),
+				  round((r.x2-r.x1)*show->scale),
+				  round((r.y1-r.y2)*show->scale));
+			}
 			char *cmd = calloc(strlen(l->file_name)+strlen(l->params)+2,
-					sizeof(char));
+					   sizeof(char));
 			sprintf(cmd,"%s %s",l->file_name,l->params); system(cmd);free(cmd);
 #else
 			fprintf(stderr,"[SLIDER] blocked launch of \"%s %s\"\n",
-					l->file_name,l->params);
+				l->file_name,l->params);
 #endif /* ALLOW_PDF_ACTION_LAUNCH */
 		}
 		else if (act->type == POPPLER_ACTION_URI) {
@@ -390,7 +405,9 @@ void command_line(int argc, const char **argv) {
 		view[i].x = view[i-1].x; view[i].y = view[i-1].y;
 	}
 	if (!show->uri) { cleanup(); usage(argv[0]); exit(1); }
+#ifdef RC_CONFIG
 	config(rc);
+#endif	/* RC_CONFIG */
 }
 
 #ifdef RC_CONFIG
@@ -773,11 +790,11 @@ printf("form fill type=signature not implemented yet\n");
 			}
 			else if (key == XK_Delete && *ch != '\0') {
 				ts = strdup(ch+1); *ch = '\0';
-				strcat(txt,ts); free(ts); 
+				strcat(txt,ts); free(ts);
 			}
 			else if (key == XK_BackSpace && ch > txt) {
 				ts = strdup(ch); *(--ch) = '\0';
-				strcat(txt,ts); free(ts); 
+				strcat(txt,ts); free(ts);
 			}
 			else if (key == XK_Left) { ch--; if (ch < txt) ch = txt; }
 			else if (key == XK_Right && *ch != '\0') ch++;
@@ -880,7 +897,7 @@ void init_X() {
 	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy,scr);
 	XSetWindowAttributes wa;
-	wa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | 
+	wa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask |
 			StructureNotifyMask;
 	wa.override_redirect = True;
 	/* get RandR info */
@@ -918,6 +935,11 @@ void init_X() {
 	bshow = XCreatePixmap(dpy,wshow,sw,sh,DefaultDepth(dpy,scr));
 	XRRFreeCrtcInfo(xrrShow);
 	XStoreName(dpy,wshow,"Slider");
+	XClassHint *hint = XAllocClassHint();
+	hint->res_name = "Slider";
+	hint->res_class = "Slider";
+	XSetClassHint(dpy,wshow,hint);
+	XFree(hint);
 	XChangeWindowAttributes(dpy,wshow,CWEventMask|CWOverrideRedirect,&wa);
 	/* Notes monitor */
 	if (xrrNote) {
@@ -1127,7 +1149,7 @@ void quit(const char *arg) { mode &= ~RUNNING; }
 
 void usage(const char *prog) {
 	printf("Usage: %s [OPTION...] SHOW_FILE [NOTES_FILE]\n"
-			"See man page for details.\n",prog); 
+			"See man page for details.\n",prog);
 }
 
 void warn() {
@@ -1214,4 +1236,3 @@ int main(int argc, const char **argv) {
 	cleanup();
 	return 0;
 }
-
