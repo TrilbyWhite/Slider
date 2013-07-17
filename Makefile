@@ -39,5 +39,6 @@ clean:
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
 	@install -Dm666 ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
+	@install -Dm666 ${PROG}rc ${DESTDIR}${PREFIX}/share/slider/config
 
 .PHONY: debug minimal experimental forms clean tarball install

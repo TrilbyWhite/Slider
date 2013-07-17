@@ -2,6 +2,11 @@
 ## | Lines starting with # are ignored, but this file is not
 ## | parsed by any shell interpreter
 
+## | To customize, copy this file to one of the following:
+## | $XDG_CONFIG_HOME/slider/config
+## | ~/.config/slider/config
+## | ~/.sliderrc
+
 # | COLORS
 # | Use RGB color codes
 color blackMute #000000
