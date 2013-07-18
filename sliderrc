@@ -39,59 +39,71 @@ draw overviewRect  10   1.0, 1.0, 0.0   0.6
 draw actionRect    1    0.0, 0.2, 1.0   0.3
 draw actionFont    8    0.0, 0.4, 1.0   1.0
 
-# | KEY BINDINGS
-# | Key bindings follow the following format
-# |   bind [<mods>] <key> = <function> [<options>]
+# | KEY BINDINGS / MOUSE BINDINGS
+# | Key keyings follow the following format
+# |   key [<mods>] <key> = <function> [<options>]
+# |   mouse [<mods>] <button> = <function> [<options>]
 # | Modifiers are case insensitive.
 # | For readability, multiple modifers may be separated by commas,
 # |   pluses, any other symbol, or nothing at all, but *not* spaces.
 # | Any of the following would work:
-# |   bind Shift+Alt+Control q = quit
-# |   bind shift,alt,CONTROL q = quit
-# |   bind sHIft:ALT+Control q = quit
-# |   bind shiftALTControl   q = quit
+# |   key Shift+Alt+Control q = quit
+# |   key shift,alt,CONTROL q = quit
+# |   key sHIft:ALT+Control q = quit
+# |   key shiftALTControl   q = quit
 # | The following would *not* work:
-# |   bind Shift Alt Control q = quit
+# |   key Shift Alt Control q = quit
+# | Mouse bindings use a X11 mouse button number for key
+# |   Left/Mid/Right = 1/2/3, Scroll Up/Down/Left/Right = 5/6/7/8
 
 # | Basic controls:
-bind Control q       = quit
-bind Tab             = overview
-bind Return          = draw
-bind Shift Return    = draw render
-bind space           = move next
-bind Right           = move next
-bind Left            = move prev
-bind Up              = move up
-bind Down            = move down
-bind b               = mute black
-bind w               = mute white
+key Control q       = quit
+key Tab             = overview
+key Return          = draw
+key Shift Return    = draw render
+key space           = move next
+key Right           = move next
+key Left            = move prev
+key Up              = move up
+key Down            = move down
+key b               = mute black
+key w               = mute white
+
+mouse 1             = move next
+mouse 2             = overview
+mouse 3             = move prev
+mouse 4             = mute white
+mouse 5             = mute black
 
 # | Action links, form filling (conditionally compiled option), and zooming
-bind a               = action mouse
-bind Shift a         = action keys
-#bind f               = form mouse
-#bind Shift f         = form keys
-bind z               = zoom
-bind Shift z         = zoom lock
+key a               = action mouse
+key Shift a         = action keys
+#key f               = form mouse
+#key Shift f         = form keys
+key z               = zoom
+key Shift z         = zoom lock
+
+mouse 6             = action mouse
+#mouse 7             = form mouse
 
 # | Drawing
-bind r               = rectangle     20   0.0, 0.8, 1.0   0.8
-bind Shift r         = rectangle     20   0.0, 1.0, 0.2   0.8
-bind Control r       = rectangle     20   1.0, 0.0, 0.0   0.8
-bind Alt r           = Rectangle     20   0.0, 0.8, 1.0   0.8
-bind F1              = pen           4    1.0, 0.0, 0.0   0.9
-bind F2              = pen           8    1.0, 0.0, 0.0   0.7
-bind F3              = pen           24   1.0, 0.0, 0.0   0.5
-bind Shift F1        = Pen           4    1.0, 0.0, 0.0   0.9
-bind Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
-bind Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
+key r               = rectangle     20   0.0, 0.8, 1.0   0.8
+key Shift r         = rectangle     20   0.0, 1.0, 0.2   0.8
+key Control r       = rectangle     20   1.0, 0.0, 0.0   0.8
+key Alt r           = Rectangle     20   0.0, 0.8, 1.0   0.8
+key F1              = pen           4    1.0, 0.0, 0.0   0.9
+key F2              = pen           8    1.0, 0.0, 0.0   0.7
+key F3              = pen           24   1.0, 0.0, 0.0   0.5
+key Shift F1        = Pen           4    1.0, 0.0, 0.0   0.9
+key Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
+key Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
 
 # | Fun mouse cursors
-bind 1               = string        60   0.0, 0.3, 1.0   0.7 <-
-bind 2               = string       120   0.0, 0.3, 1.0   0.7 ^
-bind 3               = string        60   1.0, 0.0, 0.0   0.7 X
-bind 4               = string       120   1.0, 0.0, 0.0   0.7 ----
-bind 5               = string       120   0.0, 0.4, 1.0   0.8 Slider
-bind Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
-bind Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
+key 1               = string        60   0.0, 0.3, 1.0   0.7 <-
+key 2               = string       120   0.0, 0.3, 1.0   0.7 ^
+key 3               = string        60   1.0, 0.0, 0.0   0.7 X
+key 4               = string       120   1.0, 0.0, 0.0   0.7 ----
+key 5               = string       120   0.0, 0.4, 1.0   0.8 Slider
+key Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
+key Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
 

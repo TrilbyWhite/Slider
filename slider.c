@@ -31,20 +31,21 @@
 
 #define MAX_VIEW	4
 
+typedef void (*Bind)(const char *);
+
 typedef struct {
 	unsigned int mod;
 	KeySym key;
-	void (*func)(const char *);
+	Bind func;
 	const char *arg;
 } Key;
 
-typedef struct View View;
-struct View {
+typedef struct {
 	int x, y, w, h;
 	cairo_surface_t *dest_c, *src_c;
 	cairo_t *cairo;
 	Pixmap buf;
-};
+} View;
 
 enum { Black, White, ScreenBG, SlideBG, Empty };
 
@@ -94,11 +95,11 @@ static View *view;
 static float pscale = 1.8;
 static char *monShow = NULL, *monNote = NULL;
 #ifdef RC_CONFIG
-int nkeys = 0;
+int nkeys = 0, nbtns = 0;
+Key *keys = NULL, *btns = NULL;
 char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
 char *EMPTY_RECT, *ZOOM_RECT, *OVERVIEW_RECT, *ACTION_RECT, *ACTION_FONT;
 #define CURSOR_STRING_MAX	12
-Key *keys = NULL;
 #else /* RC_CONFIG */
 #include "config.h"
 #endif /* RC_CONFIG */
@@ -127,7 +128,8 @@ void action(const char *arg) {
 	cairo_select_font_face(c,"sans-serif",
 			CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
 	/* get pdf page and action links */
-	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerDocument *pdf;
+	pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
 	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
 	GList *amap, *list;
 	amap = poppler_page_get_link_mapping(page);
@@ -145,7 +147,7 @@ void action(const char *arg) {
 		if (input == 'k') {
 			cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
 			cairo_fill(c);
-			sym[0] = n + 65;
+			sym[0] = n + 65; /* ascii 65 = 'A' */
 			cairo_set_source_rgba(c,tR,tG,tB,tA);
 			cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
 			cairo_show_text(c,sym);
@@ -159,18 +161,17 @@ void action(const char *arg) {
 		XKeyEvent *e = &ev.xkey;
 		nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0]-97;
 		/* get selected action link */
-		for (list = amap, n = 0; list; list = list->next, n++) {
-		  if (n == nsel) {
-		    act = ((PopplerLinkMapping *)list->data)->action;
-		    r = ((PopplerLinkMapping *)list->data)->area;
-		    r.y1 = show->h / show->scale - r.y1;
-		    r.y2 = show->h / show->scale - r.y2;
-		  }
+		for (list = amap, n = 0; list && n!=nsel; list = list->next, n++);
+		if (n == nsel) {
+			act = ((PopplerLinkMapping *)list->data)->action;
+			r = ((PopplerLinkMapping *)list->data)->area;
+			r.y1 = show->h / show->scale - r.y1;
+			r.y2 = show->h / show->scale - r.y2;
 		}
 	}
 	else { /* get mouse click */
 		int mx=0,my=0;
-		XDefineCursor(dpy,wshow,crosshair_cursor);
+		XUndefineCursor(dpy,wshow);
 		XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
 		if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
 		else if (ev.type == ButtonPress) {
@@ -178,7 +179,6 @@ void action(const char *arg) {
 			my = (ev.xbutton.y - show->y) / show->scale;
 		}
 		XDefineCursor(dpy,wshow,invisible_cursor);
-		XSync(dpy,True);
 		draw(NULL);
 		if (mx || my) for (list = amap; list; list = list->next) {
 			act = ((PopplerLinkMapping *)list->data)->action;
@@ -224,25 +224,27 @@ void action(const char *arg) {
 #ifdef ALLOW_PDF_ACTION_LAUNCH
 			/* fashion the area coordinates as params */
 			if (!l->params) {
-			  l->params = calloc(20,sizeof(char));
-			  /* topl_x topl_y width height */
-			  sprintf(l->params,"%04g %04g %04g %04g",
-				  round(r.x1*show->scale),
-				  round(r.y2*show->scale),
-				  round((r.x2-r.x1)*show->scale),
-				  round((r.y1-r.y2)*show->scale));
+				l->params = calloc(20,sizeof(char));
+			  	/* topl_x topl_y width height */
+				sprintf(l->params,"%04g %04g %04g %04g",
+						round(r.x1*show->scale),
+						round(r.y2*show->scale),
+						round((r.x2-r.x1)*show->scale),
+						round((r.y1-r.y2)*show->scale));
 			}
 			char *cmd = calloc(strlen(l->file_name)+strlen(l->params)+2,
-					   sizeof(char));
-			sprintf(cmd,"%s %s",l->file_name,l->params); system(cmd);free(cmd);
+					sizeof(char));
+			sprintf(cmd,"%s %s",l->file_name,l->params);
+			system(cmd); free(cmd);
 #else
 			fprintf(stderr,"[SLIDER] blocked launch of \"%s %s\"\n",
-				l->file_name,l->params);
+					l->file_name,l->params);
 #endif /* ALLOW_PDF_ACTION_LAUNCH */
 		}
 		else if (act->type == POPPLER_ACTION_URI) {
 			PopplerActionUri *u = &act->uri;
-			char *cmd = calloc(strlen(u->uri)+strlen(SHOW_URI)+2,sizeof(char));
+			char *cmd = calloc(strlen(u->uri)+strlen(SHOW_URI)+2,
+					sizeof(char));
 			sprintf(cmd,SHOW_URI,u->uri); system(cmd); free(cmd);
 		}
 		else if (act->type == POPPLER_ACTION_MOVIE) {
@@ -250,7 +252,6 @@ void action(const char *arg) {
 			const char *mov = poppler_movie_get_filename(m->movie);
 			char *cmd = calloc(strlen(mov)+strlen(SHOW_MOV)+2,sizeof(char));
 			sprintf(cmd,SHOW_MOV,mov);
-	printf("[%s]\n",cmd);
 			system(cmd); free(cmd);
 		}
 		else if (act->type == POPPLER_ACTION_RENDITION) {
@@ -260,7 +261,8 @@ void action(const char *arg) {
 			sprintf(cmd,PLAY_AUD,med); system(cmd); free(cmd);
 		}
 		else {
-			fprintf(stderr,"unsupported action selected (type=%d)\n",act->type);
+			fprintf(stderr,"unsupported action selected (type=%d)\n",
+					act->type);
 		}
 		grab_keys(True);
 		XRaiseWindow(dpy,wshow);
@@ -274,7 +276,7 @@ void action(const char *arg) {
 
 void buttonpress(XEvent *ev) {
 	XButtonEvent *e = &ev->xbutton;
-	int x,y,n;
+	int i,x,y,n;
 	if (mode & OVERVIEW) {
 		if (e->button == 1 || e->button == 3) {
 			x = (e->x - (sw-show->sorter->flag[0]*(show->sorter->w+1))/2)/
@@ -289,9 +291,17 @@ void buttonpress(XEvent *ev) {
 		if (e->button == 2 || e->button == 3) draw(NULL);
 	}
 	else {
+#ifdef RC_CONFIG
+		unsigned int mod = (e->state&~Mod2Mask)&~LockMask;
+		for (i = 0; i < nbtns; i++) {
+			if (btns[i].mod==mod && btns[i].key==e->button && btns[i].func)
+				btns[i].func(btns[i].arg);
+		}
+#else
 		if (e->button == 1) move("r");
 		else if (e->button == 2) overview(NULL);
 		else if (e->button == 3) move("l");
+#endif
 	}
 }
 
@@ -408,6 +418,31 @@ void command_line(int argc, const char **argv) {
 
 #ifdef RC_CONFIG
 #define MAX_LINE 255
+static Bind config_helper(const char *name, int ln) {
+	if (strstr(name,"quit"))			return quit;
+	else if (strstr(name,"overview"))	return overview;
+	else if (strstr(name,"mute"))		return mute;
+#ifdef ACTION_LINKS
+	else if (strstr(name,"draw"))		return draw;
+	else if (strstr(name,"move"))		return move;
+	else if (strstr(name,"action"))	return action;
+#endif /* ACTION_LINKS */
+#ifdef FORM_FILL
+	else if (strstr(name,"form"))		return fillfield;
+#endif /* FORM_FILL */
+#ifdef DRAWING
+	else if (strstr(name,"zoom"))		return zoom;
+	else if (strstr(name,"rectangle"))	return rectangle;
+	else if (strstr(name,"Rectangle"))	return perm_rect;
+	else if (strstr(name,"string"))	return string;
+	else if (strstr(name,"polka"))		return polka;
+	else if (strstr(name,"pen"))		return pen;
+	else if (strstr(name,"Pen"))		return perm_pen;
+#endif /* DRAWING */
+	fprintf(stderr,"config [%d]: %s is not a bindable function\n", ln,name);
+	return NULL;
+}
+
 void config(const char *fname) {
 	FILE *rc = NULL;
 	if (fname && !(rc=fopen(fname,"r")))
@@ -425,7 +460,7 @@ void config(const char *fname) {
 		rc = fopen("config","r");
 	if (cwd) chdir(cwd);
 	if (!rc) die("unable to find configuration file\n");
-	int ln = 0, n = 0;
+	int ln = 0, n = 0, b = 0;
 	char in[5][MAX_LINE+1];
 	KeySym keysym;
 	while (fgets(in[0],MAX_LINE,rc)) {
@@ -445,10 +480,12 @@ void config(const char *fname) {
 				else if (strncmp("empty",in[1],strlen(in[1]))==0)
 					strncpy(colors[Empty],in[2],8);
 				else
-					fprintf(stderr,"config [%d]: color target \"%s\" not recognized\n",
+					fprintf(stderr,
+					"config [%d]: color target \"%s\" not recognized\n",
 							ln,in[1]);
 			}
-			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",
+					ln,in[0]);
 		}
 		else if (in[0][0] == 's') { /* SET */
 			if (sscanf(in[0],"set %s = %[^\n]",in[1],in[2]) == 2) {
@@ -459,9 +496,11 @@ void config(const char *fname) {
 				else if (strncmp("playAudio",in[1],strlen(in[1]))==0)
 					PLAY_AUD = strdup(in[2]);
 				else
-					fprintf(stderr,"config [%d]: cannot set \"%s\"\n",ln,in[1]);
+					fprintf(stderr,"config [%d]: cannot set \"%s\"\n",
+							ln,in[1]);
 			}
-			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",
+					ln,in[0]);
 		}
 		else if (in[0][0] == 'd') { /* DRAW */
 			if (sscanf(in[0],"draw %s %[^\n]",in[1],in[2]) == 2) {
@@ -476,61 +515,61 @@ void config(const char *fname) {
 				else if (strncmp("actionFont",in[1],strlen(in[1]))==0)
 					ACTION_FONT = strdup(in[2]);
 				else
-					fprintf(stderr,"config [%d]: \"%s\" is not a drawable\n",ln,in[1]);
+					fprintf(stderr,"config [%d]: \"%s\" is not a drawable\n",
+							ln,in[1]);
 			}
-			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",
+					ln,in[0]);
 		}
-		else if (in[0][0] == 'b') { /* BIND */
+		else if (in[0][0] == 'k') { /* KEY BIND */
 			in[1][0] = in[4][0] = '\0';
 			if (
-	((sscanf(in[0],"bind %s %s = %s %[^\n]",in[1],in[2],in[3],in[4])== 4)	||
-	 (sscanf(in[0],"bind %s %s = %s",		in[1],in[2],in[3])		== 3)	||
-	 (sscanf(in[0],"bind %s = %s %[^\n]",	in[2],in[3],in[4])		== 3)	||
-	 (sscanf(in[0],"bind %s = %s",			in[2],in[3])			== 2))	&&
+	((sscanf(in[0],"key %s %s = %s %[^\n]",in[1],in[2],in[3],in[4])== 4)	||
+	 (sscanf(in[0],"key %s %s = %s",		in[1],in[2],in[3])		== 3)	||
+	 (sscanf(in[0],"key %s = %s %[^\n]",	in[2],in[3],in[4])		== 3)	||
+	 (sscanf(in[0],"key %s = %s",			in[2],in[3])			== 2))	&&
 	((keysym=XStringToKeysym(in[2])) != NoSymbol ) ) {
 				keys = realloc(keys,(n+1) * sizeof(Key));
-				keys[n].key = keysym;
-				keys[n].mod = 0;
+				keys[n].key = keysym; keys[n].mod = 0;
 				if (in[1][0] != '\0') {
-					if (strcasestr(in[1],"Shift"))		keys[n].mod |= ShiftMask;
-					if (strcasestr(in[1],"Control"))	keys[n].mod |= ControlMask;
-					if (strcasestr(in[1],"Alt"))		keys[n].mod |= Mod2Mask;
-					if (strcasestr(in[1],"Super"))		keys[n].mod |= Mod4Mask;
+					if (strcasestr(in[1],"Shift")) keys[n].mod|=ShiftMask;
+					if (strcasestr(in[1],"Control")) keys[n].mod|=ControlMask;
+					if (strcasestr(in[1],"Alt")) keys[n].mod|=Mod2Mask;
+					if (strcasestr(in[1],"Super")) keys[n].mod|=Mod4Mask;
 				}
-				if (strstr(in[3],"quit"))			keys[n].func = quit;
-				else if (strstr(in[3],"overview"))	keys[n].func = overview;
-				else if (strstr(in[3],"mute"))		keys[n].func = mute;
-#ifdef ACTION_LINKS
-				else if (strstr(in[3],"draw"))		keys[n].func = draw;
-				else if (strstr(in[3],"move"))		keys[n].func = move;
-				else if (strstr(in[3],"action"))	keys[n].func = action;
-#endif /* ACTION_LINKS */
-#ifdef FORM_FILL
-				else if (strstr(in[3],"form"))		keys[n].func = fillfield;
-#endif /* FORM_FILL */
-#ifdef DRAWING
-				else if (strstr(in[3],"zoom"))		keys[n].func = zoom;
-				else if (strstr(in[3],"rectangle"))	keys[n].func = rectangle;
-				else if (strstr(in[3],"Rectangle"))	keys[n].func = perm_rect;
-				else if (strstr(in[3],"string"))	keys[n].func = string;
-				else if (strstr(in[3],"polka"))		keys[n].func = polka;
-				else if (strstr(in[3],"pen"))		keys[n].func = pen;
-				else if (strstr(in[3],"Pen"))		keys[n].func = perm_pen;
-#endif /* DRAWING */
-				else {
-					fprintf(stderr,"config [%d]: %s is not a bindable function\n",
-							ln,in[3]);
-					keys[n].func = NULL;
-				}
+				keys[n].func = config_helper(in[3],ln);
 				if (in[4][0] != '\0') keys[n].arg = strdup(in[4]);
-				else keys[n].arg = NULL;
-				n++;
+				else keys[n].arg = NULL; n++;
 			}
-			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",ln,in[0]);
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",
+					ln,in[0]);
+		}
+		else if (in[0][0] == 'm') { /* MOUSE BIND */
+			in[1][0] = in[4][0] = '\0';
+			if (
+	((sscanf(in[0],"mouse %s %s = %s %[^\n]",in[1],in[2],in[3],in[4])== 4)	||
+	 (sscanf(in[0],"mouse %s %s = %s",		in[1],in[2],in[3])		== 3)	||
+	 (sscanf(in[0],"mouse %s = %s %[^\n]",	in[2],in[3],in[4])		== 3)	||
+	 (sscanf(in[0],"mouse %s = %s",			in[2],in[3])			== 2))) {
+				btns = realloc(btns,(b+1) * sizeof(Key));
+				btns[b].key = atoi(in[2]); btns[b].mod = 0;
+				if (in[1][0] != '\0') {
+					if (strcasestr(in[1],"Shift")) btns[b].mod|=ShiftMask;
+					if (strcasestr(in[1],"Control")) btns[b].mod|=ControlMask;
+					if (strcasestr(in[1],"Alt")) btns[b].mod|=Mod2Mask;
+					if (strcasestr(in[1],"Super")) btns[b].mod|=Mod4Mask;
+				}
+				btns[b].func = config_helper(in[3],ln);
+				if (in[4][0] != '\0') btns[b].arg = strdup(in[4]);
+				else btns[b].arg = NULL; b++;
+			}
+			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",
+					ln,in[0]);
 		}
 	}
 	fclose(rc);
 	nkeys = n;
+	nbtns = b;
 }
 #endif /* RC_CONFIG */
 
