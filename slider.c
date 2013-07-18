@@ -664,7 +664,8 @@ void fillfield(const char *arg) {
 		PopplerDocument *pdf;
 		pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
 		poppler_document_save_a_copy(pdf,"file:///tmp/fill.pdf",NULL);
-		modPDF = poppler_document_new_from_file("file:///tmp/fill.pdf",NULL,NULL);
+		modPDF = poppler_document_new_from_file("file:///tmp/fill.pdf",
+				NULL,NULL);
 	}
 	if (mode & OVERVIEW) return;
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
@@ -694,8 +695,6 @@ void fillfield(const char *arg) {
 	/* get a location from the mouse */
 	int mx=0, my=0;
 	XDefineCursor(dpy,wshow,crosshair_cursor);
-	//XGrabPointer(dpy,wshow,True,ButtonPressMask,
-	//		GrabModeAsync,GrabModeAsync,wshow,None,CurrentTime);
 	XEvent ev;
 	XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
 	if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
@@ -706,8 +705,6 @@ void fillfield(const char *arg) {
 	XDefineCursor(dpy,wshow,invisible_cursor);
 	//XSync(dpy,True);
 	draw(NULL);
-	//XUngrabPointer(dpy,CurrentTime);
-	/* match coordinates to field */
 	list = NULL;
 	if (mx || my) for (list = fmap; list; list = list->next) {
 		f = ((PopplerFormFieldMapping *)list->data)->field;
@@ -725,7 +722,8 @@ void fillfield(const char *arg) {
 	PopplerFormFieldType ft = poppler_form_field_get_field_type(f);
 	KeySym key;
 	if (ft == POPPLER_FORM_FIELD_BUTTON) {
-		PopplerFormButtonType bt = poppler_form_field_button_get_button_type(f);
+		PopplerFormButtonType bt;
+		bt = poppler_form_field_button_get_button_type(f);
 		if (bt == POPPLER_FORM_BUTTON_PUSH) printf("push button: ");
 		else if (bt == POPPLER_FORM_BUTTON_RADIO) printf("radio button: ");
 		else if (bt == POPPLER_FORM_BUTTON_CHECK) printf("check button: ");
@@ -744,7 +742,7 @@ printf("form fill type=signature not implemented yet\n");
 	}
 	else if (ft == POPPLER_FORM_FIELD_TEXT) { /* text fill */
 		/* set up locale and input context */
-		if (	!setlocale(LC_CTYPE,"") ||
+		if (!setlocale(LC_CTYPE,"") ||
 				!XSupportsLocale() ||
 				!XSetLocaleModifiers("") ) {
 			fprintf(stderr,"locale failure\n");
@@ -779,10 +777,12 @@ printf("form fill type=signature not implemented yet\n");
 		double x,y;
 		while (key != XK_Escape) {
 			/* draw text */
-			cairo_set_source_rgba(c,0.8,1.0,1.0,1.0); // TODO get a back color?
+			cairo_set_source_rgba(c,0.8,1.0,1.0,1.0);
+				// TODO get a back color?
 			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 			cairo_fill_preserve(c);
-			cairo_set_source_rgba(c,0.0,0.0,0.0,1.0); // TODO get a font color?
+			cairo_set_source_rgba(c,0.0,0.0,0.0,1.0);
+				// TODO get a font color?
 			cairo_stroke(c);
 			cairo_move_to(c,r.x1,r.y2+fext.height);
 			if (multi) {
@@ -844,13 +844,13 @@ printf("form fill type=signature not implemented yet\n");
 				txt[strlen(txt)-1] = '\0';
 				if (ch > txt+strlen(txt)) ch=txt+strlen(txt);
 			}
-if (multi) {
-	char *nl;
-	if ( !(nl=strrchr(txt,'\n')) ) nl=txt;
-	cairo_text_extents(c,nl,&ext);
-	if (ext.width > r.x2-r.x1 && (nl=strrchr(nl,' ')) )
-		*nl = '\n';
-}
+			if (multi) {
+				char *nl;
+				if ( !(nl=strrchr(txt,'\n')) ) nl=txt;
+				cairo_text_extents(c,nl,&ext);
+				if (ext.width > r.x2-r.x1 && (nl=strrchr(nl,' ')) )
+					*nl = '\n';
+			}
 		}
 		poppler_form_field_text_set_text(f,txt);
 		/* clean up */
@@ -912,15 +912,16 @@ void init_views() {
 		}
 	}
 	for (i = v1, v = &view[i]; i < MAX_VIEW && v->w && v->h; v = &view[++i]) {
-		v->buf = XCreatePixmap(dpy,root,show->w,show->h,DefaultDepth(dpy,scr));
-		v->dest_c = cairo_xlib_surface_create(dpy,bnote,DefaultVisual(dpy,scr),
-				swnote,shnote);
+		v->buf = XCreatePixmap(dpy,root,show->w,show->h,
+				DefaultDepth(dpy,scr));
+		v->dest_c = cairo_xlib_surface_create(dpy,bnote,
+				DefaultVisual(dpy,scr),swnote,shnote);
 		v->cairo = cairo_create(v->dest_c);
 		cairo_translate(v->cairo,v->x,v->y);
 		cairo_scale(v->cairo, (float) v->w / (i ? show->w : show->notes->w),
 				(float) v->h / (i ? show->h : show->notes->h) );
-		v->src_c = cairo_xlib_surface_create(dpy,v->buf,DefaultVisual(dpy,scr),
-				show->w,show->h);
+		v->src_c = cairo_xlib_surface_create(dpy,v->buf,
+				DefaultVisual(dpy,scr),show->w,show->h);
 		cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
 				DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 		cairo_t *c = cairo_create(t);
@@ -954,7 +955,8 @@ void init_X() {
 			if (monShow) {
 				if (strncmp(monShow,xrrOut->name,strlen(monShow))==0)
 					xrrShow = xrrT;
-				if (monNote && strncmp(monNote,xrrOut->name,strlen(monNote))==0)
+				if (monNote && strncmp(monNote,
+						xrrOut->name,strlen(monNote))==0)
 					xrrNote = xrrT;
 			}
 			else {
@@ -1007,7 +1009,8 @@ void init_X() {
 	XColor color;
 	char cursor_data = 0;
 	Pixmap curs_map = XCreateBitmapFromData(dpy,wshow,&cursor_data,1,1);
-	invisible_cursor = XCreatePixmapCursor(dpy,curs_map,curs_map,&color,&color,0,0);
+	invisible_cursor = XCreatePixmapCursor(dpy,curs_map,curs_map,
+			&color,&color,0,0);
 	crosshair_cursor = XCreateFontCursor(dpy,XC_crosshair);
 	XDefineCursor(dpy,wshow,invisible_cursor);
 	XMapWindow(dpy,wshow);
@@ -1037,7 +1040,8 @@ void move(const char *arg) {
 		else if (arg[0] == 'd') show->cur += show->sorter->flag[0];
 		else if (arg[0] == 'u') show->cur -= show->sorter->flag[0];
 		if (show->cur < 0) show->cur = 0;
-		while (show->cur >= show->count || !(show->flag[show->cur] & RENDERED))
+		while (show->cur >= show->count || 
+				!(show->flag[show->cur] & RENDERED))
 			show->cur--;
 		overview(NULL);
 	}
@@ -1056,7 +1060,8 @@ void move(const char *arg) {
 
 void mute(const char *arg) {
 	if ( (mode ^= MUTED) & MUTED ) {
-		XFillRectangle(dpy,wshow,(arg[0]=='w'?cgc(White):cgc(Black)),0,0,sw,sh);
+		XFillRectangle(dpy,wshow,(arg[0]=='w'?cgc(White):cgc(Black)),
+				0,0,sw,sh);
 		XFlush(dpy);
 	}
 	else {
@@ -1073,7 +1078,6 @@ void overview(const char *arg) {
 	int grid = show->sorter->flag[0];
 	int x = show->sorter->x + (show->cur % grid) * (show->sorter->w+10);
 	int y = show->sorter->y + (int)(show->cur/grid) * (show->sorter->h+10);
-
 	int w; double R,G,B,A;
 	sscanf(OVERVIEW_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
 	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
@@ -1196,8 +1200,8 @@ void usage(const char *prog) {
 void warn() {
 	Window w = wshow;
 	if (swnote && shnote) w = wnote;
-	cairo_surface_t *t = cairo_xlib_surface_create(dpy,w,DefaultVisual(dpy,scr),
-			sw+swnote,sh+shnote);
+	cairo_surface_t *t = cairo_xlib_surface_create(dpy,w,
+			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
 	cairo_pattern_t *p = cairo_pattern_create_rgb(1,0,0);
 	cairo_set_source(c,p);
@@ -1224,11 +1228,13 @@ void zoom(const char *arg) {
 	else { w = sw; h = sh; }
 	Pixmap b = XCreatePixmap(dpy,wshow,w,h,DefaultDepth(dpy,scr));
 	XFillRectangle(dpy,b,cgc(SlideBG),0,0,w,h);
-	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,
+			NULL,NULL);
 	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
 	double pdfw, pdfh;
 	poppler_page_get_size(page,&pdfw,&pdfh);
-	cairo_surface_t *t=cairo_xlib_surface_create(dpy,b,DefaultVisual(dpy,scr),w,h);
+	cairo_surface_t *t=cairo_xlib_surface_create(dpy,b,
+			DefaultVisual(dpy,scr),w,h);
 	cairo_t *c = cairo_create(t);
 	double xs = (double)(show->w*w)/(pdfw*(double)r.width);
 	double ys = (double)(show->h*h)/(pdfh*(double)r.height);
