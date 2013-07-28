@@ -28,40 +28,40 @@ const char colors[][9] = {
   and and (A)lpha opacity setting. W is an integer in pixels, RGBA are double
   precision floating point numbers between 0 and 1.
 
-						 W   R    G    B    A
-						 ----------------------*/
+				 W   R    G    B    A
+				-----------------------*/
 #define EMPTY_RECT		"10  1.0, 1.0, 1.0  0.5"
 #define ZOOM_RECT		"10  0.0, 0.8, 1.0  0.8"
-#define OVERVIEW_RECT	"10  1.0, 1.0, 0.0  0.6"
+#define OVERVIEW_RECT	        "10  1.0, 1.0, 0.0  0.6"
 #define ACTION_RECT		"1   0.0, 0.2, 1.0  0.3"
 #define ACTION_FONT		"8   0.0, 0.4, 1.0  1.0"
 
 static Key keys[] = {
 	{ ControlMask,		XK_q,		quit,		NULL		},
-	{ 0,				XK_Tab,		overview,	NULL		},
-	{ 0,				XK_Return,	draw,		NULL		},
+	{ 0,			XK_Tab,		overview,	NULL		},
+	{ 0,			XK_Return,	draw,		NULL		},
 	{ ShiftMask,		XK_Return,	draw,		"render"	},
-	{ 0,				XK_space,	move,		"right"		},
-	{ 0,				XK_Right,	move,		"right"		},
-	{ 0,				XK_Left,	move,		"left"		},
-	{ 0,				XK_Up,		move,		"up"		},
-	{ 0,				XK_Down,	move,		"down"		},
-	{ 0,				XK_b,		mute,		"black"		},
-	{ 0,				XK_w,		mute,		"white"		},
+	{ 0,			XK_space,	move,		"right"		},
+	{ 0,			XK_Right,	move,		"right"		},
+	{ 0,			XK_Left,	move,		"left"		},
+	{ 0,			XK_Up,		move,		"up"		},
+	{ 0,			XK_Down,	move,		"down"		},
+	{ 0,			XK_b,		mute,		"black"		},
+	{ 0,			XK_w,		mute,		"white"		},
 
 /* ------------ CONDITIONALLY COMPILED FEATURES: ------------ */
 #ifdef ACTION_LINKS
-	{ 0,				XK_a,		action,		"mouse"		},
+	{ 0,			XK_a,		action,		"mouse"		},
 	{ ShiftMask,		XK_a,		action,		"keys"		},
 #endif /* ACTION_LINKS */
 
 #ifdef FORM_FILL
-	{ 0,				XK_f,		fillfield,	"mouse"		},
+	{ 0,			XK_f,		fillfield,	"mouse"		},
 	{ ShiftMask,		XK_f,		fillfield,	"keys"		},
 #endif /* FORM_FILL */
 
 #ifdef ZOOMING
-	{ 0,				XK_z,		zoom,		NULL		},
+	{ 0,			XK_z,		zoom,		NULL		},
 	{ ShiftMask,		XK_z,		zoom,		"lock"		},
 #endif /*ZOOMING */
 
@@ -71,17 +71,17 @@ static Key keys[] = {
 	   duration of the presentation session.
 	   Such persistent drawings can be "erased" with draw("render")  */
 	/* draw a rectanle */
-	{ 0,				XK_r,		rectangle,	"20  0.0, 0.8, 1.0  0.8" },
+	{ 0,			XK_r,		rectangle,	"20  0.0, 0.8, 1.0  0.8" },
 	{ ShiftMask,		XK_r,		rectangle,	"20  0.0, 1.0, 0.2  0.8" },
 	{ ControlMask,		XK_r,		rectangle,	"20  1.0, 0.0, 0.0  0.8" },
-	{ Mod1Mask,			XK_r,		perm_rect,	"20  0.0, 0.8, 1.0  0.8" },
+	{ Mod1Mask,		XK_r,		perm_rect,	"20  0.0, 0.8, 1.0  0.8" },
 	/* "Polka-dot" cursor/pointers */
-	{ 0,				XK_1,		polka,		"40  0.0, 0.2, 0.5  0.7" },
-	{ 0,				XK_2,		polka,		"40  1.0, 1.0, 0.1  0.5" },
-	{ 0,				XK_3,		polka,		"40  1.0, 0.0, 0.0  0.3" },
-	{ 0,				XK_4,		polka,		"10  0.0, 0.2, 0.5  0.7" },
-	{ 0,				XK_5,		polka,		"10  1.0, 1.0, 0.1  0.5" },
-	{ 0,				XK_6,		polka,		"10  1.0, 0.0, 0.0  0.3" },
+	{ 0,			XK_1,		polka,		"40  0.0, 0.2, 0.5  0.7" },
+	{ 0,			XK_2,		polka,		"40  1.0, 1.0, 0.1  0.5" },
+	{ 0,			XK_3,		polka,		"40  1.0, 0.0, 0.0  0.3" },
+	{ 0,			XK_4,		polka,		"10  0.0, 0.2, 0.5  0.7" },
+	{ 0,			XK_5,		polka,		"10  1.0, 1.0, 0.1  0.5" },
+	{ 0,			XK_6,		polka,		"10  1.0, 0.0, 0.0  0.3" },
 	/* String cursor/pointers: Put any text string at the end of the config string */
 	/*   Strings for cursors must be less that CURSOR_STRING_MAX bytes.
 	     Note that unicode characters may count for more than one byte each. */
@@ -93,12 +93,12 @@ static Key keys[] = {
 	{ ShiftMask,		XK_6,		string,		"100  1.0, 0.0, 0.0  0.7 ↗" },
 	{ ShiftMask,		XK_7,		string,		"80   0.0, 1.0, 0.0  0.8 SLIDER" },
 	/* Drawing pens */
-	{ 0,				XK_F1,		pen,		"4   1.0, 0.0, 0.0  0.9" },
-	{ 0,				XK_F2,		pen,		"8   1.0, 0.0, 0.0  0.7" },
-	{ 0,				XK_F3,		pen,		"24  1.0, 0.0, 0.0  0.5" },
-	{ 0,				XK_F4,		pen,		"4   0.0, 0.2, 0.5  0.9" },
-	{ 0,				XK_F5,		pen,		"8   0.0, 0.2, 0.5  0.7" },
-	{ 0,				XK_F6,		pen,		"24  0.0, 0.2, 0.5  0.5" },
+	{ 0,			XK_F1,		pen,		"4   1.0, 0.0, 0.0  0.9" },
+	{ 0,			XK_F2,		pen,		"8   1.0, 0.0, 0.0  0.7" },
+	{ 0,			XK_F3,		pen,		"24  1.0, 0.0, 0.0  0.5" },
+	{ 0,			XK_F4,		pen,		"4   0.0, 0.2, 0.5  0.9" },
+	{ 0,			XK_F5,		pen,		"8   0.0, 0.2, 0.5  0.7" },
+	{ 0,			XK_F6,		pen,		"24  0.0, 0.2, 0.5  0.5" },
 	{ ShiftMask,		XK_F1,		perm_pen,	"4   1.0, 0.0, 0.0  0.9" },
 	{ ShiftMask,		XK_F2,		perm_pen,	"8   1.0, 0.0, 0.0  0.7" },
 	{ ShiftMask,		XK_F3,		perm_pen,	"24  1.0, 0.0, 0.0  0.5" },
@@ -109,4 +109,3 @@ static Key keys[] = {
 /* --------------------- END FEATURES: ---------------------- */
 
 }; /* end keys */
-
