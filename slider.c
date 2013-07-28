@@ -136,56 +136,68 @@ void action(const char *arg) {
 	PopplerAction *act = NULL;
 	PopplerRectangle r;
 	int n, nsel = 0;
-	for (list = amap, n = 0; list && n < 26; list = list->next, n++) {
-		r = ((PopplerLinkMapping *)list->data)->area;
-		r.y1 = show->h / show->scale - r.y1;
-		r.y2 = show->h / show->scale - r.y2;
-		/* draw links */
-		cairo_set_source_rgba(c,R,G,B,A);
-		cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
-		cairo_stroke(c);
-		if (input == 'k') {
-			cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
-			cairo_fill(c);
-			sym[0] = n + 65; /* ascii 65 = 'A' */
-			cairo_set_source_rgba(c,tR,tG,tB,tA);
-			cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
-			cairo_show_text(c,sym);
+	if (input == 'a') {	/* autoplay ACTION_LAUNCH action */
+	      for (list = amap; list; list = list->next) {
+		      if ((((PopplerLinkMapping *)list->data)->action)->type == POPPLER_ACTION_LAUNCH) {
+			act = ((PopplerLinkMapping *)list->data)->action;
+			r = ((PopplerLinkMapping *)list->data)->area;
+			r.y1 = show->h / show->scale - r.y1;
+			r.y2 = show->h / show->scale - r.y2;
+		      }
+	      }
+	}
+	else {			/* keyboard or mouse ACTION_LAUNCH action */
+	        for (list = amap, n = 0; list && n < 26; list = list->next, n++) {
+		        r = ((PopplerLinkMapping *)list->data)->area;
+			r.y1 = show->h / show->scale - r.y1;
+			r.y2 = show->h / show->scale - r.y2;
+			/* draw links */
+			cairo_set_source_rgba(c,R,G,B,A);
+			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 			cairo_stroke(c);
+			if (input == 'k') {
+			        cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
+				cairo_fill(c);
+				sym[0] = n + 65; /* ascii 65 = 'A' */
+				cairo_set_source_rgba(c,tR,tG,tB,tA);
+				cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
+				cairo_show_text(c,sym);
+				cairo_stroke(c);
+			}
 		}
-	}
-	if (!n) return;
-	XEvent ev;
-	if (input == 'k') { /* get key */
-		while (!XCheckTypedEvent(dpy,KeyPress,&ev));
-		XKeyEvent *e = &ev.xkey;
-		nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0]-97;
-		/* get selected action link */
-		for (list = amap, n = 0; list && n!=nsel; list = list->next, n++);
-		if (n == nsel) {
-			act = ((PopplerLinkMapping *)list->data)->action;
-			r = ((PopplerLinkMapping *)list->data)->area;
-			r.y1 = show->h / show->scale - r.y1;
-			r.y2 = show->h / show->scale - r.y2;
+		if (!n) return;
+		XEvent ev;
+		if (input == 'k') { /* get key */
+		        while (!XCheckTypedEvent(dpy,KeyPress,&ev));
+			XKeyEvent *e = &ev.xkey;
+			nsel = XKeysymToString(XkbKeycodeToKeysym(dpy,e->keycode,0,0))[0]-97;
+			/* get selected action link */
+			for (list = amap, n = 0; list && n!=nsel; list = list->next, n++);
+			if (n == nsel) {
+			      act = ((PopplerLinkMapping *)list->data)->action;
+			      r = ((PopplerLinkMapping *)list->data)->area;
+			      r.y1 = show->h / show->scale - r.y1;
+			      r.y2 = show->h / show->scale - r.y2;
+			}
 		}
-	}
-	else { /* get mouse click */
-		int mx=0,my=0;
-		XUndefineCursor(dpy,wshow);
-		XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
-		if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
-		else if (ev.type == ButtonPress) {
-			mx = (ev.xbutton.x - show->x) / show->scale;
-			my = (ev.xbutton.y - show->y) / show->scale;
-		}
-		XDefineCursor(dpy,wshow,invisible_cursor);
-		draw(NULL);
-		if (mx || my) for (list = amap; list; list = list->next) {
-			act = ((PopplerLinkMapping *)list->data)->action;
-			r = ((PopplerLinkMapping *)list->data)->area;
-			r.y1 = show->h / show->scale - r.y1;
-			r.y2 = show->h / show->scale - r.y2;
-			if (mx > r.x1 && mx < r.x2 && my > r.y2 && my < r.y1) break;
+		else { /* get mouse click */
+		        int mx=0,my=0;
+			XUndefineCursor(dpy,wshow);
+			XMaskEvent(dpy,ButtonPressMask|KeyPressMask,&ev);
+			if (ev.type == KeyPress) XPutBackEvent(dpy,&ev);
+			else if (ev.type == ButtonPress) {
+			        mx = (ev.xbutton.x - show->x) / show->scale;
+				my = (ev.xbutton.y - show->y) / show->scale;
+			}
+			XDefineCursor(dpy,wshow,invisible_cursor);
+			draw(NULL);
+			if (mx || my) for (list = amap; list; list = list->next) {
+			          act = ((PopplerLinkMapping *)list->data)->action;
+				  r = ((PopplerLinkMapping *)list->data)->area;
+				  r.y1 = show->h / show->scale - r.y1;
+				  r.y2 = show->h / show->scale - r.y2;
+				  if (mx > r.x1 && mx < r.x2 && my > r.y2 && my < r.y1) break;
+			  }
 		}
 	}
 	/* folow link */
@@ -223,19 +235,17 @@ void action(const char *arg) {
        - J McClure (10 June 2013)    */
 #ifdef ALLOW_PDF_ACTION_LAUNCH
 			/* fashion the area coordinates as params */
-			if (!l->params) {
-				l->params = calloc(20,sizeof(char));
-			  	/* topl_x topl_y width height */
-				sprintf(l->params,"%04g %04g %04g %04g",
-						round(r.x1*show->scale),
-						round(r.y2*show->scale),
-						round((r.x2-r.x1)*show->scale),
-						round((r.y1-r.y2)*show->scale));
-			}
-			char *cmd = calloc(strlen(l->file_name)+strlen(l->params)+2,
-					sizeof(char));
-			sprintf(cmd,"%s %s",l->file_name,l->params);
-			system(cmd); free(cmd);
+			/* topl_x topl_y width height - each 4 digit - hardwired to 20 */
+			gchar *coords = calloc(20,sizeof(char));
+			sprintf(coords,"%04g %04g %04g %04g",
+				round(r.x1*show->scale),
+				round(r.y2*show->scale),
+				round((r.x2-r.x1)*show->scale),
+				round((r.y1-r.y2)*show->scale));
+			size_t pl = !l->params ? 0 : strlen(l->params);
+			char *cmd = calloc(strlen(l->file_name)+pl+strlen(coords)+2,sizeof(char));
+			sprintf(cmd,"%s %s %s",l->file_name,!l->params?"":l->params,coords);
+			system(cmd); free(cmd); free(coords);
 #else
 			fprintf(stderr,"[SLIDER] blocked launch of \"%s %s\"\n",
 					l->file_name,l->params);
@@ -1040,7 +1050,7 @@ void move(const char *arg) {
 		else if (arg[0] == 'd') show->cur += show->sorter->flag[0];
 		else if (arg[0] == 'u') show->cur -= show->sorter->flag[0];
 		if (show->cur < 0) show->cur = 0;
-		while (show->cur >= show->count || 
+		while (show->cur >= show->count ||
 				!(show->flag[show->cur] & RENDERED))
 			show->cur--;
 		overview(NULL);
