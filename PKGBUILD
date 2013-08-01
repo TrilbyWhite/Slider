@@ -13,16 +13,16 @@ source=("$_gitname::git://github.com/TrilbyWhite/Slider.git")
 sha256sums=('SKIP')
 
 pkgver() {
-	cd "${srcdir}/$_gitname";
+	cd "${srcdir}/$_gitname"
 	echo 1.$(git rev-list --count HEAD).$(git describe --always )
 }
 
 build() {
-	cd ${_gitname}
+	cd "${srcdir}/$_gitname"
 	make
 }
 
 package() {
-	cd ${_gitname}
+	cd "${srcdir}/$_gitname"
 	make DESTDIR="${pkgdir}" PREFIX=/usr install
 }
