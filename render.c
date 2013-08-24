@@ -64,7 +64,7 @@ void *render_threaded(void *arg) {
 		}
 	}	
 	/* render pages */
-	cairo_surface_t *target;
+	cairo_surface_t *target, *xtarget;
 	cairo_t *cairo;
 	n = 0; x = (show->sorter ? show->sorter->x : 0);
 	y = (show->sorter ? show->sorter->y : 0);
@@ -73,24 +73,45 @@ void *render_threaded(void *arg) {
 				DefaultDepth(dpy,scr));
 		XFillRectangle(dpy,show->slide[i],sgc,0,0,show->w,show->h);
 		page = poppler_document_get_page(pdf,i);
-		target = cairo_xlib_surface_create(dpy,show->slide[i],
-				DefaultVisual(dpy,scr),show->w,show->h);
-		cairo = cairo_create(target);
-		cairo_scale(cairo,show->scale,show->scale);
-		poppler_page_render(page,cairo);
-		cairo_surface_destroy(target);
-		cairo_destroy(cairo);
+	
+/* not sure why the "middle man" image surface is needed here
+	but fontconf replacements don't seem to work without it.
+	This may be a limitation of rendering on xlib surfaces.		*/
+target = cairo_image_surface_create(CAIRO_FORMAT_RGB24,show->w,show->h);
+cairo = cairo_create(target);
+cairo_scale(cairo,show->scale,show->scale);
+poppler_page_render(page,cairo);
+cairo_destroy(cairo);
+
+xtarget = cairo_xlib_surface_create(dpy,show->slide[i],
+		DefaultVisual(dpy,scr),show->w,show->h);
+cairo = cairo_create(xtarget);
+cairo_surface_destroy(xtarget);
+cairo_set_source_surface(cairo,target,0,0);
+cairo_paint(cairo);
+cairo_destroy(cairo);
+cairo_surface_destroy(target);
+
 		show->flag[i] |= RENDERED;
 		if (show->sorter) {
 			XFillRectangle(dpy,thumb,sgc,0,0,show->sorter->w,show->sorter->h);
-			target = cairo_xlib_surface_create(dpy,thumb,DefaultVisual(dpy,scr),
-					show->sorter->w,show->sorter->h);
-			cairo = cairo_create(target);
-			cairo_scale(cairo,show->sorter->scale,show->sorter->scale);
-			poppler_page_render(page,cairo);
-			cairo_surface_destroy(target);
-			XCopyArea(dpy,thumb,show->sorter->slide[0],sgc,0,0,show->sorter->w,
-					show->sorter->h,x,y);
+
+target = cairo_image_surface_create(CAIRO_FORMAT_RGB24,show->sorter->w,show->sorter->h);
+cairo = cairo_create(target);
+cairo_scale(cairo,show->sorter->scale,show->sorter->scale);
+poppler_page_render(page,cairo);
+cairo_destroy(cairo);
+
+xtarget = cairo_xlib_surface_create(dpy,thumb,DefaultVisual(dpy,scr),
+		show->sorter->w,show->sorter->h);
+cairo = cairo_create(xtarget);
+cairo_surface_destroy(xtarget);
+cairo_set_source_surface(cairo,target,0,0);
+cairo_paint(cairo);
+cairo_destroy(cairo);
+cairo_surface_destroy(target);
+
+			XCopyArea(dpy,thumb,show->sorter->slide[0],sgc,0,0,show->sorter->w, show->sorter->h,x,y);
 			x += show->sorter->w + 10;
 			if (++n == grid) {
 				n = 0;
