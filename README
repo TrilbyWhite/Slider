@@ -1,5 +1,4 @@
-RC files have had minimal testing and caused no problems.  They are now the default compile option.  If no major issue arrise from this, the previous config.h code will be removed from the master branch soon.
-
+Config.h has been completely replaced by rc files ... except perhaps in the documentation which will be on the way.
 
 ------------------------------
 

@@ -6,8 +6,8 @@ CFLAGS	+=	-Os `pkg-config --cflags x11 xrandr poppler-glib cairo`
 LDFLAGS	+=	`pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
 PREFIX	?=	/usr
 SOURCE	= 	slider.c render.c
-HEADER	= 	slider.h config.h
-OPTS	= 	-DFADE_TRANSITION -DACTION_LINKS -DDRAWING -DZOOMING -DRC_CONFIG
+HEADER	= 	slider.h
+OPTS	= 	-DFADE_TRANSITION -DACTION_LINKS -DDRAWING -DZOOMING
 EX_OPTS	=	${OPTS} -DFORM_FILL
 
 ##################################################################

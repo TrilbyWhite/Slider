@@ -56,9 +56,7 @@ static void buttonpress(XEvent *);
 static GC cgc(int);
 static void cleanup();
 static void command_line(int, const char **);
-#ifdef RC_CONFIG
 static void config(const char *);
-#endif /* RC_CONFIG */
 static void draw(const char *);
 #ifdef FORM_FILL
 static void fillfield(const char *);
@@ -94,15 +92,11 @@ static Show *show;
 static View *view;
 static float pscale = 1.8;
 static char *monShow = NULL, *monNote = NULL;
-#ifdef RC_CONFIG
 int nkeys = 0, nbtns = 0;
 Key *keys = NULL, *btns = NULL;
 char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
 char *EMPTY_RECT, *ZOOM_RECT, *OVERVIEW_RECT, *ACTION_RECT, *ACTION_FONT;
 #define CURSOR_STRING_MAX	12
-#else /* RC_CONFIG */
-#include "config.h"
-#endif /* RC_CONFIG */
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
 	[KeyPress]		= keypress,
@@ -301,17 +295,11 @@ void buttonpress(XEvent *ev) {
 		if (e->button == 2 || e->button == 3) draw(NULL);
 	}
 	else {
-#ifdef RC_CONFIG
 		unsigned int mod = (e->state&~Mod2Mask)&~LockMask;
 		for (i = 0; i < nbtns; i++) {
 			if (btns[i].mod==mod && btns[i].key==e->button && btns[i].func)
 				btns[i].func(btns[i].arg);
 		}
-#else
-		if (e->button == 1) move("r");
-		else if (e->button == 2) overview(NULL);
-		else if (e->button == 3) move("l");
-#endif
 	}
 }
 
@@ -421,12 +409,9 @@ void command_line(int argc, const char **argv) {
 		view[i].x = view[i-1].x; view[i].y = view[i-1].y;
 	}
 	if (!show->uri) { cleanup(); usage(argv[0]); exit(1); }
-#ifdef RC_CONFIG
 	config(rc);
-#endif	/* RC_CONFIG */
 }
 
-#ifdef RC_CONFIG
 #define MAX_LINE 255
 static Bind config_helper(const char *name, int ln) {
 	if (strstr(name,"quit"))			return quit;
@@ -581,7 +566,6 @@ void config(const char *fname) {
 	nkeys = n;
 	nbtns = b;
 }
-#endif /* RC_CONFIG */
 
 static inline void draw_view(Show *set,int vnum, int snum) {
 	if (!view[vnum].w || !view[vnum].h) return;
@@ -1033,11 +1017,7 @@ void keypress(XEvent *ev) {
 	int i;
 	KeySym key = XkbKeycodeToKeysym(dpy,(KeyCode)e->keycode,0,0);
 	unsigned int mod = (e->state&~Mod2Mask)&~LockMask;
-#ifdef RC_CONFIG
 	for (i = 0; i < nkeys; i++) {
-#else
-	for (i = 0; i < sizeof(keys)/sizeof(keys[0]); i++) {
-#endif
 		if ( (key==keys[i].key) && keys[i].func && (keys[i].mod==mod) )
 			keys[i].func(keys[i].arg);
 	}
