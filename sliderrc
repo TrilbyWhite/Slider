@@ -35,6 +35,11 @@ draw slideBG       0    1.0, 1.0, 1.0   1.0
 draw sorterEmpty   2    0.2, 0.2, 0.5   1.0
 draw blackMute     0    0.0, 0.0, 0.0   1.0
 draw whiteMute     0    1.0, 1.0, 1.0   1.0
+#draw formBG        0    0.8, 0.9, 1.0   1.0
+#draw formBorder    1    0.5, 0.9, 1.0   1.0
+#draw formFG        10   0.0, 0.0, 0.0   1.0
+#draw formCursor    2    0.0, 0.4, 0.0   1.0
+
 
 # | fadeOpts       I    R    G    B     O
 # |   I:     Fade out steps
@@ -42,11 +47,11 @@ draw whiteMute     0    1.0, 1.0, 1.0   1.0
 # |   O:     Fade in steps
 # | examples:
 # | Simple cross fade:
-draw fadeOpts      0    0.0, 0.0, 0.0   40
 # | Author note: I recommend keeping the fade out at 0 which means
 # |   the RGB color is irrelevant, and adjust the fade in to suit
 # |   your taste.  More complex fades become distracting or even
 # |   annoying to an audience.
+draw fadeOpts      0    0.0, 0.0, 0.0   40
 # | Fade out slide to white fade in new slide, symetrical timing
 #draw fadeOpts      40    1.0, 1.0, 1.0   40
 # | Fade out slide to white fade in new slide, asymetrical timing
@@ -104,7 +109,7 @@ key 4               = string       120   1.0, 0.0, 0.0   0.7 ----
 key 5               = string       120   0.0, 0.4, 1.0   0.8 Slider
 key Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
 key Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
-#key f               = form mouse
+key f               = form mouse
 #key Shift f         = form keys
 
 mouse 1             = move next

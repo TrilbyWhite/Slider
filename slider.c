@@ -66,20 +66,16 @@ static void keypress(XEvent *);
 static void move(const char *);
 static void mute(const char *);
 static void overview(const char *);
-#ifdef DRAWING
 static void pen(const char *);
 static void perm_pen(const char *);
 static void polka(const char *);
 static void perm_rect(const char *);
 static void rectangle(const char *);
 static void string(const char *);
-#endif /* DRAWING */
 static void quit(const char *);
 static void usage(const char *);
 static void warn();
-#ifdef ZOOMING
 static void zoom(const char *);
-#endif /* ZOOMING */
 
 static Window wshow, wnote;
 static Pixmap bshow, bnote;
@@ -96,6 +92,9 @@ static Key *keys = NULL, *btns = NULL;
 static char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
 static CairoColor emptyRect, zoomRect, sorterRect, actionRect, 
 		actionFont, blackMute, whiteMute, fadeOpts;
+#ifdef FORM_FILL
+static CairoColor formBG, formFG, formBorder, formCursor;
+#endif /* FORM_FILL */
 #define CURSOR_STRING_MAX	12
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
@@ -427,7 +426,6 @@ static Bind config_helper(const char *name, int ln) {
 #ifdef FORM_FILL
 	else if (strstr(name,"form"))		return fillfield;
 #endif /* FORM_FILL */
-#ifdef DRAWING
 	else if (strstr(name,"zoom"))		return zoom;
 	else if (strstr(name,"rectangle"))	return rectangle;
 	else if (strstr(name,"Rectangle"))	return perm_rect;
@@ -435,7 +433,6 @@ static Bind config_helper(const char *name, int ln) {
 	else if (strstr(name,"polka"))		return polka;
 	else if (strstr(name,"pen"))		return pen;
 	else if (strstr(name,"Pen"))		return perm_pen;
-#endif /* DRAWING */
 	fprintf(stderr,"config [%d]: %s is not a bindable function\n", ln,name);
 	return NULL;
 }
@@ -505,6 +502,16 @@ void config(const char *fname) {
 					config_color(&whiteMute,in[2]);
 				else if (strncmp("fadeOpts",in[1],strlen(in[1]))==0)
 					config_color(&fadeOpts,in[2]);
+#ifdef FORM_FILL
+				else if (strncmp("formBG",in[1],strlen(in[1]))==0)
+					config_color(&formBG,in[2]);
+				else if (strncmp("formFG",in[1],strlen(in[1]))==0)
+					config_color(&formFG,in[2]);
+				else if (strncmp("formBorder",in[1],strlen(in[1]))==0)
+					config_color(&formBorder,in[2]);
+				else if (strncmp("formCursor",in[1],strlen(in[1]))==0)
+					config_color(&formCursor,in[2]);
+#endif /* FORM_FILL */
 				else
 					fprintf(stderr,"config [%d]: \"%s\" is not a drawable\n",
 							ln,in[1]);
@@ -714,11 +721,9 @@ void fillfield(const char *arg) {
 		bt = poppler_form_field_button_get_button_type(f);
 		if (bt == POPPLER_FORM_BUTTON_PUSH) printf("push button: ");
 		else if (bt == POPPLER_FORM_BUTTON_RADIO) printf("radio button: ");
-		else if (bt == POPPLER_FORM_BUTTON_CHECK) printf("check button: ");
-		printf("%d -> ",poppler_form_field_button_get_state(f));
+//		else if (bt == POPPLER_FORM_BUTTON_CHECK) printf("check button: ");
 		poppler_form_field_button_set_state(f,
 				!poppler_form_field_button_get_state(f));
-		printf("%d\n",poppler_form_field_button_get_state(f));
 	}
 	else if (ft == POPPLER_FORM_FIELD_CHOICE) {
 printf("form fill type=choice not implemented yet\n");
@@ -742,7 +747,9 @@ printf("form fill type=signature not implemented yet\n");
 				wshow, XNFocusWindow, wshow, NULL);
 		/* get field info */
 		float sz = poppler_form_field_get_font_size(f);
-		cairo_set_font_size(c, (sz = (sz ? sz : 10)) );
+cairo_color(c,formFG);
+		if (sz) cairo_set_font_size(c,sz);
+		else (sz = formFG.w);
 		cairo_select_font_face(c,"sans-serif",
 				CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
 		int len = poppler_form_field_text_get_max_len(f);
@@ -765,14 +772,14 @@ printf("form fill type=signature not implemented yet\n");
 		double x,y;
 		while (key != XK_Escape) {
 			/* draw text */
-			cairo_set_source_rgba(c,0.8,1.0,1.0,1.0);
-				// TODO get a back color?
+cairo_color(c,formBG);
 			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 			cairo_fill_preserve(c);
-			cairo_set_source_rgba(c,0.0,0.0,0.0,1.0);
-				// TODO get a font color?
+cairo_color(c,formBorder);
 			cairo_stroke(c);
 			cairo_move_to(c,r.x1,r.y2+fext.height);
+cairo_color(c,formFG);
+cairo_set_font_size(c,sz);
 			if (multi) {
 				char *nl, *start = strdup(txt), *part;
 				part = start;
@@ -792,10 +799,9 @@ printf("form fill type=signature not implemented yet\n");
 			else cairo_show_text(c,txt);
 			cairo_get_current_point(c,&x,&y);
 			if (y > r.y1) r.y1 = y+sz/9.0;
-			/* draw a (ugly) cursor */
 			if (ch > txt) {
-				cairo_set_source_rgba(c,1.0,0.0,0.0,0.8);
 				cairo_text_extents(c,ch,&ext);
+cairo_color(c,formCursor);
 				cairo_rel_move_to(c,-ext.x_advance,sz/10.0);
 				cairo_rel_line_to(c,0,-sz);
 				cairo_stroke(c);
@@ -1079,7 +1085,6 @@ void overview(const char *arg) {
 	cairo_destroy(c);
 }
 
-#ifdef DRAWING
 #define PEN		0x01
 #define POLKA	0x02
 #define RECT	0x04
@@ -1176,7 +1181,6 @@ void perm_rect(const char *arg) { pen_polka_rect(arg, RECT | PERM ); }
 void polka(const char *arg) { pen_polka_rect(arg, POLKA); }
 void rectangle(const char *arg) { pen_polka_rect(arg, RECT); }
 void string(const char *arg) { pen_polka_rect(arg, POLKA | STRING); }
-#endif /* DRAWING */
 
 void quit(const char *arg) { mode &= ~RUNNING; }
 
@@ -1200,7 +1204,6 @@ void warn() {
 	draw(NULL);
 }
 
-#ifdef ZOOMING
 void zoom(const char *arg) {
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	char str[MAX_LINE];
@@ -1240,7 +1243,6 @@ void zoom(const char *arg) {
 	poppler_page_render(page,c);
 	cairo_destroy(c);
 }
-#endif /* ZOOMING */
 
 int main(int argc, const char **argv) {
 	command_line(argc,argv);

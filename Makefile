@@ -24,9 +24,6 @@ minimal: ${SOURCE} ${HEADER}
 forms: ${SOURCE} ${HEADER}
 	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DFORM_FILL
 
-experimental: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${EX_OPTS}
-
 ##################################################################
 
 tarball: clean
