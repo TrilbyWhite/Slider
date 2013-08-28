@@ -42,11 +42,11 @@ draw whiteMute     0    1.0, 1.0, 1.0   1.0
 # |   O:     Fade in steps
 # | examples:
 # | Simple cross fade:
+draw fadeOpts      0    0.0, 0.0, 0.0   40
 # | Author note: I recommend keeping the fade out at 0 which means
 # |   the RGB color is irrelevant, and adjust the fade in to suit
 # |   your taste.  More complex fades become distracting or even
 # |   annoying to an audience.
-draw fadeOpts      0    0.0, 0.0, 0.0   40
 # | Fade out slide to white fade in new slide, symetrical timing
 #draw fadeOpts      40    1.0, 1.0, 1.0   40
 # | Fade out slide to white fade in new slide, asymetrical timing
