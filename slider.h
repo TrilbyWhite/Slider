@@ -1,3 +1,5 @@
+#ifndef __SLIDER_H__
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -18,6 +20,12 @@
 #define RENDERED	0x0001
 #define STOP_RENDER	0x0010
 
+#define cairo_color(x,y)		{								\
+	cairo_set_source_rgba(x,(y).r,(y).g,(y).b,(y).a);	\
+	cairo_set_line_width(x,(y).w);							\
+	cairo_set_font_size(x,(y).w);								\
+}
+
 typedef struct Show Show;
 struct Show {		// CREATE/FREE
 	Pixmap *slide;	// render.c
@@ -29,11 +37,19 @@ struct Show {		// CREATE/FREE
 	char *uri;		// slider.c
 };
 
+typedef struct CairoColor {
+	int w;
+	float r,g,b,a;
+} CairoColor;
+
 void die(const char *,...);
-void render(Show *,const char *,const char *,const char *);
+void render(Show *);
 void free_renderings(Show *);
 
 Display *dpy;
 int scr, sw, sh, swnote, shnote, prerender;
 Window root;
 GC gc;
+CairoColor screenBG, slideBG, sorterEmpty;
+
+#endif /* __SLIDER_H__ */

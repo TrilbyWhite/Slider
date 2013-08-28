@@ -1,14 +1,14 @@
 
-PROG	=	slider
-VER		=	2.0a
-CC		?=	gcc
-CFLAGS	+=	-Os `pkg-config --cflags x11 xrandr poppler-glib cairo`
-LDFLAGS	+=	`pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
-PREFIX	?=	/usr
-SOURCE	= 	slider.c render.c
-HEADER	= 	slider.h
-OPTS	= 	-DFADE_TRANSITION -DACTION_LINKS -DDRAWING -DZOOMING
-EX_OPTS	=	${OPTS} -DFORM_FILL
+PROG     =  slider
+VER      =  2.0a
+CC       ?= gcc
+CFLAGS   += -Os `pkg-config --cflags x11 xrandr poppler-glib cairo`
+LDFLAGS  += `pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
+PREFIX   ?= /usr
+SOURCE   = 	slider.c render.c
+HEADER   = 	slider.h
+OPTS     =  -DACTION_LINKS -DDRAWING -DZOOMING
+EX_OPTS  =	${OPTS} -DFORM_FILL
 
 ##################################################################
 

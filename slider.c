@@ -1,4 +1,4 @@
-/**************************************************************************\
+/************************************************************************\
 * SLIDER - pdf presentation tool
 *
 * Author: Jesse McClure, copyright 2012-2013
@@ -17,7 +17,7 @@
 *    You should have received a copy of the GNU General Public License
 *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *
-\**************************************************************************/
+\************************************************************************/
 
 
 #include "slider.h"
@@ -37,7 +37,7 @@ typedef struct {
 	unsigned int mod;
 	KeySym key;
 	Bind func;
-	const char *arg;
+	char *arg;
 } Key;
 
 typedef struct {
@@ -46,8 +46,6 @@ typedef struct {
 	cairo_t *cairo;
 	Pixmap buf;
 } View;
-
-enum { Black, White, ScreenBG, SlideBG, Empty };
 
 #ifdef ACTION_LINKS
 static void action(const char *);
@@ -86,16 +84,18 @@ static void zoom(const char *);
 static Window wshow, wnote;
 static Pixmap bshow, bnote;
 static Cursor invisible_cursor, crosshair_cursor;
-static XRectangle r;
+//static XRectangle r;
+PopplerRectangle r;
 static int mode = RUNNING, v1 = 1, delay = 10;
 static Show *show;
 static View *view;
 static float pscale = 1.8;
 static char *monShow = NULL, *monNote = NULL;
-int nkeys = 0, nbtns = 0;
-Key *keys = NULL, *btns = NULL;
-char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
-char *EMPTY_RECT, *ZOOM_RECT, *OVERVIEW_RECT, *ACTION_RECT, *ACTION_FONT;
+static int nkeys = 0, nbtns = 0;
+static Key *keys = NULL, *btns = NULL;
+static char colors[5][9], *SHOW_URI, *SHOW_MOV, *PLAY_AUD;
+static CairoColor emptyRect, zoomRect, sorterRect, actionRect, 
+		actionFont, blackMute, whiteMute, fadeOpts;
 #define CURSOR_STRING_MAX	12
 static void (*handler[LASTEvent])(XEvent *) = {
 	[ButtonPress]	= buttonpress,
@@ -108,19 +108,20 @@ void action(const char *arg) {
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
 	char input = (arg ? arg[0] : 'm');
 	/* create cairo context */
-	int w,tw; double R,G,B,A,tR,tG,tB,tA; char sym[2] = "x";
-	sscanf(ACTION_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
-	sscanf(ACTION_FONT,"%d %lf,%lf,%lf %lf",&tw,&tR,&tG,&tB,&tA);
+	char sym[2] = "x";
 	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
 			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
 	cairo_translate(c,show->x,show->y);
 	cairo_scale(c,show->scale,show->scale);
+	cairo_t *f = cairo_create(t);
+	cairo_translate(f,show->x,show->y);
+	cairo_scale(f,show->scale,show->scale);
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
-	cairo_set_line_width(c,w);
-	cairo_set_font_size(c,tw);
-	cairo_select_font_face(c,"sans-serif",
+	cairo_select_font_face(f,"sans-serif",
 			CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_BOLD);
+	cairo_color(c,actionRect);
+	cairo_color(f,actionFont);
 	/* get pdf page and action links */
 	PopplerDocument *pdf;
 	pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
@@ -146,17 +147,15 @@ void action(const char *arg) {
 			r.y1 = show->h / show->scale - r.y1;
 			r.y2 = show->h / show->scale - r.y2;
 			/* draw links */
-			cairo_set_source_rgba(c,R,G,B,A);
 			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 			cairo_stroke(c);
 			if (input == 'k') {
-			        cairo_arc(c,r.x1,r.y2,tw,0,2*M_PI);
+				cairo_arc(c,r.x1,r.y2,actionFont.w,0,2*M_PI);
 				cairo_fill(c);
 				sym[0] = n + 65; /* ascii 65 = 'A' */
-				cairo_set_source_rgba(c,tR,tG,tB,tA);
-				cairo_move_to(c,r.x1-tw/2.0,r.y2+tw/2.0);
-				cairo_show_text(c,sym);
-				cairo_stroke(c);
+				cairo_move_to(f,r.x1-actionFont.w/2.0,r.y2+actionFont.w/2.0);
+				cairo_show_text(f,sym);
+				cairo_stroke(f);
 			}
 		}
 		if (!n) return;
@@ -335,6 +334,9 @@ void cleanup() {
 	free(show);
 	if (monShow) free(monShow);
 	if (monNote) free(monNote);
+	for (i = 0; i < nkeys; i++)
+		if (keys[i].arg) free(keys[i].arg);
+	free(keys);
 }
 
 static inline char *get_uri(const char *arg) {
@@ -417,9 +419,9 @@ static Bind config_helper(const char *name, int ln) {
 	if (strstr(name,"quit"))			return quit;
 	else if (strstr(name,"overview"))	return overview;
 	else if (strstr(name,"mute"))		return mute;
-#ifdef ACTION_LINKS
-	else if (strstr(name,"draw"))		return draw;
 	else if (strstr(name,"move"))		return move;
+	else if (strstr(name,"draw"))		return draw;
+#ifdef ACTION_LINKS
 	else if (strstr(name,"action"))	return action;
 #endif /* ACTION_LINKS */
 #ifdef FORM_FILL
@@ -436,6 +438,10 @@ static Bind config_helper(const char *name, int ln) {
 #endif /* DRAWING */
 	fprintf(stderr,"config [%d]: %s is not a bindable function\n", ln,name);
 	return NULL;
+}
+
+static int config_color(CairoColor *c, const char *s) {
+	sscanf(s,"%d %f, %f, %f %f",&c->w,&c->r,&c->g,&c->b,&c->a);
 }
 
 void config(const char *fname) {
@@ -462,27 +468,7 @@ void config(const char *fname) {
 		in[0][strlen(in[0])-1] = '\0';
 		ln++;
 		if (in[0][0] == '#' || in[0][0] == '\n') continue;
-		else if (in[0][0] == 'c') { /* COLOR */
-			if (sscanf(in[0],"color %s %s",in[1],in[2]) == 2) {
-				if (strncmp("blackMute",in[1],strlen(in[1]))==0)
-					strncpy(colors[Black],in[2],8);
-				else if (strncmp("whiteMute",in[1],strlen(in[1]))==0)
-					strncpy(colors[White],in[2],8);
-				else if (strncmp("screenBG",in[1],strlen(in[1]))==0)
-					strncpy(colors[ScreenBG],in[2],8);
-				else if (strncmp("slideBG",in[1],strlen(in[1]))==0)
-					strncpy(colors[SlideBG],in[2],8);
-				else if (strncmp("empty",in[1],strlen(in[1]))==0)
-					strncpy(colors[Empty],in[2],8);
-				else
-					fprintf(stderr,
-					"config [%d]: color target \"%s\" not recognized\n",
-							ln,in[1]);
-			}
-			else fprintf(stderr,"config [%d]: syntax error in \"%s\"\n",
-					ln,in[0]);
-		}
-		else if (in[0][0] == 's') { /* SET */
+		if (in[0][0] == 's') { /* SET */
 			if (sscanf(in[0],"set %s = %[^\n]",in[1],in[2]) == 2) {
 				if (strncmp("showURI",in[1],strlen(in[1]))==0)
 					SHOW_URI = strdup(in[2]);
@@ -499,16 +485,26 @@ void config(const char *fname) {
 		}
 		else if (in[0][0] == 'd') { /* DRAW */
 			if (sscanf(in[0],"draw %s %[^\n]",in[1],in[2]) == 2) {
-				if (strncmp("emptyRect",in[1],strlen(in[1]))==0)
-					EMPTY_RECT = strdup(in[2]);
-				else if (strncmp("zoomRect",in[1],strlen(in[1]))==0)
-					ZOOM_RECT = strdup(in[2]);
-				else if (strncmp("overviewRect",in[1],strlen(in[1]))==0)
-					OVERVIEW_RECT = strdup(in[2]);
+				if (strncmp("zoomRect",in[1],strlen(in[1]))==0)
+					config_color(&zoomRect,in[2]);
+				else if (strncmp("sorterRect",in[1],strlen(in[1]))==0)
+					config_color(&sorterRect,in[2]);
 				else if (strncmp("actionRect",in[1],strlen(in[1]))==0)
-					ACTION_RECT = strdup(in[2]);
+					config_color(&actionRect,in[2]);
 				else if (strncmp("actionFont",in[1],strlen(in[1]))==0)
-					ACTION_FONT = strdup(in[2]);
+					config_color(&actionFont,in[2]);
+				else if (strncmp("screenBG",in[1],strlen(in[1]))==0)
+					config_color(&screenBG,in[2]);
+				else if (strncmp("slideBG",in[1],strlen(in[1]))==0)
+					config_color(&slideBG,in[2]);
+				else if (strncmp("sorterEmpty",in[1],strlen(in[1]))==0)
+					config_color(&sorterEmpty,in[2]);
+				else if (strncmp("blackMute",in[1],strlen(in[1]))==0)
+					config_color(&blackMute,in[2]);
+				else if (strncmp("whiteMute",in[1],strlen(in[1]))==0)
+					config_color(&whiteMute,in[2]);
+				else if (strncmp("fadeOpts",in[1],strlen(in[1]))==0)
+					config_color(&fadeOpts,in[2]);
 				else
 					fprintf(stderr,"config [%d]: \"%s\" is not a drawable\n",
 							ln,in[1]);
@@ -570,7 +566,7 @@ void config(const char *fname) {
 static inline void draw_view(Show *set,int vnum, int snum) {
 	if (!view[vnum].w || !view[vnum].h) return;
 	View *v = &view[vnum];
-	XFillRectangle(dpy,v->buf,cgc(ScreenBG),0,0,2*set->w,2*set->h);
+	//XFillRectangle(dpy,v->buf,cgc(ScreenBG),0,0,2*set->w,2*set->h);
 	int n = (snum > 0 ? snum : 0);
 	if ( n<set->count && (set->flag[n]&RENDERED) ) {
 		XCopyArea(dpy, set->slide[n], v->buf,gc,0,0,set->w,set->h,0,0);
@@ -608,7 +604,6 @@ void draw(const char *arg) {
 		XDefineCursor(dpy,wshow,invisible_cursor);
 	}
 	/* draw show */
-#ifdef FADE_TRANSITION
 	t = cairo_xlib_surface_create(dpy,wshow,DefaultVisual(dpy,scr),sw,sh);
 	c = cairo_create(t);
 	cairo_surface_destroy(t);
@@ -622,7 +617,15 @@ void draw(const char *arg) {
 	int i;
 	t = cairo_xlib_surface_create(dpy,show->slide[show->cur],
 			DefaultVisual(dpy,scr),show->w,show->h);
-	for (i = 20; i > 0; i--) {
+	for (i = fadeOpts.w; i > 0; i--) {
+		cairo_set_source_rgba(c,fadeOpts.r,fadeOpts.g,fadeOpts.b,
+				1.0/(float)i);
+		cairo_rectangle(c,0,0,show->w,show->h);
+		cairo_fill(c);
+		XFlush(dpy);
+		usleep(5000);
+	}
+	for (i = (int)fadeOpts.a; i > 0; i--) {
 		cairo_set_source_surface(c,t,0,0);
 		cairo_paint_with_alpha(c,1.0/(float)i);
 		cairo_fill(c);
@@ -631,18 +634,9 @@ void draw(const char *arg) {
 	}
 	cairo_surface_destroy(t);
 	cairo_destroy(c);
-#else /* FADE_TRANSITION */
-	XFillRectangle(dpy,bshow,cgc(ScreenBG),0,0,sw,sh);
-	if (!(mode & MUTED)) {
-		XCopyArea(dpy,show->slide[show->cur],bshow,gc,0,0,
-				show->w,show->h,show->x,show->y);
-		XCopyArea(dpy,bshow,wshow,gc,0,0,sw,sh,0,0);
-		XFlush(dpy);
-	}
-#endif /* FADE_TRANSITION */
 	/* draw previews */
 	if (!swnote || !shnote) return;
-	XFillRectangle(dpy,bnote,cgc(ScreenBG),0,0,swnote,shnote);
+	//XFillRectangle(dpy,bnote,cgc(ScreenBG),0,0,swnote,shnote);
 	if (show->notes) draw_view(show->notes,0,show->cur);
 	draw_view(show,1,show->cur);
 	draw_view(show,2,show->cur + 1);
@@ -1050,9 +1044,15 @@ void move(const char *arg) {
 
 void mute(const char *arg) {
 	if ( (mode ^= MUTED) & MUTED ) {
-		XFillRectangle(dpy,wshow,(arg[0]=='w'?cgc(White):cgc(Black)),
-				0,0,sw,sh);
-		XFlush(dpy);
+		cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
+				DefaultVisual(dpy,scr),sw,sh);
+		cairo_t *c = cairo_create(t);
+		cairo_surface_destroy(t);
+		CairoColor *cc = (arg[0] == 'w' ? &whiteMute : &blackMute);
+		cairo_set_source_rgba(c,cc->r,cc->g,cc->b,cc->a);
+		cairo_rectangle(c,0,0,sw,sh);
+		cairo_fill(c);
+		cairo_destroy(c);
 	}
 	else {
 		draw(NULL);
@@ -1068,14 +1068,11 @@ void overview(const char *arg) {
 	int grid = show->sorter->flag[0];
 	int x = show->sorter->x + (show->cur % grid) * (show->sorter->w+10);
 	int y = show->sorter->y + (int)(show->cur/grid) * (show->sorter->h+10);
-	int w; double R,G,B,A;
-	sscanf(OVERVIEW_RECT,"%d %lf,%lf,%lf %lf",&w,&R,&G,&B,&A);
 	cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
 			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
-	cairo_set_source_rgba(c,R,G,B,A);
-	cairo_set_line_width(c,w);
+	cairo_color(c,sorterRect);
 	cairo_rectangle(c,x,y,show->sorter->w,show->sorter->h);
 	cairo_stroke(c);
 	cairo_surface_destroy(t);
@@ -1089,8 +1086,9 @@ void overview(const char *arg) {
 #define PERM	0x08
 #define STRING	0x10
 static void pen_polka_rect(const char *arg, int type) {
-	int w; double R,G,B,A; char str[CURSOR_STRING_MAX] = "";
-	sscanf(arg,"%d %lf,%lf,%lf %lf %s",&w,&R,&G,&B,&A,str);
+	char str[CURSOR_STRING_MAX] = "";
+	CairoColor col;
+	sscanf(arg,"%d %f,%f,%f %f %s",&col.w,&col.r,&col.g,&col.b,&col.a,str);
 	XWarpPointer(dpy,None,wshow,0,0,0,0,sw/2,sh/2);
 	if (!(type & POLKA)) XDefineCursor(dpy,wshow,crosshair_cursor);
 	XEvent ev; Bool on = False;
@@ -1102,18 +1100,17 @@ static void pen_polka_rect(const char *arg, int type) {
 			DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 	cairo_t *c = cairo_create(t);
 	cairo_set_line_join(c,CAIRO_LINE_JOIN_ROUND);
-	cairo_set_source_rgba(c,R,G,B,A);
-	cairo_set_line_width(c,w);
+	cairo_color(c,col);
 	if (type & POLKA) {
 		if ( (type & STRING) ) {
-			cairo_set_font_size(c, w);
+			cairo_set_font_size(c, col.w);
 			cairo_select_font_face(c,"sans-serif",
 					CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
 			cairo_move_to(c,sw/2.0,sh/2.0);
 			cairo_show_text(c,str);
 		}
 		else {
-			cairo_arc(c,sw/2.0,sh/2.0,(double)w,0,2*M_PI);
+			cairo_arc(c,sw/2.0,sh/2.0,col.w,0,2*M_PI);
 			cairo_fill(c);
 		}
 		XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
@@ -1124,8 +1121,8 @@ static void pen_polka_rect(const char *arg, int type) {
 	while (!XNextEvent(dpy,&ev)) {
 		if (ev.type == KeyPress) { XPutBackEvent(dpy,&ev); break; }
 		else if ( !(type & POLKA) && ev.type == ButtonPress) {
-			r.x = ev.xbutton.x; r.y = ev.xbutton.y;
-			cairo_move_to(c,r.x,r.y);
+			r.x1 = ev.xbutton.x; r.y1 = ev.xbutton.y;
+			cairo_move_to(c,r.x1,r.y1);
 			on = True;
 		}
 		else if ( (type & PEN) && ev.type == MotionNotify && on) {
@@ -1140,15 +1137,16 @@ static void pen_polka_rect(const char *arg, int type) {
 				cairo_move_to(c,ev.xbutton.x,ev.xbutton.y);
 				cairo_show_text(c,str);
 			}
-			else /* SHAPE_DOT */
-				cairo_arc(c,ev.xbutton.x,ev.xbutton.y,(double)w,0,2*M_PI);
+			else { /* SHAPE_DOT */
+				cairo_arc(c,ev.xbutton.x,ev.xbutton.y,col.w,0,2*M_PI);
+			}
 			cairo_fill(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
 		else if ( (type & RECT) && ev.type == MotionNotify && on) {
 			XCopyArea(dpy,cbuf,pbuf,gc,0,0,sw,sh,0,0);
-			r.width = ev.xbutton.x - r.x; r.height = ev.xbutton.y - r.y;
-			cairo_rectangle(c,r.x,r.y,r.width,r.height);
+			r.x2 = ev.xbutton.x; r.y2 = ev.xbutton.y;
+			cairo_rectangle(c,r.x1,r.y1,r.x2-r.x1,r.y2-r.y1);
 			cairo_stroke(c);
 			XCopyArea(dpy,pbuf,wshow,gc,0,0,sw,sh,0,0);
 		}
@@ -1205,47 +1203,49 @@ void warn() {
 #ifdef ZOOMING
 void zoom(const char *arg) {
 	if (!(show->flag[show->count-1] & RENDERED)) { warn(); return; }
-	pen_polka_rect(ZOOM_RECT, RECT);
+	char str[MAX_LINE];
+	sprintf(str, "%d %f, %f, %f %f", zoomRect.w, zoomRect.r, zoomRect.g,
+			zoomRect.b, zoomRect.a);
+	pen_polka_rect(str, RECT);
 	if (arg) { /* lock aspect ratio */
-		double w_h = (double)show->w/show->h;
-		if (r.width < w_h * r.height) r.width = w_h * r.height;
-		else r.height = (double) r.width / w_h;
+		double w_h;
+		if (r.x1 > r.x2) { w_h=r.x1; r.x1=r.x2; r.x2=w_h; }
+		if (r.y1 > r.y2) { w_h=r.y1; r.y1=r.y2; r.y2=w_h; }
+		w_h = (double)show->w/show->h;
+		if (r.x2-r.x1 < w_h * (r.y2-r.y1)) r.x2 = w_h * (r.y2-r.y1) + r.x1;
+		else r.y2 = (r.x2-r.x1)/w_h + r.y1;
 	}
-	if (r.width < 20 || r.height < 20) { warn(); return; }
-	r.x-=5; r.y-=5; r.width+=10; r.height+=10;
+	if (r.x2-r.x1 < 20 || r.y2-r.y1 < 20) { warn(); return; }
 	int w,h;
 	if (arg) { w = show->w; h = show->h; }
 	else { w = sw; h = sh; }
-	Pixmap b = XCreatePixmap(dpy,wshow,w,h,DefaultDepth(dpy,scr));
-	XFillRectangle(dpy,b,cgc(SlideBG),0,0,w,h);
 	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,
 			NULL,NULL);
 	PopplerPage *page = poppler_document_get_page(pdf,show->cur);
 	double pdfw, pdfh;
 	poppler_page_get_size(page,&pdfw,&pdfh);
-	cairo_surface_t *t=cairo_xlib_surface_create(dpy,b,
-			DefaultVisual(dpy,scr),w,h);
+	cairo_surface_t *t=cairo_xlib_surface_create(dpy,wshow,
+			DefaultVisual(dpy,scr),sw,sh);
 	cairo_t *c = cairo_create(t);
-	double xs = (double)(show->w*w)/(pdfw*(double)r.width);
-	double ys = (double)(show->h*h)/(pdfh*(double)r.height);
-	double xo = (double)(show->x - r.x)*(xs/show->scale);
-	double yo = (double)(show->y - r.y)*(ys/show->scale);
+	cairo_surface_destroy(t);
+	cairo_color(c,slideBG);
+	cairo_rectangle(c,0,0,sw,sh);
+	cairo_fill(c);
+	double xs = (double)(show->w*w)/(pdfw*(r.x2-r.x1));
+	double ys = (double)(show->h*h)/(pdfh*(r.y2-r.y1));
+	double xo = (double)(show->x - r.x1)*(xs/show->scale);
+	double yo = (double)(show->y - r.y1)*(ys/show->scale);
 	cairo_translate(c,xo,yo);
 	cairo_scale(c,xs,ys);
 	poppler_page_render(page,c);
-	cairo_surface_destroy(t);
 	cairo_destroy(c);
-	XFillRectangle(dpy,wshow,cgc(ScreenBG),0,0,sw,sh);
-	XCopyArea(dpy,b,wshow,gc,0,0,w,h,(sw-w)/2,(sh-h)/2);
-	XFreePixmap(dpy,b);
-	XFlush(dpy);
 }
 #endif /* ZOOMING */
 
 int main(int argc, const char **argv) {
 	command_line(argc,argv);
 	init_X();
-	render(show,colors[ScreenBG],colors[SlideBG],colors[Empty]);
+	render(show);
 	/* grab keys */
 	grab_keys(True);
 	init_views();

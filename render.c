@@ -3,16 +3,15 @@
 
 #include "slider.h"
 
-static GC bgc, sgc, egc;
 static pthread_t show_render, note_render;
 
 void *render_threaded(void *arg) {
 	Show *show = (Show *) arg;
 	int i, j, n, x, y, grid = 0;
 	int sw = show->w, sh = show->h;
-	Pixmap thumb = 0x0;
 	/* open pdf and create Show */
-	PopplerDocument *pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
+	PopplerDocument *pdf;
+	pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
 	if (!pdf) die("\"%s\" is not a pdf file\n",show->uri);
 	show->count = poppler_document_get_n_pages(pdf);
 	show->slide = (Pixmap *) calloc(show->count, sizeof(Pixmap));
@@ -32,9 +31,11 @@ void *render_threaded(void *arg) {
 		show->h = pdfh * show->scale;
 		show->y = (sh - show->h)/2;
 	}
-	/* create sorter */
+	/* create sorter / overview */
+	cairo_surface_t *tsorter = NULL;
+	cairo_t *csorter = NULL;
 	if (show->sorter) {
-		/* scaling calculations sorter */
+		/* scaling calculations for sorter */
 		show->sorter->count = 1;
 		show->sorter->slide = (Pixmap *) calloc(1, sizeof(Pixmap));
 		show->sorter->flag = (int *) calloc(1,sizeof(int));
@@ -48,20 +49,26 @@ void *render_threaded(void *arg) {
 		show->sorter->x = (sw - (show->sorter->w+10)*grid + 10)/2;
 		show->sorter->y = (sh - (show->sorter->h+10)*grid + 10)/2;
 		/* create empty sorter frame */
-		thumb = XCreatePixmap(dpy,root,show->sorter->w,
-				show->sorter->h,DefaultDepth(dpy,scr));
 		show->sorter->slide[0] = XCreatePixmap(dpy,root,sw,sh,
 				DefaultDepth(dpy,scr));
-		XFillRectangle(dpy,show->sorter->slide[0],bgc,0,0,sw,sh);
+		tsorter = cairo_xlib_surface_create(dpy,show->sorter->slide[0],
+				DefaultVisual(dpy,scr),sw,sh);
+		csorter = cairo_create(tsorter);
+		cairo_set_source_rgba(csorter,0,0,0,1);
+		cairo_rectangle(csorter,0,0,sw,sh);
+		cairo_fill(csorter);
+		cairo_set_source_rgba(csorter,0.2,0.2,0.4,1);
 		n = 0; y = show->sorter->y;
 		for (i = 0; i < grid; i++, y += show->sorter->h + 10) {
 			x = show->sorter->x;
 			for (j = 0; j < grid; j++, x+= show->sorter->w + 10) {
 				if (++n > show->count) break;
-				XFillRectangle(dpy,show->sorter->slide[0],egc,x+2,y+2,
-						show->sorter->w-5,show->sorter->h-5);
+				cairo_rectangle(csorter,x+2,y+2,
+						show->sorter->w-4,show->sorter->h-4);
 			}
 		}
+		cairo_fill(csorter);
+		cairo_scale(csorter,show->sorter->scale,show->sorter->scale);
 	}	
 	/* render pages */
 	cairo_surface_t *target, *xtarget;
@@ -71,47 +78,36 @@ void *render_threaded(void *arg) {
 	for (i = 0; i < show->count && !(show->flag[0] & STOP_RENDER); i++) {
 		show->slide[i] = XCreatePixmap(dpy,root,show->w,show->h,
 				DefaultDepth(dpy,scr));
-		XFillRectangle(dpy,show->slide[i],sgc,0,0,show->w,show->h);
 		page = poppler_document_get_page(pdf,i);
-	
 /* not sure why the "middle man" image surface is needed here
 	but fontconf replacements don't seem to work without it.
 	This may be a limitation of rendering on xlib surfaces.		*/
-target = cairo_image_surface_create(CAIRO_FORMAT_RGB24,show->w,show->h);
-cairo = cairo_create(target);
-cairo_scale(cairo,show->scale,show->scale);
-poppler_page_render(page,cairo);
-cairo_destroy(cairo);
-
-xtarget = cairo_xlib_surface_create(dpy,show->slide[i],
-		DefaultVisual(dpy,scr),show->w,show->h);
-cairo = cairo_create(xtarget);
-cairo_surface_destroy(xtarget);
-cairo_set_source_surface(cairo,target,0,0);
-cairo_paint(cairo);
-cairo_destroy(cairo);
-cairo_surface_destroy(target);
-
+		target = cairo_image_surface_create(CAIRO_FORMAT_RGB24,
+				show->w,show->h);
+		cairo = cairo_create(target);
+		cairo_scale(cairo,show->scale,show->scale);
+cairo_set_source_rgba(cairo,1.0,1.0,1.0,1.0);
+cairo_rectangle(cairo,0,0,pdfw,pdfh);
+cairo_fill(cairo);
+		poppler_page_render(page,cairo);
+		cairo_destroy(cairo);
+		xtarget = cairo_xlib_surface_create(dpy,show->slide[i],
+				DefaultVisual(dpy,scr),show->w,show->h);
+		cairo = cairo_create(xtarget);
+		cairo_surface_destroy(xtarget);
+		cairo_set_source_surface(cairo,target,0,0);
+		cairo_paint(cairo);
+		cairo_destroy(cairo);
 		show->flag[i] |= RENDERED;
 		if (show->sorter) {
-			XFillRectangle(dpy,thumb,sgc,0,0,show->sorter->w,show->sorter->h);
-
-target = cairo_image_surface_create(CAIRO_FORMAT_RGB24,show->sorter->w,show->sorter->h);
-cairo = cairo_create(target);
-cairo_scale(cairo,show->sorter->scale,show->sorter->scale);
-poppler_page_render(page,cairo);
-cairo_destroy(cairo);
-
-xtarget = cairo_xlib_surface_create(dpy,thumb,DefaultVisual(dpy,scr),
-		show->sorter->w,show->sorter->h);
-cairo = cairo_create(xtarget);
-cairo_surface_destroy(xtarget);
-cairo_set_source_surface(cairo,target,0,0);
-cairo_paint(cairo);
-cairo_destroy(cairo);
-cairo_surface_destroy(target);
-
-			XCopyArea(dpy,thumb,show->sorter->slide[0],sgc,0,0,show->sorter->w, show->sorter->h,x,y);
+			cairo_save(csorter);
+			cairo_translate(csorter,x/show->sorter->scale,
+					y/show->sorter->scale);
+cairo_set_source_rgba(csorter,1.0,1.0,1.0,1.0);
+cairo_rectangle(csorter,0,0,pdfw,pdfh);
+cairo_fill(csorter);
+			poppler_page_render(page,csorter);
+			cairo_restore(csorter);
 			x += show->sorter->w + 10;
 			if (++n == grid) {
 				n = 0;
@@ -119,25 +115,17 @@ cairo_surface_destroy(target);
 				y += show->sorter->h + 10;
 			}
 		}
+		cairo_surface_destroy(target);
 	}
-	if (show->sorter) XFreePixmap(dpy,thumb);
+	if (show->sorter) {
+		cairo_surface_destroy(tsorter);
+		cairo_destroy(csorter);
+	}
 	return NULL;
 }
 
 
-void render(Show *show,const char *cb, const char *cs, const char *ce) {
-	/* separate gcs are needed for threadsafeness */
-	XColor col;
-	XGCValues val;
-	XAllocNamedColor(dpy,DefaultColormap(dpy,scr),cb,&col,&col);
-	val.foreground = col.pixel;
-	bgc = XCreateGC(dpy,root,GCForeground,&val);
-	XAllocNamedColor(dpy,DefaultColormap(dpy,scr),cs,&col,&col);
-	val.foreground = col.pixel;
-	sgc = XCreateGC(dpy,root,GCForeground,&val);
-	XAllocNamedColor(dpy,DefaultColormap(dpy,scr),ce,&col,&col);
-	val.foreground = col.pixel;
-	egc = XCreateGC(dpy,root,GCForeground,&val);
+void render(Show *show) {
 	/* render show */
 	pthread_create(&show_render,NULL,&render_threaded,(void *) show);
 	if (show->notes && show->notes->uri)
@@ -160,7 +148,6 @@ void free_renderings(Show *show) {
 	if (note_render) show->notes->flag[0] |= STOP_RENDER;
 	pthread_join(show_render,NULL);
 	if (note_render) pthread_join(note_render,NULL);
-	XFreeGC(dpy,bgc); XFreeGC(dpy,sgc); XFreeGC(dpy,egc);
 	int i;
 	for (i = 0; i < show->count; i++) {
 		XFreePixmap(dpy,show->slide[i]);

@@ -7,13 +7,6 @@
 ## | ~/.config/slider/config
 ## | ~/.sliderrc
 
-# | COLORS
-# | Use RGB color codes
-color blackMute #000000
-color whiteMute #FFFFFF
-color screenBG  #000000
-color slideBG   #FFFFFF
-color empty     #182436
 
 # | EXTERNAL HANDLERS
 # | The audio handler is backgrounded to allow interaction with slider
@@ -33,11 +26,34 @@ set playAudio        = mplayer %s >/dev/null 2>&1 &
 # |   R,G,B: Red,Green,Blue (floating point from 0.00 - 1.00)
 # |   A:     Alpha opacity level (floating point from 0.00 - 1.00)
 # |                W    R    G    B     A
-draw emptyRect     10   1.0, 1.0, 1.0   0.5
 draw zoomRect      10   0.0, 0.8, 1.0   0.8
-draw overviewRect  10   1.0, 1.0, 0.0   0.6
+draw sorterRect    10   1.0, 1.0, 0.0   0.6
 draw actionRect    1    0.0, 0.2, 1.0   0.3
 draw actionFont    8    0.0, 0.4, 1.0   1.0
+draw screenBG      0    0.0, 0.0, 0.0   1.0
+draw slideBG       0    1.0, 1.0, 1.0   1.0
+draw sorterEmpty   2    0.2, 0.2, 0.5   1.0
+draw blackMute     0    0.0, 0.0, 0.0   1.0
+draw whiteMute     0    1.0, 1.0, 1.0   1.0
+
+# | fadeOpts       I    R    G    B     O
+# |   I:     Fade out steps
+# |   R,G,B: Fade out to color
+# |   O:     Fade in steps
+# | examples:
+# | Simple cross fade:
+# | Author note: I recommend keeping the fade out at 0 which means
+# |   the RGB color is irrelevant, and adjust the fade in to suit
+# |   your taste.  More complex fades become distracting or even
+# |   annoying to an audience.
+draw fadeOpts      0    0.0, 0.0, 0.0   40
+# | Fade out slide to white fade in new slide, symetrical timing
+#draw fadeOpts      40    1.0, 1.0, 1.0   40
+# | Fade out slide to white fade in new slide, asymetrical timing
+#draw fadeOpts      10    1.0, 1.0, 1.0   40
+# | Fade out slide to bluw fade in new slide
+#draw fadeOpts      10    0.0, 0.0, 0.5   40
+
 
 # | KEY BINDINGS / MOUSE BINDINGS
 # | Key keyings follow the following format
@@ -56,7 +72,6 @@ draw actionFont    8    0.0, 0.4, 1.0   1.0
 # | Mouse bindings use a X11 mouse button number for key
 # |   Left/Mid/Right = 1/2/3, Scroll Up/Down/Left/Right = 5/6/7/8
 
-# | Basic controls:
 key Control q       = quit
 key Tab             = overview
 key Return          = draw
@@ -68,25 +83,10 @@ key Up              = move up
 key Down            = move down
 key b               = mute black
 key w               = mute white
-
-mouse 1             = move next
-mouse 2             = overview
-mouse 3             = move prev
-mouse 4             = mute white
-mouse 5             = mute black
-
-# | Action links, form filling (conditionally compiled option), and zooming
 key a               = action mouse
 key Shift a         = action keys
-#key f               = form mouse
-#key Shift f         = form keys
 key z               = zoom
 key Shift z         = zoom lock
-
-mouse 6             = action mouse
-#mouse 7             = form mouse
-
-# | Drawing
 key r               = rectangle     20   0.0, 0.8, 1.0   0.8
 key Shift r         = rectangle     20   0.0, 1.0, 0.2   0.8
 key Control r       = rectangle     20   1.0, 0.0, 0.0   0.8
@@ -97,8 +97,6 @@ key F3              = pen           24   1.0, 0.0, 0.0   0.5
 key Shift F1        = Pen           4    1.0, 0.0, 0.0   0.9
 key Shift F2        = Pen           8    1.0, 0.0, 0.0   0.7
 key Shift F3        = Pen           24   1.0, 0.0, 0.0   0.5
-
-# | Fun mouse cursors
 key 1               = string        60   0.0, 0.3, 1.0   0.7 <-
 key 2               = string       120   0.0, 0.3, 1.0   0.7 ^
 key 3               = string        60   1.0, 0.0, 0.0   0.7 X
@@ -106,4 +104,18 @@ key 4               = string       120   1.0, 0.0, 0.0   0.7 ----
 key 5               = string       120   0.0, 0.4, 1.0   0.8 Slider
 key Shift 1         = polka         40   0.0, 0.2, 0.5   0.7
 key Shift 2         = polka         40   1.0, 1.0, 0.1   0.5
+#key f               = form mouse
+#key Shift f         = form keys
+
+mouse 1             = move next
+mouse 2             = overview
+mouse 3             = move prev
+mouse 4             = mute white
+mouse 5             = mute black
+mouse 6             = action mouse
+#mouse 7             = form mouse
+
+# | note: form filling is a conditionally compiled option.
+
+
 
