@@ -11,11 +11,14 @@ void *render_threaded(void *arg) {
 	int sw = show->w, sh = show->h;
 	/* open pdf and create Show */
 	PopplerDocument *pdf;
-	pdf = poppler_document_new_from_file(show->uri,NULL,NULL);
-	if (!pdf) die("\"%s\" is not a pdf file\n",show->uri);
-	show->count = poppler_document_get_n_pages(pdf);
-	show->slide = (Pixmap *) calloc(show->count, sizeof(Pixmap));
-	show->flag = (int *) calloc(show->count, sizeof(int));
+	if ( !(pdf=poppler_document_new_from_file(show->uri,NULL,NULL)) )
+		die("\"%s\" is not a pdf file\n",show->uri);
+	if ( !(show->count=poppler_document_get_n_pages(pdf)) )
+		die("getting number of pages from \"%s\"\n",show->uri);
+	if ( !(show->slide=(Pixmap *) calloc(show->count, sizeof(Pixmap))) )
+		die("allocating pixmap memory");
+	if ( !(show->flag=(int *) calloc(show->count,sizeof(int))) )
+		die("allocating flags memory");
 	/* scaling calculations */
 	double pdfw, pdfh;
 	PopplerPage *page = poppler_document_get_page(pdf,0);
@@ -53,6 +56,8 @@ void *render_threaded(void *arg) {
 				DefaultDepth(dpy,scr));
 		tsorter = cairo_xlib_surface_create(dpy,show->sorter->slide[0],
 				DefaultVisual(dpy,scr),sw,sh);
+		if (cairo_surface_status(tsorter) != CAIRO_STATUS_SUCCESS)
+			die("creating cairo xlib surface for sorter\n");
 		csorter = cairo_create(tsorter);
 		cairo_set_source_rgba(csorter,0,0,0,1);
 		cairo_rectangle(csorter,0,0,sw,sh);
@@ -84,15 +89,19 @@ void *render_threaded(void *arg) {
 	This may be a limitation of rendering on xlib surfaces.		*/
 		target = cairo_image_surface_create(CAIRO_FORMAT_RGB24,
 				show->w,show->h);
+		if (cairo_surface_status(target) != CAIRO_STATUS_SUCCESS)
+			die("creating cairo image surface\n");
 		cairo = cairo_create(target);
 		cairo_scale(cairo,show->scale,show->scale);
-cairo_set_source_rgba(cairo,1.0,1.0,1.0,1.0);
-cairo_rectangle(cairo,0,0,pdfw,pdfh);
-cairo_fill(cairo);
+		cairo_set_source_rgba(cairo,1.0,1.0,1.0,1.0);
+		cairo_rectangle(cairo,0,0,pdfw,pdfh);
+		cairo_fill(cairo); // Segfault here in notes thread ??
 		poppler_page_render(page,cairo);
 		cairo_destroy(cairo);
 		xtarget = cairo_xlib_surface_create(dpy,show->slide[i],
 				DefaultVisual(dpy,scr),show->w,show->h);
+		if (cairo_surface_status(xtarget) != CAIRO_STATUS_SUCCESS)
+			die("creating cairo xlib surface\n");
 		cairo = cairo_create(xtarget);
 		cairo_surface_destroy(xtarget);
 		cairo_set_source_surface(cairo,target,0,0);
@@ -103,9 +112,9 @@ cairo_fill(cairo);
 			cairo_save(csorter);
 			cairo_translate(csorter,x/show->sorter->scale,
 					y/show->sorter->scale);
-cairo_set_source_rgba(csorter,1.0,1.0,1.0,1.0);
-cairo_rectangle(csorter,0,0,pdfw,pdfh);
-cairo_fill(csorter);
+			cairo_set_source_rgba(csorter,1.0,1.0,1.0,1.0);
+			cairo_rectangle(csorter,0,0,pdfw,pdfh);
+			cairo_fill(csorter);
 			poppler_page_render(page,csorter);
 			cairo_restore(csorter);
 			x += show->sorter->w + 10;
@@ -126,19 +135,27 @@ cairo_fill(csorter);
 
 
 void render(Show *show) {
+/* note: unique times in usleeps make filtering through
+strace output easier */
 	/* render show */
 	pthread_create(&show_render,NULL,&render_threaded,(void *) show);
-	if (show->notes && show->notes->uri)
-		pthread_create(&note_render,NULL,render_threaded,(void *) show->notes);
-	while (!(show->flag)) usleep(5000);
-	if (prerender == 0 || prerender > show->count) prerender = show->count;
-	while (!(show->flag[(prerender>0?prerender:1)-1] & RENDERED)) usleep(50000);
+	while (!(show->flag)) usleep(5100);
+	if (prerender <= 0 || prerender > show->count) prerender = show->count;
+	while (!(show->flag[(prerender>0?prerender:1)-1] & RENDERED))
+		usleep(5200);
 	/* render notes */
 	if (show->notes && show->notes->uri) {
-		while (!(show->notes->flag)) usleep(5000);
+/* ensure show is fully rendered before rendering notes
+I'm not sure why this is needed yet, but it prevents 
+sporadic segfaults */
+while (!(show->flag[show->count-1] & RENDERED))
+usleep(5250);
+		pthread_create(&note_render,NULL,render_threaded,
+				(void *) show->notes);
+		while (!(show->notes->flag)) usleep(5300);
 		if (prerender > show->notes->count) prerender = show->notes->count;
 		while (!(show->notes->flag[(prerender>0?prerender:1)-1] & RENDERED))
-			usleep(50000);
+			usleep(54000);
 	}
 }
 

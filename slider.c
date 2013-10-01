@@ -644,6 +644,14 @@ void draw(const char *arg) {
 	/* draw previews */
 	if (!swnote || !shnote) return;
 	//XFillRectangle(dpy,bnote,cgc(ScreenBG),0,0,swnote,shnote);
+	t = cairo_xlib_surface_create(dpy,bnote,
+			DefaultVisual(dpy,scr),swnote,shnote);
+	c = cairo_create(t);
+	cairo_surface_destroy(t);
+	cairo_set_source_rgba(c,0,0,0,1);
+	cairo_rectangle(c,0,0,swnote,shnote);
+	cairo_fill(c);
+	cairo_destroy(c);
 	if (show->notes) draw_view(show->notes,0,show->cur);
 	draw_view(show,1,show->cur);
 	draw_view(show,2,show->cur + 1);
@@ -887,7 +895,8 @@ void grab_keys(Bool grab) {
 void init_views() {
 	if (!swnote || !shnote) return;
 	View *v; int i;
-	if (!view[v1].w && !view[v1].h) { /* no geometry selected, used default */
+	if (!view[v1].w && !view[v1].h) {
+		/* no geometry selected, used default */
 		int d1 = swnote/((float)4*pscale+4);
 		int d2 = shnote/((float)3*pscale);
 		int d = (d1 < d2 ? d1 : d2);
@@ -905,17 +914,20 @@ void init_views() {
 			view[v1+2].y = 2*view[v1+1].y + view[v1+1].h;
 		}
 	}
-	for (i = v1, v = &view[i]; i < MAX_VIEW && v->w && v->h; v = &view[++i]) {
-		v->buf = XCreatePixmap(dpy,root,show->w,show->h,
-				DefaultDepth(dpy,scr));
+	Show *s;
+	for (i = v1, v = &view[i]; i < MAX_VIEW && v->w && v->h;
+			v = &view[++i]) {
+		if (i) s = show;
+		else s = show->notes;
+		v->buf = XCreatePixmap(dpy,root,s->w,s->h,DefaultDepth(dpy,scr));
 		v->dest_c = cairo_xlib_surface_create(dpy,bnote,
 				DefaultVisual(dpy,scr),swnote,shnote);
 		v->cairo = cairo_create(v->dest_c);
 		cairo_translate(v->cairo,v->x,v->y);
-		cairo_scale(v->cairo, (float) v->w / (i ? show->w : show->notes->w),
-				(float) v->h / (i ? show->h : show->notes->h) );
+		cairo_scale(v->cairo, (float) v->w / (float) s->w,
+				(float) v->h / (float) s->h );
 		v->src_c = cairo_xlib_surface_create(dpy,v->buf,
-				DefaultVisual(dpy,scr),show->w,show->h);
+				DefaultVisual(dpy,scr),s->w,s->h);
 		cairo_surface_t *t = cairo_xlib_surface_create(dpy,wshow,
 				DefaultVisual(dpy,scr),sw+swnote,sh+shnote);
 		cairo_t *c = cairo_create(t);
