@@ -1,7 +1,3 @@
-Config.h has been completely replaced by rc files ... except perhaps in the documentation which will be on the way.
-
-------------------------------
-
 Slider has been entirely recoded from scratch with many design choices informed by the after-the-fact adjustments I had to make in the previous version(s).
 
 The presenter mode tools (previous `Slipper`) have been incorporated into the main program.  Slider will now detect whether multiple screens are configured and display presenter notes on the local screen while the presentation is sent to the highest numbered monitor.
@@ -75,4 +71,15 @@ CONTROLS:
 
 	F1-F6		Drawing pens of various sizes and colors.  Colors, opacity, and size can be customized in config.h.
 
+CONFIGURATION
+
+Slider will look in the following location for a configuration file:
+
+$XDG_CONFIG_HOME/slider/config
+~/.config/slider/config
+~/.sliderrc
+/usr/share/slider/config
+
+Only the first file found will be used.  /usr/share/slider/config is
+installed with defaults by the Makefile install directive.
 
