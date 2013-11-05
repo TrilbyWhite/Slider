@@ -1,8 +1,8 @@
-
 PROG     =  slider
 VER      =  2.0a
 CC       ?= gcc
-CFLAGS   += -Os `pkg-config --cflags x11 xrandr poppler-glib cairo`
+CFLAGS   ?= -Os
+CFLAGS   += `pkg-config --cflags x11 xrandr poppler-glib cairo`
 LDFLAGS  += `pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
 PREFIX   ?= /usr
 SOURCE   = 	slider.c render.c
@@ -35,7 +35,7 @@ clean:
 
 install:
 	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
-	@install -Dm666 ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
-	@install -Dm666 ${PROG}rc ${DESTDIR}${PREFIX}/share/slider/config
+	@install -D ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
+	@install -D ${PROG}rc ${DESTDIR}${PREFIX}/share/slider/config
 
 .PHONY: debug minimal experimental forms clean tarball install
