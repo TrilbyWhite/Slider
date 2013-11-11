@@ -125,7 +125,7 @@ This is free software: you are free to change and redistribute it.
 
 There is NO WARRANTY, to the extent permitted by law. 
 
-Submit bug reports via github: http://github/com/TrilbyWhite/Slider.git
+Submit bug reports via github: http://github.com/TrilbyWhite/Slider.git
 
 I would like your feedback. If you enjoy *Slider*
 see the bottom of the site below for detauls on submitting comments: http://mccluresk9.com/software.html
