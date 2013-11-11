@@ -47,7 +47,7 @@ Coming soon ...
 	panels without.  Panels display the following items on the local
 	screen:
 	
-<table style="margin: auto;">
+<table style="align: center; margin: auto;">
 <tr><th>PANEL #</th><th>DISPLAY w/Notes</th><th>DISPLAY w/o</th></tr>
 <tr><td>1</td><td>Notes slide</td><td>Current slide</td>
 <tr><td>2</td><td>Current slide</td><td>Next slide</td></tr>
@@ -55,9 +55,10 @@ Coming soon ...
 <tr><td>4</td><td>Previous slide</td><td>N/A</td></tr>
 </table>
 
-	In the absense of geometry strings, what should be a useful default
-	is selected based on whether a notes.pdf was provided.  Defaults can
-	be adjusted with the -sN scaling factor.</dd>
+In the absense of geometry strings, what should be a useful default
+is selected based on whether a notes.pdf was provided.  Defaults can
+be adjusted with the -sN scaling factor.</dd>
+
 <dt>presentation.pdf</dt>
 	<dd>Required pdf to display</dd>
 <dt>notes.pdf</dt>
