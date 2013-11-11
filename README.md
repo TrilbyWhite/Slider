@@ -1,6 +1,6 @@
 # SLIDER
 
-**Slider** - *desc*
+**Slider** - *PDF presentation tool*
 
 Author: Jesse McClure, Copyright 2012, 2013
 License: GPLv3
@@ -9,6 +9,9 @@ License: GPLv3
 
 `slider [<options>] <presentation.pdf> [<notes.pdf>]`
 
+## Description
+
+Coming soon ...
 
 ## Options
 
@@ -112,4 +115,18 @@ Slider will look in the following location for a configuration file:
 Only the first file found will be used.  `/usr/share/slider/config` is
 installed with defaults by the Makefile install directive.
 
+## Author
+
+Copyright &copy;2013 Jesse McClure
+
+License GPLv3: GNU GPL version 3: http://gnu.org/licenses/gpl.html
+
+This is free software: you are free to change and redistribute it.
+
+There is NO WARRANTY, to the extent permitted by law. 
+
+Submit bug reports via github: http://github/com/TrilbyWhite/interrobang.git
+
+I would like your feedback. If you enjoy *Interrobang*
+see the bottom of the site below for detauls on submitting comments: http://mccluresk9.com/software.html
 
