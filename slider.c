@@ -1053,6 +1053,7 @@ void move(const char *arg) {
 		if (show->cur < 0) show->cur = 0;
 		if (show->cur >= show->count) {
 			if (mode & CONTINUOUS) show->cur = 0;
+			else if (mode & AUTOPLAY) quit(NULL);
 			else show->cur = show->count - 1;
 		}
 		if (!(show->flag[show->cur] & RENDERED)) show->cur--;
