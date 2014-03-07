@@ -1,41 +1,34 @@
 
 PROG     =  slider
-VER      =  2.0a
+VER      =  3.0a
 CC       ?= gcc
-CFLAGS   += `pkg-config --cflags x11 xrandr poppler-glib cairo`
-LDFLAGS  += `pkg-config --libs x11 xrandr poppler-glib cairo` -pthread -lm
+DEPS		= x11 cairo freetype2 poppler-glib xinerama
+CFLAGS   += $(shell pkg-config --cflags ${DEPS})
+LDLIBS   += $(shell pkg-config --libs ${DEPS}) -lm
 PREFIX   ?= /usr
-SOURCE   = 	slider.c render.c
-HEADER   = 	slider.h
-OPTS     =  -DACTION_LINKS -DDRAWING -DZOOMING
-EX_OPTS  =	${OPTS} -DFORM_FILL
+MODULES  =  actions config render slider xlib
+HEADERS  =  slider.h xlib-actions.h
+#MANPAGES =  slider.1
+VPATH    =  src:doc
 
-##################################################################
+${PROG}: ${MODULES:%=%.o}
 
-${PROG}: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS}
+%.o: %.c ${HEADERS}
 
-debug: ${SOURCE} ${HEADER}
-	@${CC} -g -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DDEBUG
+#install: ${PROG}
 
-minimal: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS}
+#${MANPAGES}: slider.%: slider-%.tex
+#	@latex2man $< doc/$@
 
-forms: ${SOURCE} ${HEADER}
-	@${CC} -o ${PROG} ${SOURCE} ${CFLAGS} ${LDFLAGS} ${OPTS} -DFORM_FILL
-
-##################################################################
-
-tarball: clean
-	@rm -f ${PROG}-${VER}.tar.gz
-	@tar -czf ${PROG}-${VER}.tar.gz *
+#man: ${MANPAGES}
 
 clean:
+	@rm -f ${PROG}-${VER}.tar.gz ${MODULES:%=%.o}
+
+distclean: clean
 	@rm -f ${PROG}
 
-install:
-	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
-	@install -Dm644 ${PROG}.1 ${DESTDIR}${PREFIX}/share/man/man1/${PROG}.1
-	@install -Dm644 ${PROG}rc ${DESTDIR}${PREFIX}/share/slider/config
+dist: distclean
+	@tar -czf ${PROG}-${VER}.tar.gz *
 
-.PHONY: debug minimal experimental forms clean tarball install
+.PHONY: clean dist distclean man
