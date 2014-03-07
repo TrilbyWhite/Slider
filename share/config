@@ -6,7 +6,7 @@
 *.Monitor:				1
 *.Fade:					25
 *.Loop:					false
-*.Interleave:			true
+*.Interleave:			false
 
 !! View layouts for previews:
 *.View.00.Geometry:		800x600+0+1024
