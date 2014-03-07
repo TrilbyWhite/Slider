@@ -15,7 +15,10 @@ ${PROG}: ${MODULES:%=%.o}
 
 %.o: %.c ${HEADERS}
 
-#install: ${PROG}
+install: ${PROG}
+	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
+	@install -Dm644 share/config ${DESTDIR}${PREFIX}/share/${PROG}/config
+	#@install -Dm644 ... manual page(s)
 
 #${MANPAGES}: slider.%: slider-%.tex
 #	@latex2man $< doc/$@
