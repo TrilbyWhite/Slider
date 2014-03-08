@@ -8,7 +8,7 @@ LDLIBS   += $(shell pkg-config --libs ${DEPS}) -lm
 PREFIX   ?= /usr
 MODULES  =  actions config render slider xlib
 HEADERS  =  slider.h xlib-actions.h
-#MANPAGES =  slider.1
+MANPAGES =  slider.1
 VPATH    =  src:doc
 
 ${PROG}: ${MODULES:%=%.o}
@@ -20,10 +20,10 @@ install: ${PROG}
 	@install -Dm644 share/config ${DESTDIR}${PREFIX}/share/${PROG}/config
 	#@install -Dm644 ... manual page(s)
 
-#${MANPAGES}: slider.%: slider-%.tex
-#	@latex2man $< doc/$@
+${MANPAGES}: slider.%: slider-%.tex
+	@latex2man $< doc/$@
 
-#man: ${MANPAGES}
+man: ${MANPAGES}
 
 clean:
 	@rm -f ${PROG}-${VER}.tar.gz ${MODULES:%=%.o}
