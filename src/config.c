@@ -155,7 +155,7 @@ int config_views(XrmDatabase xrdb, const char *base) {
 		// read val into conf.view[nviews]
 		sprintf(class,"%s.View.%02d.Show",base,i);
 		if (XrmGetResource(xrdb, class, class, &type, &val))
-			conf.view[conf.nviews].show = atoi(val.addr);
+				conf.view[conf.nviews].show = atoi(val.addr);
 		sprintf(class,"%s.View.%02d.Offset",base,i);
 		if (XrmGetResource(xrdb, class, class, &type, &val))
 			conf.view[conf.nviews].offset = atoi(val.addr);

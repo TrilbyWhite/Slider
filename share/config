@@ -10,12 +10,12 @@
 
 !! View layouts for previews:
 *.View.00.Geometry:		800x600+0+1024
-*.View.00.Show:			0
+*.View.00.Show:			1
 *.View.00.Offset:			0
 *.View.01.Geometry:		480x360+800+1040
 *.View.01.Show:			0
 *.View.01.Offset:			1
-*.View.02.Geometry:		480x360+800+1460
+*.View.02.Geometry:		240x180+800+1460
 *.View.02.Show:			0
 *.View.02.Offset:			-1
 
@@ -51,7 +51,7 @@ Note.View.02.Offset:			1
 *.Bind.10.None:		prev
 *.Bind.11.Key:			Down
 *.Bind.11.None:		next
-*.Bind.12.Key:			Prev
+*.Bind.12.Key:			Prior
 *.Bind.12.None:		prev
 *.Bind.13.Key:			Next
 *.Bind.13.None:		next

@@ -49,8 +49,8 @@ int xlib_init(Show *show) {
 	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
 	show->w = sw; show->h = sh;
 	/* create targets */
-if (nmon < 2) show->ntargets = 1;
-else show->ntargets = conf.nviews + 1;
+	if (nmon < 2) show->ntargets = 1;
+	else show->ntargets = conf.nviews + 1;
 	show->target = malloc(show->ntargets * sizeof(Target));
 	Target *trg;
 	View *vw;
@@ -67,8 +67,6 @@ else show->ntargets = conf.nviews + 1;
 	for (i = 1; i < show->ntargets; i++) {
 		trg = &show->target[i];
 		vw = &conf.view[i-1];
-		trg->show = (conf.view[i-1].show ? show :
-				(show->notes ? show->notes : show));
 		trg->win = XCreateSimpleWindow(dpy, root, vw->x, vw->y,
 				(trg->w = vw->w), (trg->h = vw->h), 1, 0, 0);
 		XSetClassHint(dpy, trg->win, hint);
@@ -77,7 +75,6 @@ else show->ntargets = conf.nviews + 1;
 		trg->offset = vw->offset;
 		t = cairo_xlib_surface_create(dpy, trg->win, vis, trg->w, trg->h);
 		trg->ctx = cairo_create(t);
-		cairo_scale(trg->ctx, trg->w / (float) sw, trg->h / (float) sh);
 		cairo_surface_destroy(t);
 	}
 	XFree(hint);

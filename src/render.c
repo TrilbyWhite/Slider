@@ -19,6 +19,15 @@ Show *render_init(const char *fshow, const char *fnote) {
 		show = render(fshow, True);
 		if (fnote) show->notes = render(fnote, False);
 	}
+	int i; Target *trg;
+	for (i = 1; i < show->ntargets; i++) {
+		trg = &show->target[i];
+		trg->show = (conf.view[i-1].show ?
+				(show->notes ? show->notes : show) : show);
+		if (trg->show == show)
+			cairo_scale(trg->ctx, trg->w / (float) show->w,
+					trg->h / (float) show->h);
+	}
 	return show;
 }
 
@@ -70,7 +79,7 @@ Show *render(const char *fname, Bool X) {
 	int i, p;
 	cairo_t *ctx;
 	for (i = 0; i < show->nslides; i++) {
-		p = (conf.interleave ? 2 * i + (X ? 1 : 0) : i);
+		p = (conf.interleave ? 2 * i + (X ? 0 : 1) : i);
 		page = poppler_document_get_page(pdf, p);
 		poppler_page_get_size(page, &pdfw, &pdfh);
 		show->slide[i] = cairo_image_surface_create(0, show->w, show->h);
