@@ -34,7 +34,7 @@ int xlib_init(Show *show) {
 			ButtonPressMask | StructureNotifyMask;
 	wa.override_redirect = True;
 	wshow = XCreateSimpleWindow(dpy, root,
-			geom[conf.mon].x_org, geom[conf.mon].y_org, sw, sh, 1, 0, 0);
+			geom[conf.mon].x_org, geom[conf.mon].y_org, sw, sh, 0, 0, 0);
 	XStoreName(dpy, wshow, "Slider");
 	XClassHint *hint = XAllocClassHint();
 	hint->res_name = "Slider";
@@ -68,7 +68,7 @@ int xlib_init(Show *show) {
 		trg = &show->target[i];
 		vw = &conf.view[i-1];
 		trg->win = XCreateSimpleWindow(dpy, root, vw->x, vw->y,
-				(trg->w = vw->w), (trg->h = vw->h), 1, 0, 0);
+				(trg->w = vw->w), (trg->h = vw->h), 0, 0, 0);
 		XSetClassHint(dpy, trg->win, hint);
 		XChangeWindowAttributes(dpy,trg->win,CWEventMask,&wa);
 		XMapWindow(dpy, trg->win);
