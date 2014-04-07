@@ -84,7 +84,20 @@ Show *render(const char *fname, Bool X) {
 		poppler_page_get_size(page, &pdfw, &pdfh);
 		show->slide[i] = cairo_image_surface_create(0, show->w, show->h);
 		ctx = cairo_create(show->slide[i]);
+if (conf.lock_aspect && X) {
+	double scx = show->w / pdfw, scy = show->h / pdfh;
+	if (scx > scy) {
+		cairo_translate(ctx, (show->w - pdfw * scy) / 2.0, 0);
+		cairo_scale(ctx, scy, scy);
+	}
+	else {
+		cairo_translate(ctx, 0, (show->h - pdfh * scx) / 2.0);
+		cairo_scale(ctx, scx, scx);
+	}
+}
+else {
 		cairo_scale(ctx, show->w / pdfw, show->h / pdfh);
+}
 		cairo_set_source_rgba(ctx, 1, 1, 1, 1);
 		cairo_paint(ctx);
 		poppler_page_render(page, ctx);

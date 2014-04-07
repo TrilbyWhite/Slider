@@ -7,6 +7,7 @@
 *.Fade:					25
 *.Loop:					false
 *.Interleave:			false
+*.LockAspect:			true
 
 !! View layouts for previews:
 *.View.00.Geometry:		800x600+0+1024
