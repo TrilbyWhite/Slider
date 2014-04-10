@@ -11,12 +11,12 @@ static Show *render(const char *, Bool);
 Show *render_init(const char *fshow, const char *fnote) {
 	Show *show;
 	if (conf.interleave && !fnote) {
-		show = render(fshow, True);
+		if (!(show=render(fshow, True))) return NULL;
 		show->notes = render(fshow, False);
 	}
 	else {
 		conf.interleave = False;
-		show = render(fshow, True);
+		if (!(show=render(fshow, True))) return NULL;
 		if (fnote) show->notes = render(fnote, False);
 	}
 	int i; Target *trg;
