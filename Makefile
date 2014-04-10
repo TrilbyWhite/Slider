@@ -2,8 +2,9 @@
 PROG     =  slider
 VER      =  3.0a
 CC       ?= gcc
+DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER}
 DEPS		= x11 cairo freetype2 poppler-glib xinerama
-CFLAGS   += $(shell pkg-config --cflags ${DEPS})
+CFLAGS   += $(shell pkg-config --cflags ${DEPS}) ${DEFS}
 LDLIBS   += $(shell pkg-config --libs ${DEPS}) -lm
 PREFIX   ?= /usr
 MODULES  =  actions config render slider xlib

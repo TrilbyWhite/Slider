@@ -445,6 +445,7 @@ int command(const char *cmd) {
 		}
 		else return 1;
 	}
+XSync(dpy, True);
 	return 0;
 }
 

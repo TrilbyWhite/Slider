@@ -22,6 +22,9 @@
 
 #include "slider.h"
 
+#define STRING(s)		STRINGIFY(s)
+#define STRINGIFY(s)	#s
+
 void die(const char *msg, ...) {
 	va_list arg;
 	va_start(arg, msg);
@@ -30,17 +33,35 @@ void die(const char *msg, ...) {
 	exit(1);
 }
 
+static int help() {
+	printf("Help info coming soon ...\n");
+	exit(0);
+}
+
+static int version() {
+	printf(STRING(PROGRAM_NAME) " v" STRING(PROGRAM_VER)
+", Copyright © 2013-2014 Jesse McClure <www.mccluresk9.com>\n"
+"You should have received a copy of the GNU General Public License\n"
+"along with this program.  If not, see	<http://www.gnu.org/licenses/>.\n");
+	exit(0);
+}
+
 int main(int argc, const char **argv) {
-	int i;
+	int i, j;
 	show = NULL;
 	const char *mode = NULL;
 	const char *dbname = NULL;
 	const char *pdfname = NULL, *notename = NULL;
 	for (i = 1; i < argc; i++) {
-		if (argv[i][0] == '-' && argv[i][1] == 'F' && (++i) < argc)
-			dbname = argv[i];
-		else if (argv[i][0] == '-' && argv[i][1] == 'c' && (++i) < argc)
-			mode = argv[i];
+		if (argv[i][j] == '-') {
+			j = 1;
+			if (argv[i][j] == '-') j++;
+			if (argv[i][j] == 'F' && (++i) < argc) dbname = argv[i];
+			else if (argv[i][j] == 'c' && (++i) < argc) mode = argv[i];
+			else if (argv[i][j] == 'h') help();
+			else if (argv[i][j] == 'v') version();
+			else fprintf(stderr, "Unrecognized argument \"%s\"\n", argv[i]);
+		}
 		else if (!pdfname)
 			pdfname = argv[i];
 		else if (!notename)
