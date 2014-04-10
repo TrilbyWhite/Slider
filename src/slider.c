@@ -70,6 +70,7 @@ int main(int argc, const char **argv) {
 			fprintf(stderr, "Unused argument \"%s\"\n", argv[i]);
 	}
 	config_init(mode, dbname);
+	if (!pdfname) die("No presentation found\n");
 	show = render_init(pdfname, notename);
 	if (!show) die("No presentation found\n");
 	xlib_main_loop();
