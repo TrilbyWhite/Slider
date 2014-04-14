@@ -243,6 +243,23 @@ static void pen(cairo_t *ctx, cairo_surface_t *buf,
 	}
 }
 
+static void toggle_override() {
+	static Bool on = True;
+	XUnmapWindow(dpy,wshow);
+	XFlush(dpy);
+	XSetWindowAttributes wa;
+	wa.override_redirect = (on = !on);
+	XChangeWindowAttributes(dpy, wshow, CWOverrideRedirect, &wa);
+	XMoveResizeWindow(dpy, wshow, (on ? 0 : show->w / 4),
+			(on ? 0 : show->h / 4), (on ? show->w : show->w / 2),
+			(on ? show->h : show->h / 2) );
+	XMapWindow(dpy, wshow);
+	XFlush(dpy);
+	draw(wshow);
+	XFlush(dpy);
+	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
+}
+
 static void zoom_rect(int x1, int y1, int x2, int y2) {
 	cairo_t *ctx;
 	cairo_surface_t *buf, *t;
@@ -426,6 +443,7 @@ int command(const char *cmd) {
 	else if (strncasecmp(cmd,"redr",4)==0) draw(None);
 	else if (strncasecmp(cmd,"mute",4)==0) mute(cmd);
 	else if (strncasecmp(cmd,"quit",4)==0) running = False;
+	else if (strncasecmp(cmd,"full",4)==0) toggle_override();
 	else if (strncasecmp(cmd,"zoom",4)==0) {
 		char *c;
 		if ( (c=strchr(cmd, ' ')) ) {

@@ -61,6 +61,7 @@ Note.View.02.Offset:			1
 ! sorter + muting
 *.Bind.20.Key:			Tab
 *.Bind.20.None:		sorter
+*.Bind.20.Control:	fullscreen
 *.Bind.21.Key:			b
 *.Bind.21.None:		mute black
 *.Bind.22.Key:			w
