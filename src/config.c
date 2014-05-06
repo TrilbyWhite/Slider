@@ -166,4 +166,3 @@ int config_views(XrmDatabase xrdb, const char *base) {
 	}
 	return 0;
 }
-

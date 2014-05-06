@@ -22,6 +22,7 @@ static void action_link(const char *cmd) {
 	double pdfw, pdfh;
 	poppler_page_get_size(page, &pdfw, &pdfh);
 	GList *amap, *list;
+	GList *al_pos = NULL;
 	amap = poppler_page_get_link_mapping(page);
 	PopplerAction *act = NULL;
 	PopplerLinkMapping *pmap;
@@ -56,6 +57,9 @@ static void action_link(const char *cmd) {
 		r = pmap->area;
 		r.y1 = pdfh - r.y1; // TODO Check these
 		r.y2 = pdfh - r.y2;
+		if (pmap->action->type == POPPLER_ACTION_LAUNCH) {
+			al_pos = g_list_append(al_pos, pmap);
+		}
 		if (!n) {
 			cairo_rectangle(ctx, r.x1, r.y1, r.x2-r.x1, r.y2-r.y1);
 			cairo_stroke(ctx);
@@ -118,7 +122,18 @@ static void action_link(const char *cmd) {
 		}
 	}
 	else if (act->type == POPPLER_ACTION_LAUNCH) {
-		fprintf(stderr,"Action launch blocked\n"); //TODO ... maybe
+		PopplerActionLaunch *l = &act->launch;
+		pmap = g_list_first(al_pos)->data;
+		r = pmap->area;
+		r.y1 = pdfh - r.y1;
+		r.y2 = pdfh - r.y2;
+		sprintf(sys_cmd,"%s %s %04g %04g %04g %04g",
+		        l->file_name,
+		        !l->params?"":l->params,
+		        round(r.x1*show->w/pdfw),
+		        round(r.y2*show->h/pdfh),
+		        round((r.x2-r.x1)*show->w/pdfw),
+		        round((r.y1-r.y2)*show->h/pdfh));
 	}
 	else if (act->type == POPPLER_ACTION_URI) {
 		PopplerActionUri *u = &act->uri;
@@ -463,7 +478,6 @@ int command(const char *cmd) {
 		}
 		else return 1;
 	}
-XSync(dpy, True);
+	XSync(dpy, True);
 	return 0;
 }
-
