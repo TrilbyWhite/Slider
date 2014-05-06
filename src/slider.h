@@ -69,7 +69,7 @@ typedef struct Config {
 	int nviews, nkeys, font_size, fade, mon;
 	const char *button[NBUTTON];
 	const char *url_handler, *mov_handler, *aud_handler;
-	Bool loop, interleave, lock_aspect;
+	Bool loop, interleave, lock_aspect, launch;
 } Config;
 
 Show *show;

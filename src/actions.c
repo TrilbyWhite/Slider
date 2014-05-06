@@ -7,13 +7,26 @@
 #include "slider.h"
 #include "xlib-actions.h"
 
+#define MAX_COMMAND	256
+
 static void grab_mouse() {
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
 			ButtonReleaseMask, GrabModeAsync, GrabModeAsync,
 			wshow, None, CurrentTime);
 }
 
-#define MAX_COMMAND	256
+static void action_launch(PopplerAction *act, PopplerRectangle r) {
+	PopplerActionLaunch *l = &act->launch;
+	char sys_cmd[MAX_COMMAND];
+	memset(sys_cmd, 0, MAX_COMMAND);
+	sprintf(sys_cmd, "%s %s %04g %04g %04g %04g",
+		l->file_name, (!l->params ? "" : l->params),
+		r.x1, r.y1, r.x2, r.y2);
+	if (sys_cmd[0] == '\0') return;
+	if (conf.launch) system(sys_cmd);
+	else fprintf(stderr, "Action launch blocked: \"%s\"\n");
+}
+
 static void action_link(const char *cmd) {
 	PopplerDocument *pdf;
 	if (!(pdf=poppler_document_new_from_file(show->uri, NULL, NULL)))
@@ -22,7 +35,6 @@ static void action_link(const char *cmd) {
 	double pdfw, pdfh;
 	poppler_page_get_size(page, &pdfw, &pdfh);
 	GList *amap, *list;
-	GList *al_pos = NULL;
 	amap = poppler_page_get_link_mapping(page);
 	PopplerAction *act = NULL;
 	PopplerLinkMapping *pmap;
@@ -38,7 +50,19 @@ static void action_link(const char *cmd) {
 	/* prep cairo context for drawing if in mouse mode */
 	cairo_surface_t *t;
 	cairo_t *ctx;
-	if (!(n=atoi(opt))) {
+	if ( (strncasecmp(opt,"launch",6 ==0)) && (conf.launch) ) {
+		for (list = amap; list; list = list->next) {
+			pmap = list->data;
+			r = pmap->area;
+			r.x1 *= show->w / pdfw; r.x2 *= show->w / pdfw;
+			r.y1 *= show->h / pdfh; r.y2 *= show->h / pdfh;
+			act = pmap->action;
+			if (act->type == POPPLER_ACTION_LAUNCH) action_launch(act, r);
+		}
+		poppler_page_free_link_mapping(amap);
+		return;
+	}
+	else if (!(n=atoi(opt))) {
 		Theme q;
 		sscanf(opt,"%*s %lf %lf %lf %lf %lf\n",
 				&q.R, &q.G, &q.B, &q.A, &q.e);
@@ -55,11 +79,8 @@ static void action_link(const char *cmd) {
 	for (list = amap; list; list = list->next) {
 		pmap = list->data;
 		r = pmap->area;
-		r.y1 = pdfh - r.y1; // TODO Check these
+		r.y1 = pdfh - r.y1;
 		r.y2 = pdfh - r.y2;
-		if (pmap->action->type == POPPLER_ACTION_LAUNCH) {
-			al_pos = g_list_append(al_pos, pmap);
-		}
 		if (!n) {
 			cairo_rectangle(ctx, r.x1, r.y1, r.x2-r.x1, r.y2-r.y1);
 			cairo_stroke(ctx);
@@ -89,8 +110,9 @@ static void action_link(const char *cmd) {
 						(r.x2 * show->w / pdfw > ev.xbutton.x) &&
 						(r.y2 * show->h / pdfh < ev.xbutton.y) &&
 						(r.y1 * show->h / pdfh > ev.xbutton.y) )
-					act = pmap->action;
+					break;
 			}
+			act = pmap->action;
 		}
 	}
 	if (!act) {
@@ -122,18 +144,10 @@ static void action_link(const char *cmd) {
 		}
 	}
 	else if (act->type == POPPLER_ACTION_LAUNCH) {
-		PopplerActionLaunch *l = &act->launch;
-		pmap = g_list_first(al_pos)->data;
 		r = pmap->area;
-		r.y1 = pdfh - r.y1;
-		r.y2 = pdfh - r.y2;
-		sprintf(sys_cmd,"%s %s %04g %04g %04g %04g",
-		        l->file_name,
-		        !l->params?"":l->params,
-		        round(r.x1*show->w/pdfw),
-		        round(r.y2*show->h/pdfh),
-		        round((r.x2-r.x1)*show->w/pdfw),
-		        round((r.y1-r.y2)*show->h/pdfh));
+		r.x1 *= show->w / pdfw; r.x2 *= show->w / pdfw;
+		r.y1 *= show->h / pdfh; r.y2 *= show->h / pdfh;
+		action_launch(act, r);
 	}
 	else if (act->type == POPPLER_ACTION_URI) {
 		PopplerActionUri *u = &act->uri;
