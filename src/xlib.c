@@ -139,6 +139,7 @@ void keypress(XEvent *ev) {
 	}
 }
 
+static const char *_prop_clear = NULL;
 void propertynotify(XEvent *ev) {
 	XPropertyEvent *e = &ev->xproperty;
 	if (e->window != wshow) return;
@@ -154,6 +155,10 @@ void propertynotify(XEvent *ev) {
 		command( (char *) *strs);
 		XFreeStringList(strs);
 	}
+	XFree(text.value);
+	XStringListToTextProperty(&_prop_clear, 1, &text);
+	XSetTextProperty(dpy, wshow, &text, COM_ATOM);
+	XFlush(dpy);
 	XFree(text.value);
 }
 

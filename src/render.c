@@ -87,18 +87,24 @@ Show *render(const char *fname, Bool X) {
 		if (conf.lock_aspect && X) {
 			double scx = show->w / pdfw, scy = show->h / pdfh;
 			if (scx > scy) {
-				cairo_translate(ctx, (show->w - pdfw * scy) / 2.0, 0);
-				cairo_scale(ctx, scy, scy);
+				show->dx = (show->w - pdfw * scy) / 2.0;
+				show->dy = 0.0;
+				show->scale = scy;
 			}
 			else {
-				cairo_translate(ctx, 0, (show->h - pdfh * scx) / 2.0);
-				cairo_scale(ctx, scx, scx);
+				show->dx = 0.0;
+				show->dy = (show->h - pdfh * scx) / 2.0;
+				show->scale = scx;
 			}
+			cairo_translate(ctx, show->dx, show->dy);
+			cairo_scale(ctx, show->scale, show->scale);
 			cairo_set_source_rgba(ctx, 0, 0, 0, 1);
 			cairo_paint(ctx);
 		}
 		else {
-				cairo_scale(ctx, show->w / pdfw, show->h / pdfh);
+			show->dx = show->w / pdfw;
+			show->dy = show->h / pdfh;
+			cairo_scale(ctx, show->dx, show->dy);
 		}
 		cairo_set_source_rgba(ctx, 1, 1, 1, 1);
 		cairo_rectangle(ctx, 0, 0, pdfw, pdfh);

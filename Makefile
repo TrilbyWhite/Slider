@@ -1,5 +1,6 @@
 
 PROG     =  slider
+ALT		=  remote
 VER      =  3.0a
 CC       ?= gcc
 DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER}
@@ -31,6 +32,7 @@ clean:
 
 distclean: clean
 	@rm -f ${PROG}
+	@rm -f ${PROG}-${ALT}
 
 dist: distclean
 	@tar -czf ${PROG}-${VER}.tar.gz *

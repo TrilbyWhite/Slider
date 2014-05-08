@@ -9,6 +9,7 @@
 
 #define MAX_COMMAND	256
 
+
 static void grab_mouse() {
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
 			ButtonReleaseMask, GrabModeAsync, GrabModeAsync,
@@ -69,7 +70,15 @@ static void action_link(const char *cmd) {
 		t = cairo_xlib_surface_create(dpy, wshow, vis, sw, sh);
 		ctx = cairo_create(t);
 		cairo_surface_destroy(t);
-		cairo_scale(ctx, show->w/pdfw, show->h/pdfh);
+/******************/
+	if (conf.lock_aspect) {
+		cairo_translate(ctx, show->dx, show->dy);
+		cairo_scale(ctx, show->scale, show->scale);
+	}
+	else {
+		cairo_scale(ctx, show->dx, show->dy);
+	}
+/******************/
 		cairo_set_source_rgba(ctx, q.R, q.G, q.B, q.A);
 		cairo_set_line_join(ctx, CAIRO_LINE_JOIN_ROUND);
 		cairo_set_line_cap(ctx, CAIRO_LINE_CAP_ROUND);
@@ -303,9 +312,18 @@ static void zoom_rect(int x1, int y1, int x2, int y2) {
 	poppler_page_get_size(page, &pdfw, &pdfh);
 	cairo_set_source_rgba(ctx, 1, 1, 1, 1);
 	cairo_paint(ctx);
+/**** testing: ******/
+if (conf.lock_aspect) {
+	cairo_scale(ctx, show->scale, show->scale);
+	cairo_scale(ctx, show->w /(double) (x2-x1), show->h /(double) (y2-y1));
+	cairo_translate(ctx, show->dx - x1, show->dy - y1);
+}
+else {
 	cairo_scale(ctx, show->w/(double) (x2-x1), show->h/(double) (y2-y1));
 	cairo_translate(ctx, -1.0 * x1, -1.0 * y1);
-	cairo_scale(ctx, show->w / pdfw, show->h / pdfh);
+	cairo_scale(ctx, show->dx, show->dy);
+}
+/********************/
 	poppler_page_render(page, ctx);
 	cairo_set_source_surface(show->target[0].ctx, buf, 0, 0);
 	int i;
