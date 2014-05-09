@@ -42,7 +42,6 @@ struct Target {
 struct Show {
 	cairo_surface_t **slide;
 	int nslides, w, h, cur, ntargets;
-	double scale, dx, dy;
 	char *uri;
 	Show *notes;
 	Target *target;

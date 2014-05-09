@@ -78,33 +78,27 @@ Show *render(const char *fname, Bool X) {
 	double pdfw, pdfh;
 	int i, p;
 	cairo_t *ctx;
+	double scx, scy, dx, dy;
 	for (i = 0; i < show->nslides; i++) {
 		p = (conf.interleave ? 2 * i + (X ? 0 : 1) : i);
 		page = poppler_document_get_page(pdf, p);
 		poppler_page_get_size(page, &pdfw, &pdfh);
 		show->slide[i] = cairo_image_surface_create(0, show->w, show->h);
 		ctx = cairo_create(show->slide[i]);
+		scx = show->w / pdfw; scy = show->h / pdfh;
+		dx = dy = 0.0;
 		if (conf.lock_aspect && X) {
-			double scx = show->w / pdfw, scy = show->h / pdfh;
-			if (scx > scy) {
-				show->dx = (show->w - pdfw * scy) / 2.0;
-				show->dy = 0.0;
-				show->scale = scy;
-			}
-			else {
-				show->dx = 0.0;
-				show->dy = (show->h - pdfh * scx) / 2.0;
-				show->scale = scx;
-			}
-			cairo_translate(ctx, show->dx, show->dy);
-			cairo_scale(ctx, show->scale, show->scale);
+			if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
+			else dy = (show->h - pdfh * (scy=scx)) / 2.0;
+			cairo_translate(ctx, dx, dy);
+			cairo_scale(ctx, scx, scy);
 			cairo_set_source_rgba(ctx, 0, 0, 0, 1);
 			cairo_paint(ctx);
 		}
 		else {
-			show->dx = show->w / pdfw;
-			show->dy = show->h / pdfh;
-			cairo_scale(ctx, show->dx, show->dy);
+			dx = dy = 0.0;
+			cairo_translate(ctx, dx, dy);
+			cairo_scale(ctx, scx, scy);
 		}
 		cairo_set_source_rgba(ctx, 1, 1, 1, 1);
 		cairo_rectangle(ctx, 0, 0, pdfw, pdfh);

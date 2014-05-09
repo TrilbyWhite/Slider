@@ -71,13 +71,14 @@ static void action_link(const char *cmd) {
 		ctx = cairo_create(t);
 		cairo_surface_destroy(t);
 /******************/
-	if (conf.lock_aspect) {
-		cairo_translate(ctx, show->dx, show->dy);
-		cairo_scale(ctx, show->scale, show->scale);
-	}
-	else {
-		cairo_scale(ctx, show->dx, show->dy);
-	}
+double scx = show->w / pdfw, scy = show->h / pdfh;
+double dx = 0.0, dy = 0.0;
+if (conf.lock_aspect) {
+	if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
+	else dy = (show->h - pdfh * (scy=scx)) / 2.0;
+}
+cairo_translate(ctx, dx, dy);
+cairo_scale(ctx, scx, scy);
 /******************/
 		cairo_set_source_rgba(ctx, q.R, q.G, q.B, q.A);
 		cairo_set_line_join(ctx, CAIRO_LINE_JOIN_ROUND);
@@ -313,16 +314,15 @@ static void zoom_rect(int x1, int y1, int x2, int y2) {
 	cairo_set_source_rgba(ctx, 1, 1, 1, 1);
 	cairo_paint(ctx);
 /**** testing: ******/
+double scx = show->w / pdfw, scy = show->h / pdfh;
+double dx = 0.0, dy = 0.0;
 if (conf.lock_aspect) {
-	cairo_scale(ctx, show->scale, show->scale);
-	cairo_scale(ctx, show->w /(double) (x2-x1), show->h /(double) (y2-y1));
-	cairo_translate(ctx, show->dx - x1, show->dy - y1);
+	if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
+	else dy = (show->h - pdfh * (scy=scx)) / 2.0;
 }
-else {
-	cairo_scale(ctx, show->w/(double) (x2-x1), show->h/(double) (y2-y1));
-	cairo_translate(ctx, -1.0 * x1, -1.0 * y1);
-	cairo_scale(ctx, show->dx, show->dy);
-}
+cairo_scale(ctx, show->w /(double) (x2-x1), show->h /(double) (y2-y1));
+cairo_translate(ctx, dx - x1, dy - y1);
+if (!conf.lock_aspect) cairo_scale(ctx, scx, scy);
 /********************/
 	poppler_page_render(page, ctx);
 	cairo_set_source_surface(show->target[0].ctx, buf, 0, 0);
