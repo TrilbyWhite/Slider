@@ -111,6 +111,7 @@ cairo_scale(ctx, scx, scy);
 		XMaskEvent(dpy, ButtonPressMask | KeyPressMask, &ev);
 		if (ev.type == KeyPress) XPutBackEvent(dpy, &ev);
 		else if (ev.type == ButtonPress) {
+			pmap = NULL;
 			for (list = amap; list; list = list->next) {
 				pmap = list->data;
 				r = pmap->area;
@@ -122,7 +123,8 @@ cairo_scale(ctx, scx, scy);
 						(r.y1 * show->h / pdfh > ev.xbutton.y) )
 					break;
 			}
-			act = pmap->action;
+			if (pmap) act = pmap->action;
+			else act = NULL;
 		}
 	}
 	if (!act) {
