@@ -30,12 +30,19 @@ Note.View.02.Geometry:		480x360+10+1400
 Note.View.02.Show:			0
 Note.View.02.Offset:			1
 
-!! Action handlers:
-*.Action.URL:			firefox %s > /dev/null 2>&1
-*.Action.Movie:		mplayer -fs %s > /dev/null 2>&1
-*.Action.Audio:		mplayer %s > /dev/null 2>&1 &
-!! Set to true to allow action launch links
-*.Action.Launch:		false
+!! Media handlers:
+!    Media handlers can included any of the following specifiers:
+!       %s
+!          the target file or url
+!       %x %X %y %Y %w %W %h %H
+!          the coordinates of the bounding box in the pdf
+!          upper and lower case are equivalent
+!       %%
+!          'escapes' the processing and produces a single percent sign
+*.Media.Link:			firefox %s > /dev/null 2>&1
+*.Media.Movie:			mplayer -noborder -nokeepaspect -geometry %Wx%H+%X+%Y %s >/dev/null 2>&1
+!*.Media.Movie:		mplayer -fs %s > /dev/null 2>&1
+*.Media.Sound:			mplayer %s > /dev/null 2>&1 &
 
 !! Button bindings:
 *.Button.01:			next
@@ -87,19 +94,15 @@ Note.View.02.Offset:			1
 *.Bind.33.Control:	dot 0.0 0.0 1.0 0.8 18
 *.Bind.33.Alt:			custom 0.0 0.0 1.0 0.8 36 > <
 ! action links
-!    action mouse <RGBA> <width>
+!    action
 !    action <num>
-!    action launch
+!    action <type>  --- not yet impletemented ---
 !    num = ordinal number of action on page to select
-!    "action launch" automatic runs *every* launch link on the page
-!       as long as the Action.Launch = true
 *.Bind.40.Key:			a
-*.Bind.40.None:		action mouse 1.0 0.9 0.1 0.5 2.0
+*.Bind.40.None:		action
 *.Bind.40.Shift:		action 1
 *.Bind.40.Control:	action 2
 *.Bind.40.Alt:			action 3
-!*.Bind.41.Key:			l
-!*.Bind.41.None:		action launch
 ! zoom
 *.Bind.51.Key:			z
 *.Bind.51.None:		zoom 0.0 1.0 0.0 0.8 4.0

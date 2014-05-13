@@ -7,182 +7,10 @@
 #include "slider.h"
 #include "xlib-actions.h"
 
-#define MAX_COMMAND	256
-
-
 static void grab_mouse() {
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
 			ButtonReleaseMask, GrabModeAsync, GrabModeAsync,
 			wshow, None, CurrentTime);
-}
-
-static void action_launch(PopplerAction *act, PopplerRectangle r) {
-	PopplerActionLaunch *l = &act->launch;
-	char sys_cmd[MAX_COMMAND];
-	memset(sys_cmd, 0, MAX_COMMAND);
-	sprintf(sys_cmd, "%s %s %04g %04g %04g %04g",
-		l->file_name, (!l->params ? "" : l->params),
-		r.x1, r.y1, r.x2, r.y2);
-	if (sys_cmd[0] == '\0') return;
-	if (conf.launch) system(sys_cmd);
-	else fprintf(stderr, "Action launch blocked: \"%s\"\n");
-}
-
-static void action_link(const char *cmd) {
-	PopplerDocument *pdf;
-	if (!(pdf=poppler_document_new_from_file(show->uri, NULL, NULL)))
-		return;
-	PopplerPage *page = poppler_document_get_page(pdf, show->cur);
-	double pdfw, pdfh;
-	poppler_page_get_size(page, &pdfw, &pdfh);
-	GList *amap, *list;
-	amap = poppler_page_get_link_mapping(page);
-	PopplerAction *act = NULL;
-	PopplerLinkMapping *pmap;
-	PopplerRectangle r;
-	/* check for "mouse" or number in command */
-	int n, nn = 0;
-	char *opt = strchr(cmd,' ');
-	while (opt && *opt == ' ') opt++;
-	if (!opt || *opt == '\0') {
-		poppler_page_free_link_mapping(amap);
-		return;
-	}
-	/* prep cairo context for drawing if in mouse mode */
-	cairo_surface_t *t;
-	cairo_t *ctx;
-	if ( (strncasecmp(opt,"launch",6 ==0)) && (conf.launch) ) {
-		for (list = amap; list; list = list->next) {
-			pmap = list->data;
-			r = pmap->area;
-			r.x1 *= show->w / pdfw; r.x2 *= show->w / pdfw;
-			r.y1 *= show->h / pdfh; r.y2 *= show->h / pdfh;
-			act = pmap->action;
-			if (act->type == POPPLER_ACTION_LAUNCH) action_launch(act, r);
-		}
-		poppler_page_free_link_mapping(amap);
-		return;
-	}
-	else if (!(n=atoi(opt))) {
-		Theme q;
-		sscanf(opt,"%*s %lf %lf %lf %lf %lf\n",
-				&q.R, &q.G, &q.B, &q.A, &q.e);
-		t = cairo_xlib_surface_create(dpy, wshow, vis, sw, sh);
-		ctx = cairo_create(t);
-		cairo_surface_destroy(t);
-/******************/
-double scx = show->w / pdfw, scy = show->h / pdfh;
-double dx = 0.0, dy = 0.0;
-if (conf.lock_aspect) {
-	if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
-	else dy = (show->h - pdfh * (scy=scx)) / 2.0;
-}
-cairo_translate(ctx, dx, dy);
-cairo_scale(ctx, scx, scy);
-/******************/
-		cairo_set_source_rgba(ctx, q.R, q.G, q.B, q.A);
-		cairo_set_line_join(ctx, CAIRO_LINE_JOIN_ROUND);
-		cairo_set_line_cap(ctx, CAIRO_LINE_CAP_ROUND);
-		cairo_set_line_width(ctx, q.e);
-	}
-	/* draw indicators or identify selected action */
-	for (list = amap; list; list = list->next) {
-		pmap = list->data;
-		r = pmap->area;
-		r.y1 = pdfh - r.y1;
-		r.y2 = pdfh - r.y2;
-		if (!n) {
-			cairo_rectangle(ctx, r.x1, r.y1, r.x2-r.x1, r.y2-r.y1);
-			cairo_stroke(ctx);
-		}
-		else {
-			act = pmap->action;
-			if ( (++nn) == n ) break;
-		}
-	}
-	if (n && !act) {
-		poppler_page_free_link_mapping(amap);
-		return;
-	}
-	/* get mouse selection */
-	if (!n) {
-		XUndefineCursor(dpy, wshow);
-		XEvent ev;
-		XMaskEvent(dpy, ButtonPressMask | KeyPressMask, &ev);
-		if (ev.type == KeyPress) XPutBackEvent(dpy, &ev);
-		else if (ev.type == ButtonPress) {
-			pmap = NULL;
-			for (list = amap; list; list = list->next) {
-				pmap = list->data;
-				r = pmap->area;
-				r.y1 = pdfh - r.y1;
-				r.y2 = pdfh - r.y2;
-				if ( (r.x1 * show->w / pdfw < ev.xbutton.x) &&
-						(r.x2 * show->w / pdfw > ev.xbutton.x) &&
-						(r.y2 * show->h / pdfh < ev.xbutton.y) &&
-						(r.y1 * show->h / pdfh > ev.xbutton.y) )
-					break;
-			}
-			if (pmap) act = pmap->action;
-			else act = NULL;
-		}
-	}
-	if (!act) {
-		if (!n) cairo_destroy(ctx);
-		poppler_page_free_link_mapping(amap);
-		return;
-	}
-	char sys_cmd[MAX_COMMAND];
-	memset(sys_cmd, 0, MAX_COMMAND);
-	if (act->type == POPPLER_ACTION_GOTO_DEST) {
-		PopplerDest *d, *dest = (&act->goto_dest)->dest;
-		if (dest->type == POPPLER_DEST_NAMED) {
-			d = poppler_document_find_dest(pdf, dest->named_dest);
-			if (d) {
-				show->cur = d->page_num - 1;
-				poppler_dest_free(d);
-			}
-		}
-		else {
-			show->cur = dest->page_num - 1;
-		}
-	}
-	else if (act->type == POPPLER_ACTION_NAMED) {
-		PopplerActionNamed *n = &act->named;
-		PopplerDest *d = poppler_document_find_dest(pdf, n->named_dest);
-		if (d) {
-			show->cur = d->page_num - 1;
-			poppler_dest_free(d);
-		}
-	}
-	else if (act->type == POPPLER_ACTION_LAUNCH) {
-		r = pmap->area;
-		r.x1 *= show->w / pdfw; r.x2 *= show->w / pdfw;
-		r.y1 *= show->h / pdfh; r.y2 *= show->h / pdfh;
-		action_launch(act, r);
-	}
-	else if (act->type == POPPLER_ACTION_URI) {
-		PopplerActionUri *u = &act->uri;
-		sprintf(sys_cmd, conf.url_handler, u->uri);
-	}
-	else if (act->type == POPPLER_ACTION_MOVIE) {
-		PopplerActionMovie *m = &act->movie;
-		sprintf(sys_cmd, conf.mov_handler,
-				poppler_movie_get_filename(m->movie));
-	}
-	else if (act->type == POPPLER_ACTION_RENDITION) {
-		PopplerActionRendition *r = &act->rendition;
-		sprintf(sys_cmd, conf.aud_handler,
-				poppler_media_get_filename(r->media));
-	}
-	else {
-		fprintf(stderr,"Action type %d not recognized\n", act->type);
-	}
-	if (sys_cmd[0] != '\0') system(sys_cmd);
-	poppler_page_free_link_mapping(amap);
-	if (!n) cairo_destroy(ctx);
-	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
-	draw(wshow);
 }
 
 static void custom(cairo_t *ctx, cairo_surface_t *buf,
@@ -284,21 +112,16 @@ static void pen(cairo_t *ctx, cairo_surface_t *buf,
 	}
 }
 
-static void toggle_override() {
-	static Bool on = True;
-	XUnmapWindow(dpy,wshow);
+static void toggle_fullscreen() {
+	static Bool fs = True;
+	fs = !fs;
+	XMoveResizeWindow(dpy, wshow, show->x + (fs ? 0 : show->w / 4),
+			show->y + (fs ? 0 : show->h / 4), (fs ? show->w : show->w / 2),
+			(fs ? show->h : show->h / 2) );
+	XDeleteProperty(dpy, wshow, wm_state);
+	if (fs) XChangeProperty(dpy, wshow, wm_state, XA_ATOM, 32,
+		PropModeReplace, (unsigned char *)&wm_full, 1);
 	XFlush(dpy);
-	XSetWindowAttributes wa;
-	wa.override_redirect = (on = !on);
-	XChangeWindowAttributes(dpy, wshow, CWOverrideRedirect, &wa);
-	XMoveResizeWindow(dpy, wshow, (on ? 0 : show->w / 4),
-			(on ? 0 : show->h / 4), (on ? show->w : show->w / 2),
-			(on ? show->h : show->h / 2) );
-	XMapWindow(dpy, wshow);
-	XFlush(dpy);
-	draw(wshow);
-	XFlush(dpy);
-	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
 }
 
 static void zoom_rect(int x1, int y1, int x2, int y2) {
@@ -484,7 +307,8 @@ static void sorter(const char *cmd) {
 int command(const char *cmd) {
 	if (strncasecmp(cmd,"pen",3)==0) pens(cmd);
 	else if (strncasecmp(cmd,"dot",3)==0) pens(cmd);
-	else if (strncasecmp(cmd,"act",3)==0) action_link(cmd);
+	//else if (strncasecmp(cmd,"act",3)==0) action_link(cmd);
+	else if (strncasecmp(cmd,"act",3)==0) action(cmd);
 	else if (strncasecmp(cmd,"cust",4)==0) pens(cmd);
 	else if (strncasecmp(cmd,"sort",4)==0) sorter(cmd);
 	else if (strncasecmp(cmd,"prev",4)==0) move(cmd);
@@ -492,7 +316,7 @@ int command(const char *cmd) {
 	else if (strncasecmp(cmd,"redr",4)==0) draw(None);
 	else if (strncasecmp(cmd,"mute",4)==0) mute(cmd);
 	else if (strncasecmp(cmd,"quit",4)==0) running = False;
-	else if (strncasecmp(cmd,"full",4)==0) toggle_override();
+	else if (strncasecmp(cmd,"full",4)==0) toggle_fullscreen();
 	else if (strncasecmp(cmd,"zoom",4)==0) {
 		char *c;
 		if ( (c=strchr(cmd, ' ')) ) {

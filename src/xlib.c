@@ -28,26 +28,27 @@ int xlib_init(Show *show) {
 	if (conf.mon == -1 || conf.mon >= nmon) conf.mon = nmon - 1;
 	sw = geom[conf.mon].width;
 	sh = geom[conf.mon].height;
+	show->w = sw; show->h = sh;
+	show->x = geom[conf.mon].x_org;
+	show->y = geom[conf.mon].y_org;
 	/* create main window: */
-	XSetWindowAttributes wa;
-	wa.event_mask = ExposureMask | KeyPressMask | PropertyChangeMask |
-			ButtonPressMask | StructureNotifyMask;
-	wa.override_redirect = True;
-	wshow = XCreateSimpleWindow(dpy, root,
-			geom[conf.mon].x_org, geom[conf.mon].y_org, sw, sh, 0, 0, 0);
+	wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
+	wm_full = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	wshow = XCreateSimpleWindow(dpy, root, show->x, show->y, sw, sh, 0, 0, 0);
 	XStoreName(dpy, wshow, "Slider");
 	XClassHint *hint = XAllocClassHint();
 	hint->res_name = "Slider";
 	hint->res_class = "presentation";
 	XSetClassHint(dpy, wshow, hint);
 	hint->res_class = "notes";
-	XChangeWindowAttributes(dpy,wshow,CWEventMask|CWOverrideRedirect,&wa);
-	// TODO Set hints
-	// TODO notes monitor
+	XSetWindowAttributes wa;
+	wa.event_mask = ExposureMask | KeyPressMask | PropertyChangeMask |
+			ButtonPressMask | StructureNotifyMask;
+	XChangeWindowAttributes(dpy,wshow,CWEventMask,&wa);
+	XChangeProperty(dpy, wshow, wm_state, XA_ATOM, 32,
+		PropModeReplace, (unsigned char *)&wm_full, 1);
 	XMapWindow(dpy, wshow);
 	XFlush(dpy);
-	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
-	show->w = sw; show->h = sh;
 	/* create targets */
 	if (nmon < 2) show->ntargets = 1;
 	else show->ntargets = conf.nviews + 1;
@@ -87,7 +88,7 @@ int xlib_init(Show *show) {
 	crosshair_cursor = XCreateFontCursor(dpy, XC_crosshair);
 	XFreePixmap(dpy, curs_map);
 	XDefineCursor(dpy, wshow, invisible_cursor);
-	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
+	//XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
 	running = True;
 	COM_ATOM = XInternAtom(dpy, "Command", False);
 	return 0;
@@ -156,7 +157,7 @@ void propertynotify(XEvent *ev) {
 		XFreeStringList(strs);
 	}
 	XFree(text.value);
-	XStringListToTextProperty(&_prop_clear, 1, &text);
+	XStringListToTextProperty((char **)&_prop_clear, 1, &text);
 	XSetTextProperty(dpy, wshow, &text, COM_ATOM);
 	XFlush(dpy);
 	XFree(text.value);

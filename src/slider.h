@@ -30,6 +30,7 @@
 #include <poppler.h>
 
 #define NBUTTON	12
+#define POPPLER_ANNOT_LAST	POPPLER_ANNOT_3D + 1
 
 typedef struct Target Target;
 typedef struct Show Show;
@@ -41,7 +42,7 @@ struct Target {
 };
 struct Show {
 	cairo_surface_t **slide;
-	int nslides, w, h, cur, ntargets;
+	int nslides, x, y, w, h, cur, ntargets;
 	char *uri;
 	Show *notes;
 	Target *target;
@@ -68,7 +69,7 @@ typedef struct Config {
 	Key *key;
 	int nviews, nkeys, font_size, fade, mon;
 	const char *button[NBUTTON];
-	const char *url_handler, *mov_handler, *aud_handler;
+	const char *media_link[POPPLER_ANNOT_LAST];
 	Bool loop, interleave, lock_aspect, launch;
 } Config;
 

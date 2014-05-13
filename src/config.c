@@ -6,8 +6,11 @@
 
 #include "slider.h"
 
+extern const char *atypes[];
+
 static int config_buttons(XrmDatabase, const char *);
 static int config_binds(XrmDatabase, const char *);
+static int config_media(XrmDatabase, const char *);
 static int config_general(XrmDatabase, const char *);
 static int config_views(XrmDatabase, const char *);
 
@@ -36,8 +39,11 @@ int config_init(const char *mode, const char *db) {
 	config_buttons(xrdb, base);
 	config_binds(xrdb, base);
 	config_views(xrdb, base);
+	config_media(xrdb, base);
 	config_general(xrdb, base);
 	chdir(pwd);
+//if (conf.lock_aspect)
+//fprintf(stderr,"LOCKED\n");
 	return 0;
 }
 
@@ -70,15 +76,6 @@ int config_general(XrmDatabase xrdb, const char *base) {
 		else
 			conf.font = cairo_ft_font_face_create_for_ft_face(face, 0);
 	}
-	sprintf(class,"%s.Action.URL",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		conf.url_handler = val.addr;
-	sprintf(class,"%s.Action.Movie",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		conf.mov_handler = val.addr;
-	sprintf(class,"%s.Action.Audio",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		conf.aud_handler = val.addr;
 	sprintf(class,"%s.Fade",base);
 	if (XrmGetResource(xrdb, class, class, &type, &val))
 		conf.fade = atoi(val.addr);
@@ -137,6 +134,19 @@ int config_binds(XrmDatabase xrdb, const char *base) {
 			conf.key[conf.nkeys].arg = val.addr;
 			conf.nkeys++;
 		}
+	}
+	return 0;
+}
+
+int config_media(XrmDatabase xrdb, const char *base) {
+	int i;
+	char class[256], *type;
+	XrmValue val;
+	for (i = 0; i < POPPLER_ANNOT_LAST; i++) {
+		conf.media_link[i] = NULL;
+		sprintf(class,"%s.Media.%s", base, atypes[i]);
+		if (XrmGetResource(xrdb, class, class, &type, &val))
+			conf.media_link[i] = val.addr;
 	}
 	return 0;
 }

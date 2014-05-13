@@ -22,7 +22,10 @@ unsigned int dep;
 Visual *vis;
 Bool running;
 Cursor invisible_cursor, crosshair_cursor;
+Atom wm_state, wm_full;
 
+extern int action(const char *);
 extern int command(const char *);
+
 
 #endif /* __XLIB_ACTIONS_H__ */
