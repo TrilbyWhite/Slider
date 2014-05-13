@@ -31,10 +31,14 @@ int xlib_init(Show *show) {
 	show->w = sw; show->h = sh;
 	show->x = geom[conf.mon].x_org;
 	show->y = geom[conf.mon].y_org;
+	/* init EWMH atoms */
+	NET_WM_STATE = XInternAtom(dpy,
+			"_NET_WM_STATE", False);
+	NET_WM_STATE_FULLSCREEN = XInternAtom(dpy,
+			"_NET_WM_STATE_FULLSCREEN", False);
 	/* create main window: */
-	wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
-	wm_full = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
-	wshow = XCreateSimpleWindow(dpy, root, show->x, show->y, sw, sh, 0, 0, 0);
+	wshow = XCreateSimpleWindow(dpy, root, show->x, show->y,
+			sw, sh, 0, 0, 0);
 	XStoreName(dpy, wshow, "Slider");
 	XClassHint *hint = XAllocClassHint();
 	hint->res_name = "Slider";
@@ -45,10 +49,16 @@ int xlib_init(Show *show) {
 	wa.event_mask = ExposureMask | KeyPressMask | PropertyChangeMask |
 			ButtonPressMask | StructureNotifyMask;
 	XChangeWindowAttributes(dpy,wshow,CWEventMask,&wa);
-	XChangeProperty(dpy, wshow, wm_state, XA_ATOM, 32,
-		PropModeReplace, (unsigned char *)&wm_full, 1);
+	XChangeProperty(dpy, wshow, NET_WM_STATE, XA_ATOM, 32,
+		PropModeReplace, (unsigned char *)&NET_WM_STATE_FULLSCREEN, 1);
+	XSizeHints *size = XAllocSizeHints();
+	size->base_width = size->width = sw;
+	size->base_height = size->height = sh;
+	size->flags = USSize | PBaseSize;
+	XSetWMNormalHints(dpy, wshow, size);
 	XMapWindow(dpy, wshow);
 	XFlush(dpy);
+	XFree(size);
 	/* create targets */
 	if (nmon < 2) show->ntargets = 1;
 	else show->ntargets = conf.nviews + 1;

@@ -14,6 +14,7 @@ extern void propertynotify(XEvent *);
 
 extern void draw();
 
+
 Display *dpy;
 GC gc;
 Window root, wshow;
@@ -22,7 +23,7 @@ unsigned int dep;
 Visual *vis;
 Bool running;
 Cursor invisible_cursor, crosshair_cursor;
-Atom wm_state, wm_full;
+Atom NET_WM_STATE, NET_WM_STATE_FULLSCREEN;
 
 extern int action(const char *);
 extern int command(const char *);

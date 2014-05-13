@@ -115,12 +115,22 @@ static void pen(cairo_t *ctx, cairo_surface_t *buf,
 static void toggle_fullscreen() {
 	static Bool fs = True;
 	fs = !fs;
-	XMoveResizeWindow(dpy, wshow, show->x + (fs ? 0 : show->w / 4),
-			show->y + (fs ? 0 : show->h / 4), (fs ? show->w : show->w / 2),
-			(fs ? show->h : show->h / 2) );
-	XDeleteProperty(dpy, wshow, wm_state);
-	if (fs) XChangeProperty(dpy, wshow, wm_state, XA_ATOM, 32,
-		PropModeReplace, (unsigned char *)&wm_full, 1);
+XEvent ev;
+ev.xclient.type = ClientMessage;
+ev.xclient.serial = 0;
+ev.xclient.send_event = True;
+ev.xclient.display = dpy;
+ev.xclient.window = wshow;
+ev.xclient.message_type = NET_WM_STATE;
+ev.xclient.format = 32;
+ev.xclient.data.l[0] = 2;
+ev.xclient.data.l[1] = NET_WM_STATE_FULLSCREEN;
+ev.xclient.data.l[2] = 0;
+XSendEvent(dpy, root, False, SubstructureRedirectMask
+| SubstructureNotifyMask,&ev);
+XMoveResizeWindow(dpy, wshow, show->x + (fs ? 0 : show->w / 4),
+		show->y + (fs ? 0 : show->h / 4), (fs ? show->w : show->w / 2),
+		(fs ? show->h : show->h / 2) );
 	XFlush(dpy);
 }
 
