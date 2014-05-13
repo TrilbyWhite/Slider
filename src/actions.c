@@ -138,17 +138,15 @@ static void zoom_rect(int x1, int y1, int x2, int y2) {
 	poppler_page_get_size(page, &pdfw, &pdfh);
 	cairo_set_source_rgba(ctx, 1, 1, 1, 1);
 	cairo_paint(ctx);
-/**** testing: ******/
-double scx = show->w / pdfw, scy = show->h / pdfh;
-double dx = 0.0, dy = 0.0;
-if (conf.lock_aspect) {
-	if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
-	else dy = (show->h - pdfh * (scy=scx)) / 2.0;
-}
-cairo_scale(ctx, show->w /(double) (x2-x1), show->h /(double) (y2-y1));
-cairo_translate(ctx, dx - x1, dy - y1);
-if (!conf.lock_aspect) cairo_scale(ctx, scx, scy);
-/********************/
+	double scx = show->w / pdfw, scy = show->h / pdfh;
+	double dx = 0.0, dy = 0.0;
+	if (conf.lock_aspect) {
+		if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
+		else dy = (show->h - pdfh * (scy=scx)) / 2.0;
+	}
+	cairo_scale(ctx, scx * show->w /(double) (x2-x1),
+			scy * show->h /(double) (y2-y1));
+	cairo_translate(ctx, (dx - x1)/scx, (dy - y1)/scy);
 	poppler_page_render(page, ctx);
 	cairo_set_source_surface(show->target[0].ctx, buf, 0, 0);
 	int i;
