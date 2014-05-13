@@ -36,6 +36,8 @@ int xlib_init(Show *show) {
 			"_NET_WM_STATE", False);
 	NET_WM_STATE_FULLSCREEN = XInternAtom(dpy,
 			"_NET_WM_STATE_FULLSCREEN", False);
+NET_ACTIVE_WINDOW = XInternAtom(dpy,
+"_NET_ACTIVE_WINDOW", False);
 	/* create main window: */
 	wshow = XCreateSimpleWindow(dpy, root, show->x, show->y,
 			sw, sh, 0, 0, 0);
