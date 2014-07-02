@@ -86,7 +86,7 @@ Note.View.02.Offset:			1
 
 !! CONTROLS & BINDINGS:
 !! Each binding takes a single slider command.
-!!   For full documentation of commands, see `man 7 slider-commands`.
+!!   For full documentation of commands, see `man slider`.
 !!   Examples for many common commands are provided below.
 !
 !! Mouse Buttons:

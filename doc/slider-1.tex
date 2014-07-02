@@ -9,13 +9,31 @@
 \section{Synopsis}
 slider
 	\oOptArg{-F}{ config}
-	\oOptArg{-c}{ class name}
+	\oOptArg{-c}{ class}
 	\Arg{presentation}
 	\oArg{notes}
 
 \section{Description}
 
-\Prog{Slider} is ...
+\Prog{Slider} is a pdf slideshow presentation tool that can be used on a
+single monitor, or with an optional and configurable presenter mode for
+multiple outputs (e.g. laptop screen and projector).
+
+\section{Options}
+
+\begin{description}
+\item[\OptArg{-F}{ config}] Override the default configuration file
+\item[\OptArg{-c}{ class}] Specify the resource class under which
+resources will be obtained from the configuration.  This allows for a
+single configuration file to contain settings for different
+configurations.  An example use would be a single configuration file
+which contains a default set of bindings, and bindings for a "Remote"
+class which may select key bindings to work with a presention remote.
+\item[\Arg{presentation}] The primary pdf file to be used for the
+presentation (required).
+\item[\Arg{notes}] Secondary pdf file of presenter notes that will be
+shown on the local screen (for two outputs only).
+\end{description}
 
 \section{Configuration}
 
@@ -23,6 +41,62 @@ Configuration is implemented via an X resources data base file which is
 read on startup.  A well-commented example configuration file is
 distributed with \Prog{slider} and can be found at
 \File{/usr/share/slider/config}.
+Slider checks the following paths for user configuration and uses only
+the first file found:
+\File{$XDG_CONFIG_HOME/slider/config},
+\File{$HOME/.config/slider/config},
+\File{/usr/share/slider/config}.
+
+\section{Commands}
+
+Slider is controlled by the commands described below.  These commands
+can be triggered by key or button bindings as set in the configuration
+file, or the commands can be sent to the "Command" property of slider's
+main window with a tool like xprop.  The commands can be abbreviated to
+the first four characters (or three for dot).
+
+Several of these commands allow or require additional parameters which
+are provided as a white-space delineated list.  Several commands require
+a color definition which is provided as four numeric values between 0.00
+and 1.00 to define the red, green, and blue color components as well as
+an alpha (opacity) value.
+
+\begin{description}
+\item[next] Move to the next slide.
+\item[previous] Move to the previous slide.
+\item[quit] End the slide show.
+\item[redraw] Redraw the current slide.
+\item[mute] Mutes the display.  And optional parameter can specify
+"black" (default) or "white" muting, or provide a full RGBA color
+specifier. (Not implemented yet).
+\item[sorter] Display the "slide sorter" view.
+\item[pen] Draw on the current slide with a selected color and line
+width.  Requires five numeric parameters separated by whitespace.  The
+first four define the color.  The fifth parameter defines the line width.
+\item[dot] Set a 'dot' cursor for the mouse.  This can provide the same
+effect as a laser pointer, but with much better control.  As 'pen' this
+requires five numeric parameters.  The first four define the color, the
+fifth defines a radius.
+\item[custom] Set a custom cursor like 'dot' but rather than a circular
+dot, specify a text string to use as a cursor.  This requires five
+numeric and one string parameter.  The first four specify the color as
+in 'dot' and 'pen', the fifth specifies a font size, and the sixth
+provides the text string.
+\item[action] Activate action/media links.  With no additional
+parameters, this command will show a standard mouse cursor and wait for
+a click event to select an action/media link.  A single integer
+parameter can be provided to specify a link (the ordinal number of that
+link on the current page).  A link type can also be specified to
+activate the first link of the specified type (not yet implemented).
+\item[fullscreen] Toggle the fullscreen state of the main presentation
+window.
+\item[zoom] Zoom in on a portion of the window.  If numeric color
+parameters are specified, they will define how a bounding box is to be
+drawn with the mouse - slider will then wait for a region to be selected
+with the mouse for zooming into.  Zoom can also accept "quad N"
+parameters upon which it will zoom into the specified quadrant of the
+current page.
+\end{description}
 
 \section{Author}
 Copyright \copyright 2012-2014 Jesse McClure \\
