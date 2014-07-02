@@ -121,13 +121,31 @@ int xlib_free() {
 	return 0;
 }
 
+#define MAX_LINE 256
 int xlib_main_loop() {
 	XFlush(dpy);
-	XEvent ev;
 	draw(None);
-	while (running && !XNextEvent(dpy, &ev))
-		if (ev.type < LASTEvent && handler[ev.type])
+
+	char line[MAX_LINE], *c;
+	fd_set fds;
+	int xfd = ConnectionNumber(dpy);
+	int sfd = fileno(stdin);
+	XEvent ev;
+	while (running) {
+		FD_ZERO(&fds);
+		FD_SET(xfd, &fds);
+		FD_SET(sfd, &fds);
+		select(xfd+1, &fds, 0, 0, NULL);
+		if (FD_ISSET(sfd, &fds)) {
+			fgets(line, MAX_LINE, stdin);
+			command(line);
+		}
+		if (FD_ISSET(xfd, &fds)) while (XPending(dpy)) {
+			XNextEvent(dpy, &ev);
+			if (ev.type < LASTEvent && handler[ev.type])
 			handler[ev.type](&ev);
+		}
+	}
 }
 
 void buttonpress(XEvent *ev) {

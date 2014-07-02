@@ -1,6 +1,5 @@
 
 PROG     =  slider
-ALT		=  remote
 VER      =  3.0a
 CC       ?= gcc
 DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER}
