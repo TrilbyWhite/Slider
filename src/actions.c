@@ -131,14 +131,12 @@ static void toggle_fullscreen() {
 	XMoveResizeWindow(dpy, wshow, show->x + (fs ? 0 : show->w / 4),
 			show->y + (fs ? 0 : show->h / 4), (fs ? show->w : show->w / 2),
 			(fs ? show->h : show->h / 2) );
-/* FOR GNOME 3 / MUTTER */
 	ev.xclient.message_type = NET_ACTIVE_WINDOW;
 	ev.xclient.data.l[0] = 1;
 	ev.xclient.data.l[1] = CurrentTime;
 	ev.xclient.data.l[2] = wshow;
 	XSendEvent(dpy, root, False, SubstructureRedirectMask |
 			SubstructureNotifyMask, &ev);
-/*   */
 	XFlush(dpy);
 }
 

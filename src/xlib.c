@@ -36,8 +36,8 @@ int xlib_init(Show *show) {
 			"_NET_WM_STATE", False);
 	NET_WM_STATE_FULLSCREEN = XInternAtom(dpy,
 			"_NET_WM_STATE_FULLSCREEN", False);
-NET_ACTIVE_WINDOW = XInternAtom(dpy,
-"_NET_ACTIVE_WINDOW", False);
+	NET_ACTIVE_WINDOW = XInternAtom(dpy,
+			"_NET_ACTIVE_WINDOW", False);
 	/* create main window: */
 	wshow = XCreateSimpleWindow(dpy, root, show->x, show->y,
 			sw, sh, 0, 0, 0);
@@ -51,16 +51,17 @@ NET_ACTIVE_WINDOW = XInternAtom(dpy,
 	wa.event_mask = ExposureMask | KeyPressMask | PropertyChangeMask |
 			ButtonPressMask | StructureNotifyMask;
 	XChangeWindowAttributes(dpy,wshow,CWEventMask,&wa);
-	XChangeProperty(dpy, wshow, NET_WM_STATE, XA_ATOM, 32,
-		PropModeReplace, (unsigned char *)&NET_WM_STATE_FULLSCREEN, 1);
 	XSizeHints *size = XAllocSizeHints();
-	size->base_width = size->width = sw;
-	size->base_height = size->height = sh;
+	size->base_width = size->width = show->w / 2;
+	size->base_height = size->height = show->h / 2;
 	size->flags = USSize | PBaseSize;
 	XSetWMNormalHints(dpy, wshow, size);
 	XMapWindow(dpy, wshow);
 	XFlush(dpy);
 	XFree(size);
+	XMoveResizeWindow(dpy, wshow, show->x, show->y, show->w, show->h);
+	XChangeProperty(dpy, wshow, NET_WM_STATE, XA_ATOM, 32,
+		PropModeReplace, (unsigned char *)&NET_WM_STATE_FULLSCREEN, 1);
 	/* create targets */
 	if (nmon < 2) show->ntargets = 1;
 	else show->ntargets = conf.nviews + 1;
