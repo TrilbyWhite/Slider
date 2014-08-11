@@ -204,7 +204,7 @@ void draw(Window win) {
 		if (n < 0) n = 0;
 		else if (n >= trg->show->nslides) n = trg->show->nslides - 1;
 		cairo_set_source_surface(trg->ctx, trg->show->slide[n], 0, 0);
-		if (trg->win == wshow) for (j = conf.fade; j; j--) {
+		if (trg->win == wshow && win != wshow) for (j = conf.fade; j; j--) {
 			cairo_paint_with_alpha(trg->ctx, 1/(float)j);
 			XFlush(dpy);
 			usleep(5000);

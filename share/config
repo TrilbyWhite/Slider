@@ -82,6 +82,7 @@ Note.View.02.Offset:			1
 *.Media.Movie:			mplayer -noborder -nokeepaspect -geometry %Wx%H+%X+%Y %s >/dev/null 2>&1
 !*.Media.Movie:		mplayer -fs %s > /dev/null 2>&1
 *.Media.Sound:			mplayer %s > /dev/null 2>&1 &
+*.Media.Widget:		/home/jmcclure/code/slider/interro %W %H %X %Y %s
 
 
 !! CONTROLS & BINDINGS:

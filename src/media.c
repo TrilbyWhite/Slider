@@ -8,21 +8,24 @@
 #include "xlib-actions.h"
 
 #define MAX_COMMAND	256
+#define SLIDER_FORM_BASE		POPPLER_ANNOT_3D + 1
 
 typedef struct MediaLink {
 	PopplerRectangle pdfrect;
 	PopplerRectangle rect;
 	PopplerAnnotType type;
 	PopplerAnnot *link;
+	PopplerFormField *form;
 } MediaLink;
 
 static void media_link(MediaLink *);
 static void media_sound(MediaLink *);
 static void media_movie(MediaLink *);
+static void media_widget(MediaLink *);
 static MediaLink *mouse_select();
 static void spawn(PopplerAnnotType, const char *, PopplerRectangle *);
 
-static PopplerDocument *pdf;
+static PopplerDocument *pdf = NULL;
 static PopplerPage *page;
 static double dx, dy, scx, scy;
 static double pdfw, pdfh;
@@ -60,6 +63,7 @@ static void (*media_handler[POPPLER_ANNOT_3D]) (MediaLink *) = {
 	[POPPLER_ANNOT_LINK]					= media_link,
 	[POPPLER_ANNOT_SOUND]				= media_sound,
 	[POPPLER_ANNOT_MOVIE]				= media_movie,
+	[POPPLER_ANNOT_WIDGET]				= media_widget,
 };
 
 
@@ -77,7 +81,7 @@ static void (*media_handler[POPPLER_ANNOT_3D]) (MediaLink *) = {
 
 int action(const char *cmd) {
 	/* read annots */
-	if (!(pdf=poppler_document_new_from_file(show->uri, NULL, NULL)))
+	if (!pdf && !(pdf=poppler_document_new_from_file(show->uri, NULL, NULL)))
 		return;
 	page = poppler_document_get_page(pdf, show->cur);
 	poppler_page_get_size(page, &pdfw, &pdfh);
@@ -85,7 +89,7 @@ int action(const char *cmd) {
 	GList *annots, *list;
 	annots = poppler_page_get_annot_mapping(page);
 	scx = show->w / pdfw, scy = show->h / pdfh;
-	dx = dy = 0.0;
+	dx = dy = 0;
 	if (conf.lock_aspect) {
 		if (scx > scy) dx = (show->w - pdfw * (scx=scy)) / 2.0;
 		else dy = (show->h - pdfh * (scy=scx)) / 2.0;
@@ -107,6 +111,21 @@ int action(const char *cmd) {
 		ml[nml].rect.y1 = scy * ml[nml].rect.y1 + dy;
 		ml[nml].rect.y2 = scy * ml[nml].rect.y2 + dy;
 	}
+	/* for form filling */
+	GList *forms;
+	forms = poppler_page_get_form_field_mapping(page);
+	PopplerFormField *field = NULL;
+	PopplerRectangle rect;
+	int i;
+	for (list = forms; list; list = list->next) {
+		field = ((PopplerFormFieldMapping *)list->data)->field;
+		rect = ((PopplerFormFieldMapping *)list->data)->area;
+		for (i = 0; i < nml; i++) {
+			if ( (ml[i].pdfrect.x1 == rect.x1) && (ml[i].pdfrect.x2 == rect.x2) &&
+					(ml[i].pdfrect.y1 == rect.y1) && (ml[i].pdfrect.y2 == rect.y2) )
+				ml[i].form = field;
+		}
+	}
 	/* determine selection method, and select annots */
 	MediaLink *sel = NULL;
 	int nsel;
@@ -119,13 +138,15 @@ int action(const char *cmd) {
 	}
 	XDefineCursor(dpy, wshow, invisible_cursor);
 	if (sel) {
+		sel->rect.x1 += show->x; sel->rect.x2 += show->x;
+		sel->rect.y1 += show->y; sel->rect.y2 += show->y;
 		if (media_handler[sel->type]) media_handler[sel->type](sel);
-		else fprintf(stderr,"No media handler for type \"%s\"\n",
-				atypes[sel->type]);
+		else fprintf(stderr,"No media handler for type \"%s\"\n", atypes[sel->type]);
 	}
 	/* clean up and exit */
 	if (ml) free(ml);
 	ml = NULL;
+	poppler_page_free_form_field_mapping(forms);
 	poppler_page_free_annot_mapping(annots);
 	draw(None);
 }
@@ -201,6 +222,81 @@ void media_movie(MediaLink *m) {
 	PopplerMovie *mov;
 	mov = poppler_annot_movie_get_movie((PopplerAnnotMovie *) m->link);
 	spawn(m->type, poppler_movie_get_filename(mov), &m->rect);
+}
+
+#define FIELD_FILE_NAME		"/tmp/slider.field"
+void media_widget(MediaLink *m) {
+	int t = poppler_form_field_get_field_type(m->form);
+	XIM xim = XOpenIM(dpy,NULL,NULL,NULL);
+	XIC xic = XCreateIC(xim,XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+			XNClientWindow, wshow, XNFocusWindow, wshow, NULL);
+	cairo_t *ctx = cairo_create(show->slide[show->cur]);
+	cairo_translate(ctx,dx,dy);
+	cairo_scale(ctx, scx, scy);
+	if (t == POPPLER_FORM_FIELD_TEXT) {
+		XEvent ev;
+		XKeyEvent *e;
+		KeySym sym;
+		int len;
+		char key[32], *str;
+		Status stat;
+		gchar *txt;
+		txt = poppler_form_field_text_get_text(m->form);
+		if (txt) { str = malloc(strlen(txt) + 32); strcpy(str,txt); }
+		else { str = malloc(32); str[0] = '\0'; }
+		g_free(txt);
+		strcat(str,"|");
+		poppler_form_field_text_set_text(m->form,str);
+		poppler_page_render(page,ctx);
+		draw(wshow);
+		while (!XMaskEvent(dpy, KeyPressMask, &ev)) {
+			txt = poppler_form_field_text_get_text(m->form);
+			if (txt) { str = malloc(strlen(txt) + 32); strcpy(str,txt); }
+			else { str = malloc(32); str[0] = '\0'; }
+			g_free(txt);
+			str[strlen(str) - 1] = '\0';
+			e = &ev.xkey; sym = NoSymbol;
+			len = XmbLookupString(xic, e, key, sizeof(key), &sym, &stat);
+			if (stat == XBufferOverflow) continue;
+			else if (sym == XK_Return) strcat(str,"\n");
+			if (sym == XK_Escape) break;
+			if (sym == XK_BackSpace) str[strlen(str) - 1] = '\0';
+			else if (!iscntrl(*key)) strcat(str, key);
+			strcat(str,"|");
+			poppler_form_field_text_set_text(m->form,str);
+			poppler_page_render(page,ctx);
+			draw(wshow);
+			free(str);
+		}
+		txt = poppler_form_field_text_get_text(m->form);
+		txt[strlen(txt) - 1] = '\0';
+		poppler_form_field_text_set_text(m->form,txt);
+	}
+	else if (t == POPPLER_FORM_FIELD_BUTTON) {
+		gboolean b = poppler_form_field_button_get_state(m->form);
+		if (b) fprintf(stderr,"true\n");
+		else fprintf(stderr,"false\n");
+		switch (poppler_form_field_button_get_button_type(m->form)) {
+			case POPPLER_FORM_BUTTON_PUSH: break;
+			case POPPLER_FORM_BUTTON_CHECK: break;
+			case POPPLER_FORM_BUTTON_RADIO: break;
+		}
+		poppler_form_field_button_set_state(m->form, True);
+		b = poppler_form_field_button_get_state(m->form);
+		if (b) fprintf(stderr,"true\n");
+		else fprintf(stderr,"false\n");
+	}
+	else if (t == POPPLER_FORM_FIELD_CHOICE) {
+	}
+	else if (t == POPPLER_FORM_FIELD_SIGNATURE) {
+	}
+	else {
+		// unknown type
+	}
+	poppler_page_render(page,ctx);
+	draw(wshow);
+	cairo_destroy(ctx);
+	XDestroyIC(xic);
 }
 
 MediaLink *mouse_select() {
