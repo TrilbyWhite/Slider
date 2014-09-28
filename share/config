@@ -92,10 +92,10 @@ Note.View.02.Offset:			1
 !
 !! Mouse Buttons:
 !! Slider will recognize as many buttons as are provided by the X server
-!! Generally, X will report events 12 mouse buttons for the following:
-!!   1 - left button, 2 - left button, 3 - right button
+!! Generally, X will report events for 12 mouse buttons as follows:
+!!   1 - left button, 2 - middle button, 3 - right button
 !!   4 - scroll down, 5 - scroll up, 6 - scroll left, 7 - scroll right
-!!   8-12 have no typical meaning and are various "extra" buttons
+!!   8-12 have no generic meaning and are various "extra" buttons
 *.Button.01:			next
 *.Button.02:			sorter
 *.Button.03:			prev
@@ -104,7 +104,7 @@ Note.View.02.Offset:			1
 
 !! Keyboard:
 !! Define as many key bindings as you like, numbering from 00-99.
-!! Each Bind requires the 'key' element to define the modifier-free
+!! Each Bind requires the 'Key' element to define the modifier-free
 !!   key string that is to be bound.  Each Bind can then have any of the
 !!   following modifier entries for that key: None, Control, Alt, Shift.
 !!   Each modifier entry is bound to a slider command.

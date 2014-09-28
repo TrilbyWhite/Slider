@@ -1,0 +1,6 @@
+
+- post-installation message about config file
+- startup message about config if falling back to default
+- much needed man page
+- history functions (back after a jump link)
+- redraw after exiting 'dot' mode
