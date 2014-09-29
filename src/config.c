@@ -27,8 +27,15 @@ int config_init(const char *mode, const char *db) {
 	else if ( (!chdir(getenv("XDG_CONFIG_HOME")) && !chdir("slider")) ||
 			(!chdir(getenv("HOME")) && !chdir(".config/slider")) )
 		xrdb = XrmGetFileDatabase("config");
-	if (!xrdb) xrdb = XrmGetFileDatabase("/usr/share/slider/config");
-	if (!xrdb) die("cannot find a configuration resource database");
+	if (!xrdb) {
+		fprintf(stderr,
+"WARNING: No configuration file found.  Falling back on defaults.\n"
+"Copy /usr/share/slider/config to either of the following to customize:\n"
+"  $XDG_CONFIG_HOME/slider/config\n"
+"  $HOME/.config/slider/config\n");
+		xrdb = XrmGetFileDatabase("/usr/share/slider/config");
+		if (!xrdb) die("cannot find a default configuration resource database");
+	}
 	char *_base = "Slider", *class = "Slider.Mode", *type;
 	const char *base;
 	XrmValue val;
