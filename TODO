@@ -1,5 +1,3 @@
 
-- post-installation message about config file
 - much needed man page
 - history functions (back after a jump link)
-- redraw after exiting 'dot' mode
