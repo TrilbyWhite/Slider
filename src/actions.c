@@ -39,6 +39,7 @@ static void custom(cairo_t *ctx, cairo_surface_t *buf,
 			cairo_paint(show->target[0].ctx);
 		}
 	}
+	draw(wshow);
 }
 
 static void dot(cairo_t *ctx, cairo_surface_t *buf,
@@ -65,6 +66,7 @@ static void dot(cairo_t *ctx, cairo_surface_t *buf,
 			cairo_paint(show->target[0].ctx);
 		}
 	}
+	draw(wshow);
 }
 
 static void move(const char *cmd) {
