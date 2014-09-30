@@ -125,6 +125,7 @@ int xlib_free() {
 #define MAX_LINE 256
 int xlib_main_loop() {
 	XFlush(dpy);
+	command("history push");
 	draw(None);
 
 	char line[MAX_LINE], *c;
@@ -147,6 +148,7 @@ int xlib_main_loop() {
 			handler[ev.type](&ev);
 		}
 	}
+	command("history clear");
 }
 
 void buttonpress(XEvent *ev) {

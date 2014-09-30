@@ -183,6 +183,7 @@ void media_link(MediaLink *m) {
 		else {
 			show->cur = dest->page_num - 1;
 		}
+command("history push");
 	}
 	else if (act->type == POPPLER_ACTION_NAMED) {
 		PopplerActionNamed *n = &act->named;
@@ -191,6 +192,7 @@ void media_link(MediaLink *m) {
 			show->cur = d->page_num - 1;
 			poppler_dest_free(d);
 		}
+command("history push");
 	}
 	else if (act->type == POPPLER_ACTION_LAUNCH) {
 		//action_launch(act, m);

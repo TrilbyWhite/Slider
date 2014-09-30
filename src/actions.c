@@ -7,6 +7,43 @@
 #include "slider.h"
 #include "xlib-actions.h"
 
+static void history(const char *arg) {
+	static int *hist = NULL;
+	static int nhist = 0;
+	static int pos = -1;
+	char *cmd = strchr(arg,' ');
+	if (!(cmd && *(++cmd))) return;
+	int page = 0;
+	switch (*cmd) {
+		case 'b': /* back */
+			if (hist && pos) page = hist[--pos];
+			else return;
+			break;
+		case 'f': /* forward */
+			if (hist && pos < nhist - 1) page = hist[++pos];
+			else return;
+			break;
+		case 'e': /* end */
+			page = nhist - 1;
+		case 's': /* start */
+			break;
+		case 'c': /* clear */
+			free(hist);
+			hist = NULL;
+			nhist = 0;
+			pos = -1;
+			return;
+			break;
+		case 'p': default: /* push to history */
+			hist = realloc(hist, (nhist=(++pos)+1) * sizeof(int));
+			hist[pos] = show->cur;
+			return;
+			break;
+	}
+	show->cur = page;
+	draw(None);
+}
+
 static void grab_mouse() {
 	XGrabPointer(dpy, wshow, True, PointerMotionMask | ButtonPressMask |
 			ButtonReleaseMask, GrabModeAsync, GrabModeAsync,
@@ -70,13 +107,14 @@ static void dot(cairo_t *ctx, cairo_surface_t *buf,
 }
 
 static void move(const char *cmd) {
-	if (cmd[0] == 'p') show->cur --;
-	else if (cmd[0] == 'n') show->cur ++;
+	if (cmd[0] == 'p') --show->cur;
+	else if (cmd[0] == 'n') ++show->cur;
 	if (show->cur < 0) show->cur = 0;
 	else if (show->cur >= show->nslides) {
 		if (conf.loop) show->cur = 0;
 		else show->cur = show->nslides - 1;
 	}
+	command("history push");
 	draw(None);
 }
 
@@ -168,7 +206,7 @@ static void zoom_rect(int x1, int y1, int x2, int y2) {
 	poppler_page_render(page, ctx);
 	cairo_set_source_surface(show->target[0].ctx, buf, 0, 0);
 	int i;
-	for (i = conf.fade; i; i--) {
+	for (i = conf.fade; i; --i) {
 		cairo_paint_with_alpha(show->target[0].ctx, 1/(float)i);
 		XFlush(dpy);
 		usleep(5000);
@@ -276,7 +314,7 @@ static void sorter(const char *cmd) {
 			pn = nn;
 			cairo_set_source_rgba(ctx, 0, 0, 0, 1);
 			cairo_paint(ctx);
-			for (j = 0; j < grid; j++) for (i = 0; i < grid; i++) {
+			for (j = 0; j < grid; ++j) for (i = 0; i < grid; ++i) {
 				if ( (n=j * grid + i) >= show->nslides ) break;
 				cairo_set_source_surface(ctx, show->slide[n],
 					(show->w * i)/MARGIN, (show->h * j)/MARGIN);
@@ -289,10 +327,10 @@ static void sorter(const char *cmd) {
 		XMaskEvent(dpy,PointerMotionMask|ButtonPressMask|KeyPressMask,&ev);
 		if (ev.type == KeyPress) {
 			switch (XkbKeycodeToKeysym(dpy, ev.xkey.keycode, 0, 0)) {
-				case 'h': case XK_Right: nn++; break;
+				case 'h': case XK_Right: ++nn; break;
 				case 'j': case XK_Down: nn += grid; break;
 				case 'k': case XK_Up: nn -= grid; break;
-				case 'l': case XK_Left: nn--; break;
+				case 'l': case XK_Left: --nn; break;
 				case XK_space: case XK_Return: goto full_break_change; break;
 				default: goto full_break_no_change;
 			}
@@ -311,6 +349,7 @@ static void sorter(const char *cmd) {
 	}
 	full_break_change:
 	show->cur = nn;
+	command("history push");
 	full_break_no_change:
 	XUngrabKeyboard(dpy, CurrentTime);
 	XUngrabPointer(dpy, CurrentTime);
@@ -326,6 +365,7 @@ int command(const char *cmd) {
 	//else if (strncasecmp(cmd,"act",3)==0) action_link(cmd);
 	else if (strncasecmp(cmd,"act",3)==0) action(cmd);
 	else if (strncasecmp(cmd,"cust",4)==0) pens(cmd);
+	else if (strncasecmp(cmd,"hist",4)==0) history(cmd);
 	else if (strncasecmp(cmd,"sort",4)==0) sorter(cmd);
 	else if (strncasecmp(cmd,"prev",4)==0) move(cmd);
 	else if (strncasecmp(cmd,"next",4)==0) move(cmd);
@@ -336,11 +376,11 @@ int command(const char *cmd) {
 	else if (strncasecmp(cmd,"zoom",4)==0) {
 		char *c;
 		if ( (c=strchr(cmd, ' ')) ) {
-			while (c && *c == ' ') c++;
+			while (c && *c == ' ') ++c;
 			if (*c == '\0') return 1;
 			if (*c == 'q') {
 				if (!(c=strchr(c, ' '))) return 1;
-				while (c && *c == ' ') c++;
+				while (c && *c == ' ') ++c;
 				if (*c == '\0') return 1;
 				else if (*c == '1') zoom_rect(0, 0, show->w/2, show->h/2);
 				else if (*c == '2') zoom_rect(show->w/2, 0, show->w, show->h/2);
