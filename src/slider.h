@@ -70,7 +70,7 @@ typedef struct Config {
 	int nviews, nkeys, font_size, fade, mon;
 	const char *button[NBUTTON];
 	const char *media_link[POPPLER_ANNOT_LAST];
-	Bool loop, interleave, lock_aspect, launch;
+	Bool history, interleave, lock_aspect, launch, loop;
 } Config;
 
 Show *show;

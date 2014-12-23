@@ -7,14 +7,15 @@
 #include "slider.h"
 #include "xlib-actions.h"
 
-static void history(const char *arg) {
+static void history(const char *cmd) {
+	if (!conf.history) return;
 	static int *hist = NULL;
 	static int nhist = 0;
 	static int pos = -1;
-	char *cmd = strchr(arg,' ');
-	if (!(cmd && *(++cmd))) return;
+	char *arg = strchr(cmd,' ');
+	if (!(arg && *(++arg))) return;
 	int page = 0;
-	switch (*cmd) {
+	switch (*arg) {
 		case 'b': /* back */
 			if (hist && pos) page = hist[--pos];
 			else return;
@@ -119,7 +120,16 @@ static void move(const char *cmd) {
 }
 
 static void mute(const char *cmd) {
-	// TODO
+	char dir, *arg = strchr(cmd, ' ');
+	if (!(arg && *(++arg))) return;
+	if (arg[0] == 'w') cairo_set_source_rgb(show->target[0].ctx, 1, 1, 1);
+	else cairo_set_source_rgb(show->target[0].ctx, 0, 0, 0);
+	int i;
+	for (i = conf.fade; i; --i) {
+		cairo_paint_with_alpha(show->target[0].ctx, 1/(float)i);
+		XFlush(dpy);
+		usleep(5000);
+	}
 }
 
 static void pen(cairo_t *ctx, cairo_surface_t *buf,

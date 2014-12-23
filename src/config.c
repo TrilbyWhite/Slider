@@ -74,7 +74,7 @@ int config_general(XrmDatabase xrdb, const char *base) {
 	char class[256], *type;
 	XrmValue val;
 	conf.mon = -1;
-	conf.launch = conf.interleave = conf.loop = conf.lock_aspect = False;
+	conf.launch = conf.interleave = conf.loop = conf.lock_aspect = conf.history = False;
 	sprintf(class,"%s.Font",base);
 	if (XrmGetResource(xrdb, class, class, &type, &val)) {
 		if (FT_New_Face(ftlib, val.addr, 0, &face) |
@@ -92,6 +92,9 @@ int config_general(XrmDatabase xrdb, const char *base) {
 	sprintf(class,"%s.Loop",base);
 	if (XrmGetResource(xrdb, class, class, &type, &val))
 		if (*val.addr == 'T' || *val.addr == 't') conf.loop = True;
+	sprintf(class,"%s.History",base);
+	if (XrmGetResource(xrdb, class, class, &type, &val))
+		if (*val.addr == 'T' || *val.addr == 't') conf.history = True;
 	sprintf(class,"%s.LockAspect",base);
 	if (XrmGetResource(xrdb, class, class, &type, &val))
 		if (*val.addr == 'T' || *val.addr == 't') conf.lock_aspect = True;

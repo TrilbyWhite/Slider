@@ -336,10 +336,16 @@ void spawn(PopplerAnnotType type, const char *s, PopplerRectangle *r) {
 			switch (fmt[i+1]) {
 				case '%': strcat(cmd, "%"); break;
 				case 's': strcat(cmd, s); break;
-				case 'x': case 'X':
+				case 'x':
+					sprintf(num, "%d", (int) (r->x1 + 0.5) - show->x);
+					strcat(cmd, num); break;
+				case 'X':
 					sprintf(num, "%d", (int) (r->x1 + 0.5));
 					strcat(cmd, num); break;
-				case 'y': case 'Y':
+				case 'y':
+					sprintf(num, "%d", (int) (r->y1 + 0.5) - show->y);
+					strcat(cmd, num); break;
+				case 'Y':
 					sprintf(num, "%d", (int) (r->y1 + 0.5));
 					strcat(cmd, num); break;
 				case 'w': case 'W':

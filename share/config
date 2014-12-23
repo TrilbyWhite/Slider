@@ -25,6 +25,9 @@
 *.Loop:					false
 *.Interleave:			false
 *.LockAspect:			true
+!! History is still experimental, see archlinux forum thread or wait for
+!!   documentation.
+!*.History:				true
 
 !! VIEWS:
 !! Views only apply when a second output is connected.  One output
@@ -74,22 +77,22 @@ Note.View.02.Offset:			1
 !! Media handlers can included any of the following specifiers:
 !!   %s        target file or url
 !!   %x | %X   x coordinate of the bounding box in the pdf
+!!               lower case is relative to slideshow window, upper is absolute
 !!   %y | %Y   y coordinate of the bounding box in the pdf
+!!               lower case is relative to slideshow window, upper is absolute
 !!   %w | %W   width of the bounding box in the pdf
 !!   %h | %H   height of the bounding box in the pdf
 !!   %%        produces a single percent sign
 *.Media.Link:			firefox %s > /dev/null 2>&1
-*.Media.Movie:			mplayer -noborder -nokeepaspect -geometry %Wx%H+%X+%Y %s >/dev/null 2>&1
-!*.Media.Movie:		mplayer -fs %s > /dev/null 2>&1
-*.Media.Sound:			mplayer %s > /dev/null 2>&1 &
-*.Media.Widget:		/home/jmcclure/code/slider/interro %W %H %X %Y %s
-
+*.Media.Movie:			mpv --noborder -ontop --screen 1 --geometry %Wx%H+%x+%x %s >/dev/null 2>&1
+*.Media.Sound:			mpv %s > /dev/null 2>&1 &
+!*.Media.Widget:		Coming Soon
 
 !! CONTROLS & BINDINGS:
 !! Each binding takes a single slider command.
 !!   For full documentation of commands, see `man slider`.
 !!   Examples for many common commands are provided below.
-!
+!!
 !! Mouse Buttons:
 !! Slider will recognize as many buttons as are provided by the X server
 !! Generally, X will report events for 12 mouse buttons as follows:
@@ -116,7 +119,7 @@ Note.View.02.Offset:			1
 *.Bind.00.Control:	quit
 *.Bind.01.Key:			Return
 *.Bind.01.None:		redraw
-! slide forward/back
+!! slide forward/back
 *.Bind.10.Key:			Up
 *.Bind.10.None:		prev
 *.Bind.11.Key:			Down
@@ -127,7 +130,13 @@ Note.View.02.Offset:			1
 *.Bind.13.None:		next
 *.Bind.14.Key:			space
 *.Bind.14.None:		next
-! sorter + muting
+!*.Bind.15.Key:			j
+!*.Bind.15.None:		history forward
+!*.Bind.15.Shift:		history end
+!*.Bind.16.Key:			k
+!*.Bind.16.None:		history back
+!*.Bind.16.Shift:		history start
+!! sorter + muting
 *.Bind.20.Key:			Tab
 *.Bind.20.None:		sorter
 *.Bind.20.Control:	fullscreen
