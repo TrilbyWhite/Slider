@@ -372,7 +372,6 @@ void spawn(PopplerAnnotType type, const char *s, PopplerRectangle *r) {
 		arg[n] = strdup(tok);
 	}
 */
-fprintf(stderr,"%s\n",cmd);
 	system(cmd);
 }
 
