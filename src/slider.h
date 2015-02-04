@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <locale.h>
 #include <math.h>
@@ -18,71 +19,87 @@
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
 #include <X11/cursorfont.h>
-#include <X11/Xresource.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
-#include <X11/extensions/Xinerama.h>
-#include <ft2build.h>
-#include FT_FREETYPE_H
 #include <cairo.h>
 #include <cairo-xlib.h>
-#include <cairo-ft.h>
 #include <poppler.h>
 
-#define NBUTTON	12
-#define POPPLER_ANNOT_LAST	POPPLER_ANNOT_3D + 1
-
-typedef struct Target Target;
-typedef struct Show Show;
-struct Target {
-	Show *show;
-	cairo_t *ctx;
-	Window win;
-	int w, h, offset;
+typedef unsigned short int bool;
+enum { false=0, true=1, toggle=2, query=3 };
+enum {
+	noteX, noteY, noteFile,
+	presX, presY, presW, presH, presFile,
+	self,
+	videoOut,
+	LASTVar,
 };
-struct Show {
-	cairo_surface_t **slide;
-	int nslides, x, y, w, h, cur, ntargets;
-	char *uri;
-	Show *notes;
-	Target *target;
+enum {
+	cmdFullscreen,
+	cmdNext,
+	cmdPan,
+	cmdPrev,
+	cmdRedraw,
+	cmdQuit,
+	cmdZoom,
+	LASTCommand,
 };
+typedef union {
+	int d;
+	float f;
+	const char *s;
+} config_union;
 
-typedef struct Key {
-	unsigned short int mod;
-	KeySym keysym;
-	const char *arg;
-} Key;
+#define set(x,y)		config_set(x,(config_union)y)
 
-typedef struct View {
-	int x, y, w, h, show, offset;
-} View;
 
-typedef union Theme {
-	struct { double x, y, w, h, r; };
-	struct { double R, G, B, A, e; };
-} Theme;
+Display *dpy;
+int scr, cur;
+Window root, topWin, presWin;
+bool running;
 
-typedef struct Config {
-	cairo_font_face_t *font;
-	View *view;
-	Key *key;
-	int nviews, nkeys, font_size, fade, mon;
-	const char *button[NBUTTON];
-	const char *media_link[POPPLER_ANNOT_LAST];
-	Bool history, interleave, lock_aspect, launch, loop;
-} Config;
+/* config.c */
+int config_init();
+int config_free();
+void config_set(int, config_union);
+int get_d(int);
+float get_f(int);
+const char *get_s(int);
 
-Show *show;
-FT_Library ftlib;
-Config conf;
+/* cursor.c */
+int cursor_draw(int, int);
+int cursor_init(Window);
+int cursor_free();
+int cursor_set_size(int, int);
+int cursor_set_size_relative(int, int);
+bool cursor_visible(bool);
+bool cursor_suspend(bool);
 
-extern int config_init(const char *, const char *);
-extern void die(const char *, ...);
-extern int xlib_init(Show *);
-extern int xlib_free();
-extern int xlib_main_loop();
-extern Show *render_init(const char *, const char *);
-extern int render_free(Show *);
+/* randr.c */
+#ifdef module_randr
+int randr_init();
+int randr_free();
+#endif /* module randr */
+
+/* render.c */
+int render_init();
+int render_free();
+int render_page(int, Window, bool);
+int render_set_fader(Window, int);
+Window *render_create_sorter(Window);
+
+/* sorter.c */
+int sorter_draw(int);
+int sorter_init(Window);
+bool sorter_event(XEvent *);
+int sorter_free();
+int sorter_set_offset(int);
+int sorter_set_offset_relative(int);
+bool sorter_visible(bool);
+
+/* xlib.c */
+int xlib_init();
+int xlib_free(int);
+int xlib_mainloop();
 
 #endif /* __SLIDER_H__ */

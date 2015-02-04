@@ -1,39 +1,28 @@
 
 PROG     =  slider
-VER      =  3.0a
+VER      =  4.0
+MODULES  ?= command config cursor randr render slider sorter xlib
+MODDEFS  =  $(foreach mod, ${MODULES}, -Dmodule_${mod})
 CC       ?= gcc
-DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER}
-DEPS     = x11 cairo freetype2 poppler-glib xinerama
+DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER} ${MODDEFS}
+DEPS     =  x11 cairo poppler-glib xrandr
 CFLAGS   += $(shell pkg-config --cflags ${DEPS}) ${DEFS}
 LDLIBS   += $(shell pkg-config --libs ${DEPS}) -lm
 PREFIX   ?= /usr
-MODULES  =  actions config media render slider xlib
-HEADERS  =  slider.h xlib-actions.h
-MANPAGES =  slider.1
-VPATH    =  src:doc
+HEADERS  =  slider.h
+VPATH    =  src
 
 ${PROG}: ${MODULES:%=%.o}
 
 %.o: %.c ${HEADERS}
-
-install: ${PROG}
-	@install -Dm755 ${PROG} ${DESTDIR}${PREFIX}/bin/${PROG}
-	@install -Dm644 share/config ${DESTDIR}${PREFIX}/share/${PROG}/config
-	#@install -Dm644 ... manual page(s)
-
-${MANPAGES}: slider.%: slider-%.tex
-	@latex2man $< doc/$@
-
-man: ${MANPAGES}
 
 clean:
 	@rm -f ${PROG}-${VER}.tar.gz ${MODULES:%=%.o}
 
 distclean: clean
 	@rm -f ${PROG}
-	@rm -f ${PROG}-${ALT}
 
-dist: distclean
+tarball: distclean
 	@tar -czf ${PROG}-${VER}.tar.gz *
 
-.PHONY: clean dist distclean man
+.PHONY: clean distclean tarball

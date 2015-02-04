@@ -1,191 +1,138 @@
 /*****************************************************\
 * CONFIG.C
-* By: Jesse McClure (c) 2012-2014
+* By: Jesse McClure (c) 2015
 * See slider.c or COPYING for license information
 \*****************************************************/
 
 #include "slider.h"
 
-extern const char *atypes[];
+static int _read_config_file(const char *);
 
-static int config_buttons(XrmDatabase, const char *);
-static int config_binds(XrmDatabase, const char *);
-static int config_media(XrmDatabase, const char *);
-static int config_general(XrmDatabase, const char *);
-static int config_views(XrmDatabase, const char *);
+static int *_d = NULL;
+static float *_f = NULL;
+static char **_s = NULL;
+static int _nd = 0, _nf = 0, _ns = 0;
+static int _var[LASTVar];
+static char _type[LASTVar] = {
+	[noteX]       = 'd',
+	[noteY]       = 'd',
+	[noteFile]    = 's',
+	[presX]       = 'd',
+	[presY]       = 'd',
+	[presW]       = 'd',
+	[presH]       = 'd',
+	[presFile]    = 's',
+	[self]        = 's',
+	[videoOut]    = 's',
+};
+static const char *_name[LASTVar] = {
+	[noteX]       = "noteX",
+	[noteY]       = "noteY",
+	[noteFile]    = "noteFile",
+	[presX]       = "presX",
+	[presY]       = "presY",
+	[presW]       = "presW",
+	[presH]       = "presH",
+	[presFile]    = "presFile",
+	[videoOut]    = "display",
+	[self]        = "self",
+};
 
-FT_Face face;
-static XrmDatabase xrdb;
+int get_d(int var) {
+	if (_type[var] != 'd') return 0;
+	if (_var[var] < 0 || _var[var] >= _nd) return 0;
+	return _d[_var[var]];
+}
 
-int config_init(const char *mode, const char *db) {
-	const char *pwd = getenv("PWD");
-	XrmInitialize();
-	memset(conf.button, 0, NBUTTON);
-	conf.button[0] = "next";
-	conf.button[2] = "prev";
-	if (db) xrdb = XrmGetFileDatabase(db);
-	else if ( (!chdir(getenv("XDG_CONFIG_HOME")) && !chdir("slider")) ||
-			(!chdir(getenv("HOME")) && !chdir(".config/slider")) )
-		xrdb = XrmGetFileDatabase("config");
-	if (!xrdb) {
-		fprintf(stderr,
-"WARNING: No configuration file found.  Falling back on defaults.\n"
-"Copy /usr/share/slider/config to either of the following to customize:\n"
-"  $XDG_CONFIG_HOME/slider/config\n"
-"  $HOME/.config/slider/config\n");
-		xrdb = XrmGetFileDatabase("/usr/share/slider/config");
-		if (!xrdb) die("cannot find a default configuration resource database");
+float get_f(int var) {
+	if (_type[var] != 'f') return 0.0;
+	if (_var[var] < 0 || _var[var] >= _nf) return 0.0;
+	return _f[_var[var]];
+}
+
+const char *get_s(int var) {
+	if (_type[var] != 's') return NULL;
+	if (_var[var] < 0 || _var[var] >= _ns) return NULL;
+	return _s[_var[var]];
+}
+
+int config_init(int argc, const char **argv) {
+	int i;
+	set(self, argv[0]);
+	int file_count = 0;
+	char *conf = NULL;
+	for (i = 1; i < argc; ++i) {
+		if (argv[i][0] == '-' && argv[i][1] == '-' && argv[i][2] == '\0')
+			break;
+		else if (argv[i][0] == '-' && argv[i][1] == 'c' && i + 1 < argc)
+			_read_config_file(argv[++i]);
+		else if (++file_count == 1)
+			set(presFile, argv[i]);
+		else if (file_count == 2)
+			set(noteFile, argv[i]);
+		else
+			fprintf(stderr, "unused parameter \"%s\"\n", argv[i]);
 	}
-	char *_base = "Slider", *class = "Slider.Mode", *type;
-	const char *base;
-	XrmValue val;
-	if (mode) base = mode;
-	else if (XrmGetResource(xrdb, class, class, &type, &val))
-		base = val.addr;
-	else base = _base;
-	config_buttons(xrdb, base);
-	config_binds(xrdb, base);
-	config_views(xrdb, base);
-	config_media(xrdb, base);
-	config_general(xrdb, base);
-	chdir(pwd);
-//if (conf.lock_aspect)
-//fprintf(stderr,"LOCKED\n");
+	for (i; i < argc; ++i)
+		_parse_config_string(argv[i]);
 	return 0;
 }
 
 int config_free() {
-	XrmDestroyDatabase(xrdb);
 	int i;
-	cairo_font_face_destroy(conf.font);
-	FT_Done_Face(face);
-	free(conf.key);
-	conf.key = NULL;
-	conf.nkeys = 0;
-	free(conf.view);
-	conf.view = NULL;
-	conf.nviews = 0;
+	for (i = 0; i < _ns; ++i) free(_s[i]);
+	free(_s);
+	free(_f);
+	free(_d);
 	return 0;
 }
 
-/**** Local functions ****/
-
-int config_general(XrmDatabase xrdb, const char *base) {
-	char class[256], *type;
-	XrmValue val;
-	conf.mon = -1;
-	conf.launch = conf.interleave = conf.loop = conf.lock_aspect = conf.history = False;
-	sprintf(class,"%s.Font",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val)) {
-		if (FT_New_Face(ftlib, val.addr, 0, &face) |
-				FT_Set_Pixel_Sizes(face, 0, conf.font_size))
-			fprintf(stderr,"unable to load font \"%s\"\n", val.addr);
-		else
-			conf.font = cairo_ft_font_face_create_for_ft_face(face, 0);
+void config_set(int var, config_union u) {
+	switch (_type[var]) {
+		case 'd':
+			_d = realloc(_d, (_nd+1) * sizeof(int));
+			_d[_nd] = u.d;
+			_var[var] = _nd;
+			++_nd;
+			break;
+		case 'f':
+			_f = realloc(_f, (_nf+1) * sizeof(float));
+			_f[_nf] = u.f;
+			_var[var] = _nf;
+			++_nf;
+			break;
+		case 's':
+			if (!u.s) return;
+			_s = realloc(_s, (_ns+1) * sizeof(char *));
+			_s[_ns] = strdup(u.s);
+			_var[var] = _ns;
+			++_ns;
+			break;
 	}
-	sprintf(class,"%s.Fade",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		conf.fade = atoi(val.addr);
-	sprintf(class,"%s.Monitor",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		conf.mon = atoi(val.addr);
-	sprintf(class,"%s.Loop",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		if (*val.addr == 'T' || *val.addr == 't') conf.loop = True;
-	sprintf(class,"%s.History",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		if (*val.addr == 'T' || *val.addr == 't') conf.history = True;
-	sprintf(class,"%s.LockAspect",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		if (*val.addr == 'T' || *val.addr == 't') conf.lock_aspect = True;
-	sprintf(class,"%s.Interleave",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		if (*val.addr == 'T' || *val.addr == 't') conf.interleave = True;
-	sprintf(class,"%s.Action.Launch",base);
-	if (XrmGetResource(xrdb, class, class, &type, &val))
-		if (*val.addr == 'T' || *val.addr == 't') conf.launch = True;
-	return 0;
 }
 
-int config_buttons(XrmDatabase xrdb, const char *base) {
-	char class[256], *type;
-	XrmValue val;
+int _parse_config_string(const char *arg) {
+	char *ptr, *key, *value, *str = strdup(arg);
+	key = strtok_r(str, " =\t", &ptr);
+	value = strtok_r(NULL, " =\t", &ptr);
 	int i;
-	for (i = 1; i < NBUTTON + 1; i++) {
-		sprintf(class,"%s.Button.%02d",base,i);
-		if (!XrmGetResource(xrdb, class, class, &type, &val)) continue;
-		conf.button[i - 1] = val.addr;
+	for (i = 0; i < LASTVar; ++i)
+		if (strncasecmp(_name[i], key, strlen(key)) == 0) break;
+	if (i < LASTVar) switch (_type[i]) {
+		case 'd': set(i, atoi(value)); break;
+		case 'f': set(i, (float) atof(value)); break;
+		case 's': set(i, (const char *) value); break;
 	}
+	free(str);
 	return 0;
 }
 
-#define MAX_MOD	4
-int config_binds(XrmDatabase xrdb, const char *base) {
-	/* get modifiers */
-	int mods[MAX_MOD] = {0, ControlMask, Mod1Mask, ShiftMask};
-	char *ord[MAX_MOD] = { "None", "Control", "Alt", "Shift" };
-	char class[256], *type;
-	XrmValue val;
-	int i, j, tmod;
-	/* loop through bindings */
-	conf.key = NULL;
-	conf.nkeys = 0;
-	KeySym sym;
-	for (i = 0; i < 100; i++) {
-		sprintf(class,"%s.Bind.%02d.Key",base,i);
-		if (!XrmGetResource(xrdb, class, class, &type, &val)) continue;
-		if ( (sym=XStringToKeysym(val.addr)) == NoSymbol ) continue;
-		for (j = 0; j < MAX_MOD; j++) {
-			sprintf(class,"%s.Bind.%02d.%s",base,i,ord[j]);
-			if (!XrmGetResource(xrdb, class, class, &type, &val)) continue;
-			conf.key = realloc(conf.key, (conf.nkeys+1) * sizeof(Key));
-			conf.key[conf.nkeys].keysym = sym;
-			conf.key[conf.nkeys].mod = mods[j];
-			conf.key[conf.nkeys].arg = val.addr;
-			conf.nkeys++;
-		}
-	}
-	return 0;
-}
-
-int config_media(XrmDatabase xrdb, const char *base) {
-	int i;
-	char class[256], *type;
-	XrmValue val;
-	for (i = 0; i < POPPLER_ANNOT_LAST; i++) {
-		conf.media_link[i] = NULL;
-		sprintf(class,"%s.Media.%s", base, atypes[i]);
-		if (XrmGetResource(xrdb, class, class, &type, &val))
-			conf.media_link[i] = val.addr;
-	}
-	return 0;
-}
-
-int config_views(XrmDatabase xrdb, const char *base) {
-	/* get modifiers */
-	char class[256], *type;
-	XrmValue val;
-	int i;
-	/* loop through bindings */
-	conf.view = NULL;
-	conf.nviews = 0;
-	for (i = 0; i < 100; i++) {
-		sprintf(class,"%s.View.%02d.Geometry",base, i);
-		if (!XrmGetResource(xrdb, class, class, &type, &val)) continue;
-		conf.view = realloc(conf.view, (conf.nviews+1) * sizeof(View));
-		sscanf(val.addr, "%dx%d%d%d",
-			&conf.view[conf.nviews].w,
-			&conf.view[conf.nviews].h,
-			&conf.view[conf.nviews].x,
-			&conf.view[conf.nviews].y);
-		// read val into conf.view[nviews]
-		sprintf(class,"%s.View.%02d.Show",base,i);
-		if (XrmGetResource(xrdb, class, class, &type, &val))
-				conf.view[conf.nviews].show = atoi(val.addr);
-		sprintf(class,"%s.View.%02d.Offset",base,i);
-		if (XrmGetResource(xrdb, class, class, &type, &val))
-			conf.view[conf.nviews].offset = atoi(val.addr);
-		conf.nviews++;
-	}
+int _read_config_file(const char *arg) {
+	FILE *f = fopen(arg, "r");
+	if (!f) return 1;
+	char line[256];
+	while (fgets(line, 256, f))
+		_parse_config_string(line);
+	fclose(f);
 	return 0;
 }

@@ -5,214 +5,121 @@
 \*****************************************************/
 
 #include "slider.h"
-#include "xlib-actions.h"
 
-static Atom COM_ATOM;
-
+static void _buttonpress(XEvent *);
+static void _keypress(XEvent *);
+static void _motionnotify(XEvent *);
 static void (*handler[LASTEvent])(XEvent *) = {
-	[ButtonPress]		= buttonpress,
-	[Expose]				= expose,
-	[KeyPress]			= keypress,
-	[PropertyNotify]	= propertynotify,
+	[ButtonPress]     = _buttonpress,
+	[KeyPress]        = _keypress,
+	[MotionNotify]    = _motionnotify,
 };
 
-int xlib_init(Show *show) {
-	if (!(dpy=XOpenDisplay(NULL))) die("Failed to open display\n");
+int xlib_init() {
+	dpy = XOpenDisplay(0x0);
 	scr = DefaultScreen(dpy);
-	root = RootWindow(dpy, scr);
-	vis = DefaultVisual(dpy, scr);
-	dep = DefaultDepth(dpy, scr);
-	/* get screen information: */
-	int nmon, i;
-	XineramaScreenInfo *geom = XineramaQueryScreens(dpy, &nmon);
-	if (conf.mon == -1 || conf.mon >= nmon) conf.mon = nmon - 1;
-	sw = geom[conf.mon].width;
-	sh = geom[conf.mon].height;
-	show->w = sw; show->h = sh;
-	show->x = geom[conf.mon].x_org;
-	show->y = geom[conf.mon].y_org;
-	/* init EWMH atoms */
-	NET_WM_STATE = XInternAtom(dpy,
-			"_NET_WM_STATE", False);
-	NET_WM_STATE_FULLSCREEN = XInternAtom(dpy,
-			"_NET_WM_STATE_FULLSCREEN", False);
-	NET_ACTIVE_WINDOW = XInternAtom(dpy,
-			"_NET_ACTIVE_WINDOW", False);
-	/* create main window: */
-	wshow = XCreateSimpleWindow(dpy, root, show->x, show->y,
-			sw, sh, 0, 0, 0);
-	XStoreName(dpy, wshow, "Slider");
-	XClassHint *hint = XAllocClassHint();
-	hint->res_name = "Slider";
-	hint->res_class = "presentation";
-	XSetClassHint(dpy, wshow, hint);
-	hint->res_class = "notes";
+	root = DefaultRootWindow(dpy);
 	XSetWindowAttributes wa;
-	wa.event_mask = ExposureMask | KeyPressMask | PropertyChangeMask |
-			ButtonPressMask | StructureNotifyMask;
-	XChangeWindowAttributes(dpy,wshow,CWEventMask,&wa);
-	XSizeHints *size = XAllocSizeHints();
-	size->base_width = size->width = show->w / 2;
-	size->base_height = size->height = show->h / 2;
-	size->flags = USSize | PBaseSize;
-	XSetWMNormalHints(dpy, wshow, size);
-	XMapWindow(dpy, wshow);
-	XFlush(dpy);
-	XFree(size);
-	XMoveResizeWindow(dpy, wshow, show->x, show->y, show->w, show->h);
-	XChangeProperty(dpy, wshow, NET_WM_STATE, XA_ATOM, 32,
-		PropModeReplace, (unsigned char *)&NET_WM_STATE_FULLSCREEN, 1);
-	/* create targets */
-	if (nmon < 2) show->ntargets = 1;
-	else show->ntargets = conf.nviews + 1;
-	show->target = malloc(show->ntargets * sizeof(Target));
-	Target *trg;
-	View *vw;
-	cairo_surface_t *t;
-	trg = show->target;
-	trg->win = wshow;
-	trg->w = sw;
-	trg->h = sh;
-	trg->offset = 0;
-	trg->show = show;
-	t = cairo_xlib_surface_create(dpy, trg->win, vis, trg->w, trg->h);
-	trg->ctx = cairo_create(t);
-	cairo_surface_destroy(t);
-	for (i = 1; i < show->ntargets; i++) {
-		trg = &show->target[i];
-		vw = &conf.view[i-1];
-		trg->win = XCreateSimpleWindow(dpy, root, vw->x, vw->y,
-				(trg->w = vw->w), (trg->h = vw->h), 0, 0, 0);
-		XSetClassHint(dpy, trg->win, hint);
-		XChangeWindowAttributes(dpy,trg->win,CWEventMask,&wa);
-		XMapWindow(dpy, trg->win);
-		trg->offset = vw->offset;
-		t = cairo_xlib_surface_create(dpy, trg->win, vis, trg->w, trg->h);
-		trg->ctx = cairo_create(t);
-		cairo_surface_destroy(t);
-	}
-	XFree(hint);
-	/* create cursors */
-	XColor color;
-	char c_data = 0;
-	Pixmap curs_map = XCreateBitmapFromData(dpy, wshow, &c_data, 1,	1);
-	invisible_cursor = XCreatePixmapCursor(dpy, curs_map, curs_map,
-			&color, &color, 0, 0);
-	crosshair_cursor = XCreateFontCursor(dpy, XC_crosshair);
-	XFreePixmap(dpy, curs_map);
-	XDefineCursor(dpy, wshow, invisible_cursor);
-	//XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
-	running = True;
-	COM_ATOM = XInternAtom(dpy, "Command", False);
+	wa.background_pixel = 0x000000;
+	wa.backing_store = Always;
+#ifdef module_randr
+	randr_init();
+#else
+	set(presX, 0); set(presY, 0);
+	set(presW, DisplayWidth(dpy,scr));
+	set(presH, DisplayHeight(dpy,scr));
+#endif /* moudle_randr */
+	topWin = XCreateWindow(dpy, root, get_d(presX), get_d(presY), get_d(presW),
+			get_d(presH), 0, DefaultDepth(dpy,scr), InputOutput,
+			DefaultVisual(dpy,scr), CWBackingPixel, &wa);
+	wa.event_mask = ButtonPressMask | KeyPressMask | PointerMotionMask;
+	presWin = XCreateWindow(dpy, topWin, 0, 0, get_d(presW), get_d(presH), 0,
+			DefaultDepth(dpy,scr), InputOutput, DefaultVisual(dpy,scr),
+			CWBackingStore | CWEventMask, &wa);
+	XMapWindow(dpy, topWin); // TODO where is it?
+	XMapWindow(dpy, presWin);
+
+	/* other init functions */
+	if (render_init(get_s(presFile))) return xlib_free(1);
+	if (cursor_init(presWin)) return xlib_free(2);
+	if (sorter_init(topWin)) return xlib_free(3);
+	render_set_fader(presWin, 15);
 	return 0;
 }
 
-int xlib_free() {
-	Target *trg;
-	int i;
-	for (i = 0; i < show->ntargets; i++) {
-		trg = &show->target[i];
-		cairo_destroy(trg->ctx);
-		XDestroyWindow(dpy, trg->win);
-	}
-	free(show->target);
-	XFreeCursor(dpy, invisible_cursor);
-	XFreeCursor(dpy, crosshair_cursor);
+int xlib_free(int ret) {
+	sorter_free();
+	cursor_free();
+	render_free();
+	XDestroyWindow(dpy, topWin);
 	XCloseDisplay(dpy);
-	return 0;
+	return ret;
 }
 
-#define MAX_LINE 256
-int xlib_main_loop() {
-	XFlush(dpy);
-	command("history push");
-	draw(None);
-
-	char line[MAX_LINE], *c;
-	fd_set fds;
-	int xfd = ConnectionNumber(dpy);
-	int sfd = fileno(stdin);
+int xlib_mainloop() {
 	XEvent ev;
-	while (running) {
-		FD_ZERO(&fds);
-		FD_SET(xfd, &fds);
-		FD_SET(sfd, &fds);
-		select(xfd+1, &fds, 0, 0, NULL);
-		if (FD_ISSET(sfd, &fds)) {
-			fgets(line, MAX_LINE, stdin);
-			command(line);
-		}
-		if (FD_ISSET(xfd, &fds)) while (XPending(dpy)) {
-			XNextEvent(dpy, &ev);
-			if (ev.type < LASTEvent && handler[ev.type])
+cur = 0;
+	running = true;
+	render_page(cur, presWin, false);
+	while (running && !XNextEvent(dpy,&ev)) {
+		if (sorter_event(&ev)) continue;
+		//if (notes_event(&ev)) continue;
+		if (ev.type < LASTEvent && handler[ev.type])
 			handler[ev.type](&ev);
-		}
+		XSync(dpy,true);
 	}
-	command("history clear");
 }
 
-void buttonpress(XEvent *ev) {
+static const int minWindow = 40;
+static const int maxWindow = 10000;
+void _buttonpress(XEvent *ev) {
 	XButtonEvent *e = &ev->xbutton;
-	XSetInputFocus(dpy, wshow, RevertToPointerRoot, CurrentTime);
-	if (e->button < NBUTTON + 1) command(conf.button[e->button - 1]);
+	if (e->state & ControlMask) { /* TODO cursor stuff */
+		if (e->button == 1) cursor_visible(toggle);
+		else if (e->button == 3) { } // TODO follow link
+		else if (e->button == 2) running = false; // command("quit");
+		else return;
+	}
+	else if (e->state & ShiftMask) { /* Move / Resize-Zoom */
+		int x, y, ig, mode = 0; unsigned int w, h;
+		XGetGeometry(dpy, presWin, (Window *)&ig, &x, &y, &w, &h, &ig, &ig);
+		//if (e->button == 4) { x-=40, y-=40, w+=80, h+=80; }
+		//else if (e->button == 5) { x+=40, y+=40, w-=80, h-=80; }
+		if (e->button == 1) command(cmdPan, NULL);
+		else if (e->button == 2) { /* TODO reset win size */ }
+		else if (e->button == 3) command(cmdZoom, NULL);
+		else return;
+		if (mode) { // TODO drag move/resize
+		}
+		if (w < minWindow) w = minWindow;
+		else if (w > maxWindow) w = maxWindow;
+		if (h < minWindow) h = minWindow;
+		else if (h > maxWindow) h = maxWindow;
+		if (x + w < minWindow) x = minWindow - w;
+		else if (x > 800) x = 800; // TODO
+		if (y + h < minWindow) y = minWindow - h;
+		else if (y > 800) y = 800; // TODO
+		XMoveResizeWindow(dpy, presWin, x, y, w, h);
+	}
+	else { /* Basic navigation */
+		if (e->button == 1) command(cmdNext, NULL);
+		else if (e->button == 2) sorter_visible(toggle);
+		else if (e->button == 3) command(cmdPrev, NULL);
+		else if (e->button == 4) { } //TODO history back
+		else if (e->button == 5) { } //TODO history forward
+		else return;
+	}
 }
 
-void expose(XEvent *ev) {
-	draw(ev->xexpose.window);
-}
-
-void keypress(XEvent *ev) {
-	int i;
+void _keypress(XEvent *ev) {
 	XKeyEvent *e = &ev->xkey;
-	KeySym sym = XkbKeycodeToKeysym(dpy, e->keycode, 0, 0);
-	for (i = 0; i < conf.nkeys; i++) {
-		if( (sym==conf.key[i].keysym) && (conf.key[i].arg) &&
-				conf.key[i].mod == ((e->state&~Mod2Mask)&~LockMask) ) {
-			command(conf.key[i].arg);
-		}
-	}
+	//running = false;
+	//render_page(++cur, presWin, false);
+	//sorter_draw(cur);
 }
 
-static const char *_prop_clear = NULL;
-void propertynotify(XEvent *ev) {
-	XPropertyEvent *e = &ev->xproperty;
-	if (e->window != wshow) return;
-	if (e->atom != COM_ATOM) return;
-	char **strs = NULL;
-	int n;
-	XTextProperty text;
-	XGetTextProperty(dpy, wshow, &text, COM_ATOM);
-	if (!text.nitems) return;
-	if (text.encoding == XA_STRING) command( (char *) text.value);
-	else if (XmbTextPropertyToTextList(dpy, &text, &strs, &n) >=
-			Success) {
-		command( (char *) *strs);
-		XFreeStringList(strs);
-	}
-	XFree(text.value);
-	XStringListToTextProperty((char **)&_prop_clear, 1, &text);
-	XSetTextProperty(dpy, wshow, &text, COM_ATOM);
-	XFlush(dpy);
-	XFree(text.value);
-}
-
-void draw(Window win) {
-	int i, j, n;
-	Target *trg;
-	for (i = 0; i < show->ntargets; i++) {
-		trg = &show->target[i];
-		if (!(win == None || trg->win == win)) continue;
-		n = show->cur + trg->offset;
-		if (n < 0) n = 0;
-		else if (n >= trg->show->nslides) n = trg->show->nslides - 1;
-		cairo_set_source_surface(trg->ctx, trg->show->slide[n], 0, 0);
-		if (trg->win == wshow && win != wshow) for (j = conf.fade; j; j--) {
-			cairo_paint_with_alpha(trg->ctx, 1/(float)j);
-			XFlush(dpy);
-			usleep(5000);
-		}
-		cairo_paint(trg->ctx);
-	}
-	XFlush(dpy);
+void _motionnotify(XEvent *ev) {
+	XMotionEvent *e = &ev->xmotion;
+	cursor_draw(e->x, e->y);
 }
 
