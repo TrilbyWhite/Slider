@@ -1,7 +1,7 @@
 /*****************************************************\
-* RANDR.C
-* By: Jesse McClure (c) 2012-2014
-* See slider.c or COPYING for license information
+  RANDR.C
+  By: Jesse McClure (c) 2015
+  See slider.c or COPYING for license information
 \*****************************************************/
 
 #include "slider.h"
@@ -11,7 +11,7 @@ typedef struct Rect {
 	int x, y, w, h;
 } Rect;
 
-int _screen_info(const char *, int, Rect *);
+static int _screen_info(const char *, int, Rect *);
 
 int randr_init() {
 	Rect r;

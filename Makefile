@@ -1,7 +1,7 @@
 
 PROG     =  slider
 VER      =  4.0
-MODULES  ?= command config cursor randr render slider sorter xlib
+MODULES  ?= binding command config cursor randr render slider sorter xlib
 MODDEFS  =  $(foreach mod, ${MODULES}, -Dmodule_${mod})
 CC       ?= gcc
 DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER} ${MODDEFS}

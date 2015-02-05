@@ -1,0 +1,18 @@
+
+
+#### Bindings
+## Buttons
+Button   Control    1    cursor      toggle
+Button   Control    2    quit
+Button   Control    3    follow
+Button   Shift      1    pan
+Button   Shift      2    redraw      normal
+Button   Shift      3    zoom
+Button              1    next
+Button              2    sorter      toggle
+Button              3    prev
+Button              4    history     back
+Button              5    history     forward
+## Keys
+Key      Control    q    quit
+Key      Control    f    fullscreen

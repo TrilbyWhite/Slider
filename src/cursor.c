@@ -1,7 +1,7 @@
 /*****************************************************\
-* RENDER.C
-* By: Jesse McClure (c) 2012-2014
-* See slider.c or COPYING for license information
+  CURSOR.C
+  By: Jesse McClure (c) 2015
+  See slider.c or COPYING for license information
 \*****************************************************/
 
 /*

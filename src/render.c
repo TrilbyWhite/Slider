@@ -1,7 +1,7 @@
 /*****************************************************\
-* RENDER.C
-* By: Jesse McClure (c) 2012-2014
-* See slider.c or COPYING for license information
+  RENDER.C
+  By: Jesse McClure (c) 2015
+  See slider.c or COPYING for license information
 \*****************************************************/
 
 #include "slider.h"
@@ -37,7 +37,7 @@ int render_page(int i, Window win, bool fixed) {
 	ctx = cairo_create(s);
 	cairo_surface_destroy(s);
 	cairo_scale(ctx, scx, scy);
-	cairo_set_source_rgba(ctx, 1, 1, 1, 1);
+	cairo_set_source_rgb(ctx, 1, 1, 1);
 	cairo_paint(ctx);
 	poppler_page_render(page, ctx);
 	cairo_destroy(ctx);
@@ -50,7 +50,7 @@ int render_page(int i, Window win, bool fixed) {
 		img = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, _ww, _wh);
 		ctx = cairo_create(img);
 		cairo_scale(ctx, scx, scy);
-		cairo_set_source_rgba(ctx, 1, 1, 1, 1);
+		cairo_set_source_rgb(ctx, 1, 1, 1);
 		cairo_paint(ctx);
 		poppler_page_render(page, ctx);
 		cairo_destroy(ctx);
@@ -61,15 +61,16 @@ int render_page(int i, Window win, bool fixed) {
 		cairo_set_source_surface(ctx, img, 0, 0); // memory leak?!
 		/* fade in */
 		for (ig = fade_steps; ig; --ig) {
-			cairo_paint_with_alpha(ctx, 1 / (float) ig);
+			cairo_paint_with_alpha(ctx, 1 / (float) ig); // memory leak?!
 			XFlush(dpy);
-			usleep(5000);
+			usleep(10000);
 		}
 		/* clean up */
 		cairo_destroy(ctx);
 		cairo_surface_destroy(img);
 		cursor_visible(pre);
 	}
+	g_object_unref(page);
 	/* set the pixmap to be the window background */
 	XSetWindowBackgroundPixmap(dpy, win, pix);
 	XFreePixmap(dpy, pix);
@@ -114,18 +115,18 @@ Window *render_create_sorter(Window win) {
 		ww = scale * pdfw; wh = scale * pdfh;
 		wins[i] = XCreateWindow(dpy, win, 0, 0, ww, wh, 1, DefaultDepth(dpy,scr),
 				InputOutput, DefaultVisual(dpy,scr), CWBackingStore | CWEventMask, &wa);
-//		XDefineCursor(dpy, wins[i], XCreateFontCursor(dpy,68));
 		pix = XCreatePixmap(dpy, wins[i], ww, wh, DefaultDepth(dpy,scr));
 		pix_s = cairo_xlib_surface_create(dpy, pix, DefaultVisual(dpy,scr), ww, wh);
 		pix_c = cairo_create(pix_s);
 		cairo_surface_destroy(pix_s);
-		cairo_set_source_rgba(pix_c, 1, 1, 1, 1);
+		cairo_set_source_rgb(pix_c, 1, 1, 1);
 		cairo_paint(pix_c);
 		cairo_scale(pix_c, scale, scale);
 		poppler_page_render(page, pix_c);
 		cairo_destroy(pix_c);
 		XSetWindowBackgroundPixmap(dpy, wins[i], pix);
 		XFreePixmap(dpy, pix);
+		g_object_unref(page);
 	}
 	wins[_npage] = None;
 	return wins;

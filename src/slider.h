@@ -1,7 +1,7 @@
 /*****************************************************\
-* SLIDER.H
-* By: Jesse McClure (c) 2012-2014
-* See slider.c or COPYING for license information
+  SLIDER.H
+  By: Jesse McClure (c) 2015
+  See slider.c or COPYING for license information
 \*****************************************************/
 
 #ifndef __SLIDER_H__
@@ -25,6 +25,7 @@
 #include <cairo-xlib.h>
 #include <poppler.h>
 
+typedef unsigned int uint;
 typedef unsigned short int bool;
 enum { false=0, true=1, toggle=2, query=3 };
 enum {
@@ -35,12 +36,14 @@ enum {
 	LASTVar,
 };
 enum {
+	cmdNone = 0,
 	cmdFullscreen,
 	cmdNext,
 	cmdPan,
 	cmdPrev,
 	cmdRedraw,
 	cmdQuit,
+	cmdSorter,
 	cmdZoom,
 	LASTCommand,
 };
@@ -52,11 +55,16 @@ typedef union {
 
 #define set(x,y)		config_set(x,(config_union)y)
 
-
 Display *dpy;
 int scr, cur;
 Window root, topWin, presWin;
 bool running;
+
+/* binding.c */
+int binding_init();
+int binding_free();
+int binding_add(uint, uint, uint, uint, const char *);
+int binding_exec(uint, uint, uint);
 
 /* config.c */
 int config_init();

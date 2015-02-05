@@ -1,7 +1,7 @@
 /*****************************************************\
-* CONFIG.C
-* By: Jesse McClure (c) 2015
-* See slider.c or COPYING for license information
+  CONFIG.C
+  By: Jesse McClure (c) 2015
+  See slider.c or COPYING for license information
 \*****************************************************/
 
 #include "slider.h"
@@ -57,6 +57,9 @@ const char *get_s(int var) {
 }
 
 int config_init(int argc, const char **argv) {
+	dpy = XOpenDisplay(0x0);
+	if (!dpy) return 1;
+	binding_init();
 	int i;
 	set(self, argv[0]);
 	int file_count = 0;
@@ -81,9 +84,11 @@ int config_init(int argc, const char **argv) {
 int config_free() {
 	int i;
 	for (i = 0; i < _ns; ++i) free(_s[i]);
-	free(_s);
-	free(_f);
-	free(_d);
+	free(_s); _s = NULL; _ns = 0;
+	free(_f); _f = NULL; _nf = 0;
+	free(_d); _d = NULL; _nd = 0;
+	binding_free();
+	XCloseDisplay(dpy);
 	return 0;
 }
 
@@ -111,17 +116,68 @@ void config_set(int var, config_union u) {
 	}
 }
 
+static unsigned int _parse_modifier(const char *mod) {
+	if (strncasecmp(mod, "control", 7) == 0) return ControlMask;
+	else if (strncasecmp(mod, "cntrl", 5) == 0) return ControlMask;
+	else if (strncasecmp(mod, "ctrl", 4) == 0) return ControlMask;
+	else if (strncasecmp(mod, "shift", 5) == 0) return ShiftMask;
+	else if (strncasecmp(mod, "alt", 3) == 0) return Mod1Mask;
+	else if (strncasecmp(mod, "mod1", 4) == 0) return Mod1Mask;
+	else if (strncasecmp(mod, "mod2", 4) == 0) return Mod2Mask;
+	else if (strncasecmp(mod, "mod3", 4) == 0) return Mod3Mask;
+	else if (strncasecmp(mod, "mod4", 4) == 0) return Mod4Mask;
+	else if (strncasecmp(mod, "mod5", 4) == 0) return Mod5Mask;
+	else if (strncasecmp(mod, "super", 5) == 0) return Mod4Mask;
+	else if (strncasecmp(mod, "win", 3) == 0) return Mod4Mask;
+	return 0;
+}
+
+int _parse_binding(const char *arg) {
+	unsigned int mod = 0, mod_add, button = 0, key = 0, cmd;
+	char *ptr, *type, *value, *str = strdup(arg);
+	type = strtok_r(str, " =\t", &ptr);
+	value = strtok_r(NULL, " =\t", &ptr);
+	while (value && (mod_add = _parse_modifier(value))) {
+		mod |= mod_add;
+		value = strtok_r(NULL, " =\t", &ptr);
+	}
+	if (strncasecmp(type, "key", 3) == 0) {
+		KeySym sym = None;
+		if (value && ((sym = XStringToKeysym(value)) != NoSymbol)) {
+			key = XKeysymToKeycode(dpy, sym);
+			value = strtok_r(NULL, " =\t", &ptr);
+		}
+	}
+	else { /* button */
+		if (value && (button = atoi(value)) )
+			value = strtok_r(NULL, " =\t", &ptr);
+	}
+	if (value && (cmd = command_str_to_num(value)))
+		value = strtok_r(NULL, " =\t", &ptr);
+	if (button || key)
+		binding_add(mod, button, key, cmd, value);
+	free(str);
+	return 0;
+}
+
 int _parse_config_string(const char *arg) {
 	char *ptr, *key, *value, *str = strdup(arg);
+	int i;
 	key = strtok_r(str, " =\t", &ptr);
 	value = strtok_r(NULL, " =\t", &ptr);
-	int i;
-	for (i = 0; i < LASTVar; ++i)
-		if (strncasecmp(_name[i], key, strlen(key)) == 0) break;
-	if (i < LASTVar) switch (_type[i]) {
-		case 'd': set(i, atoi(value)); break;
-		case 'f': set(i, (float) atof(value)); break;
-		case 's': set(i, (const char *) value); break;
+	if (strncasecmp("key", key, 3) == 0)
+		_parse_binding(arg);
+	else if (strncasecmp("button", key, 6) == 0)
+		_parse_binding(arg);
+	else {
+		for (i = 0; i < LASTVar; ++i)
+			if (strncasecmp(_name[i], key, strlen(key)) == 0)
+				break;
+		if (i < LASTVar) switch (_type[i]) {
+			case 'd': set(i, atoi(value)); break;
+			case 'f': set(i, (float) atof(value)); break;
+			case 's': set(i, (const char *) value); break;
+		}
 	}
 	free(str);
 	return 0;
@@ -132,7 +188,9 @@ int _read_config_file(const char *arg) {
 	if (!f) return 1;
 	char line[256];
 	while (fgets(line, 256, f))
-		_parse_config_string(line);
+		if (line[0] != '#' && line[0] != '\n')
+			_parse_config_string(line);
 	fclose(f);
 	return 0;
 }
+

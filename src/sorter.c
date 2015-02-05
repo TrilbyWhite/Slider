@@ -1,7 +1,7 @@
 /*****************************************************\
-* RENDER.C
-* By: Jesse McClure (c) 2012-2014
-* See slider.c or COPYING for license information
+  SORTER.C
+  By: Jesse McClure (c) 2015
+  See slider.c or COPYING for license information
 \*****************************************************/
 
 #include "slider.h"
@@ -20,22 +20,14 @@ bool sorter_event(XEvent *ev) {
 	for (i = 0; _wins[i] != None; ++i)
 		if (ev->xany.window == _wins[i]) break;
 	if (_wins[i] == None) return false;
-
-	//if (ev->type == Expose)
-	//	sorter_draw();
-	if (ev->type == MotionNotify) {
+	if (ev->type != ButtonPress) return false;
+	if (ev->xbutton.button == 1) {
+		render_page(cur=i, presWin, false);
+		sorter_draw(cur);
 	}
-	if (ev->type == ButtonPress) {
-		if (ev->xbutton.button == 1) {
-			render_page(cur=i, presWin, false);
-			sorter_draw(cur);
-		}
-		else if (ev->xbutton.button == 3) sorter_visible(false);
-		else if (ev->xbutton.button == 4) sorter_draw(--_cur);
-		else if (ev->xbutton.button == 5) sorter_draw(++_cur);
-		//else if (ev->xbutton.button == 6)
-		//else if (ev->xbutton.button == 7)
-	}
+	else if (ev->xbutton.button == 4) sorter_draw(--_cur);
+	else if (ev->xbutton.button == 5) sorter_draw(++_cur);
+	else return false;
 	return true;
 }
 
@@ -80,6 +72,7 @@ int sorter_init(Window win) {
 int sorter_free() {
 	if (!_wins) return 0;
 	if (_x) free(_x);
+	_x = NULL;
 	int i;
 	for (i = 0; _wins[i] != None; ++i)
 		XDestroyWindow(dpy, _wins[i]);
