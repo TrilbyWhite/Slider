@@ -86,12 +86,10 @@ bool sorter_visible(bool set) {
 	else _visible = set;
 	if (_visible) {
 		cursor_visible(false);
-		XUndefineCursor(dpy, topWin);
+		XDefineCursor(dpy, presWin, XCreateFontCursor(dpy, 68));
 	}
-	else {
-		cursor_visible(true);
-		cursor_visible(false);
-	}
+	else
+		XDefineCursor(dpy, presWin, None);
 	//sorter_draw(cur);
 	return _visible;
 }

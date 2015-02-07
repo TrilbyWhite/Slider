@@ -15,6 +15,10 @@ int render_set_fader(Window win, int steps) {
 	fade_steps = steps;
 }
 
+PopplerDocument *render_get_pdf_ptr() {
+	return _pdf;
+}
+
 int render_page(int i, Window win, bool fixed) {
 	if (i >= _npage) return 1;
 	cairo_t *ctx;
@@ -115,6 +119,7 @@ Window *render_create_sorter(Window win) {
 		ww = scale * pdfw; wh = scale * pdfh;
 		wins[i] = XCreateWindow(dpy, win, 0, 0, ww, wh, 1, DefaultDepth(dpy,scr),
 				InputOutput, DefaultVisual(dpy,scr), CWBackingStore | CWEventMask, &wa);
+		XDefineCursor(dpy, wins[i], XCreateFontCursor(dpy, 68));
 		pix = XCreatePixmap(dpy, wins[i], ww, wh, DefaultDepth(dpy,scr));
 		pix_s = cairo_xlib_surface_create(dpy, pix, DefaultVisual(dpy,scr), ww, wh);
 		pix_c = cairo_create(pix_s);

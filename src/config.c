@@ -6,6 +6,11 @@
 
 #include "slider.h"
 
+typedef struct Bind {
+	uint mod, button, key, cmd;
+	char *arg;
+} Bind;
+
 static int _read_config_file(const char *);
 
 static int *_d = NULL;
@@ -13,6 +18,8 @@ static float *_f = NULL;
 static char **_s = NULL;
 static int _nd = 0, _nf = 0, _ns = 0;
 static int _var[LASTVar];
+static Bind *bind = NULL;
+static int nbind = 0;
 static char _type[LASTVar] = {
 	[noteX]       = 'd',
 	[noteY]       = 'd',
@@ -34,8 +41,8 @@ static const char *_name[LASTVar] = {
 	[presW]       = "presW",
 	[presH]       = "presH",
 	[presFile]    = "presFile",
-	[videoOut]    = "display",
 	[self]        = "self",
+	[videoOut]    = "display",
 };
 
 int get_d(int var) {
@@ -59,7 +66,6 @@ const char *get_s(int var) {
 int config_init(int argc, const char **argv) {
 	dpy = XOpenDisplay(0x0);
 	if (!dpy) return 1;
-	binding_init();
 	int i;
 	set(self, argv[0]);
 	int file_count = 0;
@@ -83,11 +89,17 @@ int config_init(int argc, const char **argv) {
 
 int config_free() {
 	int i;
+	/* free bindings */
+	for (i = 0; i < nbind; ++i)
+		if (bind[i].arg) free(bind[i].arg);
+	free(bind);
+	bind = NULL;
+	nbind = 0;
+	/* free configurations */
 	for (i = 0; i < _ns; ++i) free(_s[i]);
 	free(_s); _s = NULL; _ns = 0;
 	free(_f); _f = NULL; _nf = 0;
 	free(_d); _d = NULL; _nd = 0;
-	binding_free();
 	XCloseDisplay(dpy);
 	return 0;
 }
@@ -132,6 +144,18 @@ static unsigned int _parse_modifier(const char *mod) {
 	return 0;
 }
 
+int _binding_add(uint mod, uint button, uint key, uint cmd, const char *arg) {
+	bind = realloc(bind, (++nbind) * sizeof(Bind));
+	Bind *b = &bind[nbind-1];
+	b->mod = mod;
+	b->button = button;
+	b->key = key;
+	b->cmd = cmd;
+	b->arg = NULL;
+	if (arg) b->arg = strdup(arg);
+	return 0;
+}
+
 int _parse_binding(const char *arg) {
 	unsigned int mod = 0, mod_add, button = 0, key = 0, cmd;
 	char *ptr, *type, *value, *str = strdup(arg);
@@ -155,7 +179,7 @@ int _parse_binding(const char *arg) {
 	if (value && (cmd = command_str_to_num(value)))
 		value = strtok_r(NULL, " =\t", &ptr);
 	if (button || key)
-		binding_add(mod, button, key, cmd, value);
+		_binding_add(mod, button, key, cmd, value);
 	free(str);
 	return 0;
 }
@@ -193,4 +217,16 @@ int _read_config_file(const char *arg) {
 	fclose(f);
 	return 0;
 }
+
+
+int config_bind_exec(uint mod, uint button, uint key) {
+	int i;
+	for (i = 0; i < nbind; ++i) {
+		if (button && button != bind[i].button) continue;
+		if (key && key != bind[i].key) continue;
+		if (mod == bind[i].mod && bind[i].cmd) command(bind[i].cmd, bind[i].arg);
+	}
+	return 0;
+}
+
 

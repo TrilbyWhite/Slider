@@ -6,7 +6,9 @@
 
 #include "slider.h"
 
+static void _cursor(const char *);
 static void _fullscreen(const char *);
+static void _link(const char *);
 static void _next(const char *);
 static void _pan(const char *);
 static void _prev(const char *);
@@ -17,7 +19,9 @@ static void _zoom(const char *);
 
 static Atom NET_WM_STATE, NET_WM_STATE_FULLSCREEN;
 static void (*_cmd[LASTCommand]) (const char *) = {
+	[cmdCursor]              = _cursor,
 	[cmdFullscreen]          = _fullscreen,
+	[cmdLink]                = _link,
 	[cmdNext]                = _next,
 	[cmdPan]                 = _pan,
 	[cmdPrev]                = _prev,
@@ -27,7 +31,9 @@ static void (*_cmd[LASTCommand]) (const char *) = {
 	[cmdZoom]                = _zoom,
 };
 static const char *_cmd_str[LASTCommand] = {
+	[cmdCursor]              = "cursor",
 	[cmdFullscreen]          = "fullscreen",
+	[cmdLink]                = "link",
 	[cmdNext]                = "next",
 	[cmdPan]                 = "pan",
 	[cmdPrev]                = "prev",
@@ -62,6 +68,9 @@ int command_free() {
 }
 
 
+void _cursor(const char *arg) {
+	cursor_visible(toggle);
+}
 
 void _fullscreen(const char *arg) {
 	static bool fs = false;
@@ -78,6 +87,10 @@ void _fullscreen(const char *arg) {
 	ev.xclient.data.l[1] = NET_WM_STATE_FULLSCREEN;
 	ev.xclient.data.l[2] = 0;
 	XSendEvent(dpy, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &ev);
+}
+
+void _link(const char *arg) {
+	link_follow(0);
 }
 
 void _next(const char *arg) {

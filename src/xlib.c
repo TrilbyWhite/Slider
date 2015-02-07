@@ -73,12 +73,12 @@ int xlib_mainloop() {
 
 void _buttonpress(XEvent *ev) {
 	XButtonEvent *e = &ev->xbutton;
-	binding_exec(e->state, e->button, None);
+	config_bind_exec(e->state, e->button, None);
 }
 
 void _keypress(XEvent *ev) {
 	XKeyEvent *e = &ev->xkey;
-	binding_exec(e->state, 0, e->keycode);
+	config_bind_exec(e->state, 0, e->keycode);
 }
 
 void _motionnotify(XEvent *ev) {

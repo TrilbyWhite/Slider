@@ -10,4 +10,10 @@ only feature which is near-completion is the replacement for the sorter view
 with floating preview tiles.
 
 
+## Todo
+
+- Links
+- History
+- Media
+- Track down memory leaks (in cairo?!)
 

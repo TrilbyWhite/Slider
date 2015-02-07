@@ -1,7 +1,16 @@
+# Slider configuration
+# By: Jesse McClure (c) 2015
+# License: CC-BY-SA
 
+Display      = VGA1 LVDS1
+FadeSteps    = 25
+Loop         =	0
+#*.Interleave:			false
+LinkLink     = firefox %s > /dev/null 2>&1
+LinkMovie    =	mpv --no-border --ontop --x11-name Float --screen 1 --geometry=%Wx%H+%x+%y %s >/dev/null 2>&1
+LinkSound    = mpv %s > /dev/null 2>&1 &
 
-#### Bindings
-## Buttons
+# Buttons
 Button   Control    1    cursor      toggle
 Button   Control    2    quit
 Button   Control    3    follow
@@ -11,8 +20,9 @@ Button   Shift      3    zoom
 Button              1    next
 Button              2    sorter      toggle
 Button              3    prev
-Button              4    history     back
-Button              5    history     forward
-## Keys
+#Button              4    history     back
+#Button              5    history     forward
+# Keys
 Key      Control    q    quit
 Key      Control    f    fullscreen
+Key      Control    l    link

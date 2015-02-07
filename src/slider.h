@@ -37,7 +37,9 @@ enum {
 };
 enum {
 	cmdNone = 0,
+	cmdCursor,
 	cmdFullscreen,
+	cmdLink,
 	cmdNext,
 	cmdPan,
 	cmdPrev,
@@ -60,16 +62,11 @@ int scr, cur;
 Window root, topWin, presWin;
 bool running;
 
-/* binding.c */
-int binding_init();
-int binding_free();
-int binding_add(uint, uint, uint, uint, const char *);
-int binding_exec(uint, uint, uint);
-
 /* config.c */
 int config_init();
 int config_free();
 void config_set(int, config_union);
+int config_bind_exec(uint, uint, uint);
 int get_d(int);
 float get_f(int);
 const char *get_s(int);
@@ -94,6 +91,7 @@ int render_init();
 int render_free();
 int render_page(int, Window, bool);
 int render_set_fader(Window, int);
+PopplerDocument *render_get_pdf_ptr();
 Window *render_create_sorter(Window);
 
 /* sorter.c */

@@ -91,7 +91,9 @@ bool cursor_visible(bool set) {
 		XDefineCursor(dpy, topWin, no_cursor);
 		XMapWindow(dpy, _win);
 	}
-	else XUnmapWindow(dpy, _win);
+	else {
+		XUnmapWindow(dpy, _win);
+	}
 }
 
 
