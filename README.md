@@ -5,15 +5,22 @@
 Author: Jesse McClure, Copyright 2012-2015
 License: GPLv3
 
-v4 branch: version 4 is 'pre-pre-alpha' and for previewing purposes only.  The
-only feature which is near-completion is the replacement for the sorter view
-with floating preview tiles.
+v4 branch: version 4 is 'pre-alpha' and for previewing purposes only.  This is a
+complete rewrite from scratch with different design and implementation.
 
+## Major changes from v3
+
+- Sorter has been replaced with "coverflow" style previews
+- All rendering is done on demand;
+	- pro: no delay during startup
+	- pro: no need to load all of the pdf into memory
+	- con: very large/elaborate pages can take a moment to render on older hardware
+- All new approach to user configuration
 
 ## Todo
 
-- Links
+- Links (in progress)
+- Cursors (other than current circle/dot)
 - History
-- Media
-- Track down memory leaks (in cairo?!)
+- Track down memory leaks (in cairo?)
 
