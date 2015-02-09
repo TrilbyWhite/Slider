@@ -29,6 +29,7 @@ typedef unsigned int uint;
 typedef unsigned short int bool;
 enum { false=0, true=1, toggle=2, query=3 };
 enum {
+	linkMovie,
 	noteX, noteY, noteFile,
 	presX, presY, presW, presH, presFile,
 	self,

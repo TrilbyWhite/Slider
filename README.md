@@ -20,7 +20,8 @@ complete rewrite from scratch with different design and implementation.
 ## Todo
 
 - Links (in progress)
-- Cursors (other than current circle/dot)
-- History
+- Configuration (in progress)
+- Cursors (other than current circle/dot, low priority)
+- History (low priority)
 - Track down memory leaks (in cairo?)
 

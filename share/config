@@ -6,9 +6,10 @@ Display      = VGA1 LVDS1
 FadeSteps    = 25
 Loop         =	0
 #*.Interleave:			false
-LinkLink     = firefox %s > /dev/null 2>&1
-LinkMovie    =	mpv --no-border --ontop --x11-name Float --screen 1 --geometry=%Wx%H+%x+%y %s >/dev/null 2>&1
-LinkSound    = mpv %s > /dev/null 2>&1 &
+LinkHandler     = firefox %s
+#MovieHandler    =	mpv --no-border --ontop --x11-name Float --screen 1 --geometry=%Wx%H+%x+%y %s
+MovieHandler    =	mpv --no-border --no-keepaspect --ontop --x11-name Float --screen 1 --geometry=%Wx%H+%x+%y %s
+SoundHandler    = mpv %s
 
 # Buttons
 Button   Control    1    cursor      toggle

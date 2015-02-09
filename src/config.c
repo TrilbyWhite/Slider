@@ -21,6 +21,7 @@ static int _var[LASTVar];
 static Bind *bind = NULL;
 static int nbind = 0;
 static char _type[LASTVar] = {
+	[linkMovie]   = 's',
 	[noteX]       = 'd',
 	[noteY]       = 'd',
 	[noteFile]    = 's',
@@ -33,6 +34,7 @@ static char _type[LASTVar] = {
 	[videoOut]    = 's',
 };
 static const char *_name[LASTVar] = {
+	[linkMovie]   = "movieHandler",
 	[noteX]       = "noteX",
 	[noteY]       = "noteY",
 	[noteFile]    = "noteFile",
@@ -67,9 +69,10 @@ int config_init(int argc, const char **argv) {
 	dpy = XOpenDisplay(0x0);
 	if (!dpy) return 1;
 	int i;
-	set(self, argv[0]);
 	int file_count = 0;
 	char *conf = NULL;
+	for (i = 0; i < LASTVar; ++i) _var[i] = -1;
+	set(self, argv[0]);
 	for (i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-' && argv[i][1] == '-' && argv[i][2] == '\0')
 			break;
@@ -96,7 +99,7 @@ int config_free() {
 	bind = NULL;
 	nbind = 0;
 	/* free configurations */
-	for (i = 0; i < _ns; ++i) free(_s[i]);
+	for (i = 0; i < _ns; ++i) if (_s[i]) free(_s[i]);
 	free(_s); _s = NULL; _ns = 0;
 	free(_f); _f = NULL; _nf = 0;
 	free(_d); _d = NULL; _nd = 0;
@@ -188,12 +191,12 @@ int _parse_config_string(const char *arg) {
 	char *ptr, *key, *value, *str = strdup(arg);
 	int i;
 	key = strtok_r(str, " =\t", &ptr);
-	value = strtok_r(NULL, " =\t", &ptr);
 	if (strncasecmp("key", key, 3) == 0)
 		_parse_binding(arg);
 	else if (strncasecmp("button", key, 6) == 0)
 		_parse_binding(arg);
 	else {
+		value = ptr + strspn(ptr, " =\t");
 		for (i = 0; i < LASTVar; ++i)
 			if (strncasecmp(_name[i], key, strlen(key)) == 0)
 				break;
@@ -211,13 +214,14 @@ int _read_config_file(const char *arg) {
 	FILE *f = fopen(arg, "r");
 	if (!f) return 1;
 	char line[256];
-	while (fgets(line, 256, f))
-		if (line[0] != '#' && line[0] != '\n')
-			_parse_config_string(line);
+	while (fgets(line, 256, f)) {
+		if (line[0] == '#' || line[0] == '\n') continue;
+		line[strlen(line)-1] = '\0';
+		_parse_config_string(line);
+	}
 	fclose(f);
 	return 0;
 }
-
 
 int config_bind_exec(uint mod, uint button, uint key) {
 	int i;
