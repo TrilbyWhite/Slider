@@ -5,8 +5,11 @@
 Author: Jesse McClure, Copyright 2012-2015
 License: GPLv3
 
-v4 branch: version 4 is 'pre-alpha' and for previewing purposes only.  This is a
-complete rewrite from scratch with different design and implementation.
+Version 4 is in active development and is a complete rewrite from scratch with
+different design and implementation.  Many features are currently incomplete,
+some are not implemented at all just yet.  Please consider 4.0 for testing
+purposes only.  The 3.0 code has been moved to it's own branch and can continue
+to be used for daily use.  As of 16 Feb 2015, the master branch points to 4.0.
 
 ## Major changes from v3
 
@@ -19,6 +22,8 @@ complete rewrite from scratch with different design and implementation.
 
 ## Todo
 
+- Multimonitor testing
+- Notes windows (currently not implemented at all)
 - Configuration (in progress)
 - Uncommon links types
 - Cursors (other than current circle/dot, low priority)
