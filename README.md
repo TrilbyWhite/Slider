@@ -5,9 +5,10 @@
 Author: Jesse McClure, Copyright 2012-2014
 License: GPLv3
 
-NOTE: version 3a was pushed to git on 7 Mar 2014.  Documentation will be
-coming shortly
+Version 3a was pushed to git on 7 Mar 2014.
 
+As of 15 Feb 2015 the master branch points to version 4.0, this branch can still
+be used for daily use, but will not get further updates.
 
 ## Synopsis
 
