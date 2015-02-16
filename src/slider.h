@@ -25,11 +25,14 @@
 #include <cairo-xlib.h>
 #include <poppler.h>
 
+#define STRING(s)		STRINGIFY(s)
+#define STRINGIFY(s)	#s
+
 typedef unsigned int uint;
 typedef unsigned short int bool;
 enum { false=0, true=1, toggle=2, query=3 };
 enum {
-	linkMovie,
+	linkAction, linkAudio, linkMovie, linkUri,
 	noteX, noteY, noteFile,
 	presX, presY, presW, presH, presFile,
 	self,
@@ -63,6 +66,12 @@ int scr, cur;
 Window root, topWin, presWin;
 bool running;
 
+/* command.c */
+int command(int, const char *);
+int command_init();
+int command_free();
+int command_str_to_num(const char *);
+
 /* config.c */
 int config_init();
 int config_free();
@@ -80,6 +89,9 @@ int cursor_set_size(int, int);
 int cursor_set_size_relative(int, int);
 bool cursor_visible(bool);
 bool cursor_suspend(bool);
+
+/* link.c */
+int link_follow(PopplerActionType);
 
 /* randr.c */
 #ifdef module_randr

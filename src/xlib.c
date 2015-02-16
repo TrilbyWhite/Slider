@@ -69,6 +69,7 @@ int xlib_mainloop() {
 			handler[ev.type](&ev);
 		XSync(dpy,true);
 	}
+	return 0;
 }
 
 void _buttonpress(XEvent *ev) {

@@ -19,8 +19,8 @@ complete rewrite from scratch with different design and implementation.
 
 ## Todo
 
-- Links (in progress)
 - Configuration (in progress)
+- Uncommon links types
 - Cursors (other than current circle/dot, low priority)
 - History (low priority)
 - Track down memory leaks (in cairo?)

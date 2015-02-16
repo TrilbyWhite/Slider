@@ -12,6 +12,7 @@ static void _goto(PopplerAction *);
 static void _launch(PopplerAction *);
 static void _movie(PopplerAction *);
 static void _none(PopplerAction *);
+static void _rendition(PopplerAction *);
 static void _uri(PopplerAction *);
 static void _named(PopplerAction *);
 
@@ -24,7 +25,7 @@ static void (*handler[POPPLER_ACTION_JAVASCRIPT + 1]) (PopplerAction *) = {
 	[POPPLER_ACTION_URI]           = _uri,
 	[POPPLER_ACTION_NAMED]         = _named,
 	[POPPLER_ACTION_MOVIE]         = _movie,
-	[POPPLER_ACTION_RENDITION]     = _none, // sound
+	[POPPLER_ACTION_RENDITION]     = _rendition,
 	[POPPLER_ACTION_OCG_STATE]     = _none,
 	[POPPLER_ACTION_JAVASCRIPT]    = _none,
 };
@@ -33,7 +34,6 @@ int link_follow(PopplerActionType type) {
 	_pdf = render_get_pdf_ptr();
 	PopplerPage *page = poppler_document_get_page(_pdf, cur);
 	PopplerAction *act = NULL;
-	PopplerRectangle rect;
 	PopplerLinkMapping *lmap;
 	GList *links, *list;
 	links = poppler_page_get_link_mapping(page);
@@ -79,7 +79,7 @@ int link_follow(PopplerActionType type) {
 	}
 	XDefineCursor(dpy, presWin, None);
 	XUngrabPointer(dpy, CurrentTime);
-	if (act) handler[lmap->action->type](lmap->action);
+	if (act) handler[lmap->action->type](act);
 	poppler_page_free_link_mapping(links);
 	g_object_unref(page);
 	return 0;
@@ -88,9 +88,10 @@ int link_follow(PopplerActionType type) {
 PopplerRectangle *_pdf_to_x(PopplerRectangle *pdf, double pdfw, double pdfh) {
 	static PopplerRectangle x;
 	if (!pdf) return &x;
-	unsigned int ww, wh, ig;
+	int ig;
+	unsigned int ww, wh, uig;
 	Window wig;
-	XGetGeometry(dpy, presWin, &wig, &ig, &ig, &ww, &wh, &ig, &ig);
+	XGetGeometry(dpy, presWin, &wig, &ig, &ig, &ww, &wh, &uig, &uig);
 	x.x1 = ww * pdf->x1 / pdfw;
 	x.x2 = ww * pdf->x2 / pdfw;
 	x.y1 = wh - wh * pdf->y1 / pdfh;
@@ -102,7 +103,8 @@ PopplerRectangle *_pdf_to_x(PopplerRectangle *pdf, double pdfw, double pdfh) {
 }
 
 
-char *_parse_fmt(const char *fmt, const char *fname) {
+int _spawn(const char *fmt, const char *fname) {
+	if (!fmt) return 1;
 	static char line[256];
 	char num[8];
 	line[0] = '\0';
@@ -148,13 +150,8 @@ char *_parse_fmt(const char *fmt, const char *fname) {
 		else strcat(line, start);
 		start = end;
 	}
-	return line;
-}
-
-int _spawn(const char *fmt, const char *fname) {
-	char *cmd = _parse_fmt(fmt, fname);
-	system(cmd);
-	printf("CMD: %s\n", cmd);
+	system(line); // TODO
+	return 0;
 }
 
 void _goto(PopplerAction *act){
@@ -170,35 +167,54 @@ void _goto(PopplerAction *act){
 	command(cmdRedraw, NULL);
 }
 
-void _launch(PopplerAction *act){
-	fprintf(stderr, "no link handler for launch actions\n");
-	_none(act);
+void _launch(PopplerAction *act) {
+	if (get_s(linkAction)) {
+		PopplerActionLaunch *launch = &act->launch;
+		int len = strlen(launch->file_name) + strlen(launch->params) + 2;
+		char *cmd = malloc(len * sizeof(char));
+		strcpy(cmd, launch->file_name);
+		strcat(cmd, launch->params);
+		_spawn(cmd, "");
+	}
+	else {
+		fprintf(stderr, "Action links blocked\n");
+		_none(act);
+	}
 }
 
-void _movie(PopplerAction *act){
+void _movie(PopplerAction *act) {
 	PopplerActionMovie *movie = &act->movie;
 	if (movie->operation != POPPLER_ACTION_MOVIE_PLAY) {
 		fprintf(stderr, "no link handler for movie controls\n");
 		_none(act);
 	}
-	_spawn(get_s(linkMovie), poppler_movie_get_filename(movie->movie));
+	if (_spawn(get_s(linkMovie), poppler_movie_get_filename(movie->movie)) != 0)
+		fprintf(stderr, "no MovieHandler defined in config file\n");
 }
 
-void _none(PopplerAction *act){
+void _none(PopplerAction *act) {
 	fprintf(stderr, "Action link not handled: type=%d name=%s\n",
 			act->type, act->any.title);
 }
 
-void _uri(PopplerAction *act){
-	fprintf(stderr, "no link handler for uri actions\n");
-	_none(act);
+void _rendition(PopplerAction *act) {
+	PopplerActionRendition *audio = &act->rendition;
+	if (_spawn(get_s(linkAudio), poppler_media_get_filename(audio->media)) != 0)
+		fprintf(stderr, "no AudioHandler defined in config file\n");
 }
 
-void _named(PopplerAction *act){
+void _uri(PopplerAction *act) {
+	PopplerActionUri *uri = &act->uri;
+	if (_spawn(get_s(linkUri), uri->uri) != 0)
+		fprintf(stderr, "no LinkHandler defined in config file\n");
+}
+
+void _named(PopplerAction *act) {
 	PopplerActionNamed *name = &act->named;
 	PopplerDest *d = poppler_document_find_dest(_pdf, name->named_dest);
 	cur = d->page_num - 1;
 	poppler_dest_free(d);
 	command(cmdRedraw, NULL);
 }
+
 

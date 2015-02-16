@@ -8,11 +8,13 @@
 
 static PopplerDocument *_pdf = NULL;
 static Window fade_win = None;
-static int _npage, fade_steps, _ww, _wh;
+static int _npage, fade_steps;
+static unsigned int _ww, _wh;
 
 int render_set_fader(Window win, int steps) {
 	fade_win = win;
 	fade_steps = steps;
+	return 0;
 }
 
 PopplerDocument *render_get_pdf_ptr() {
@@ -24,11 +26,12 @@ int render_page(int i, Window win, bool fixed) {
 	cairo_t *ctx;
 	cairo_surface_t *s, *img;
 	double pdfw, pdfh, scx, scy;
-	unsigned int ig;
+	int ig;
+	unsigned int uig;
 	/* get page size and scale to window */
 	PopplerPage *page = poppler_document_get_page(_pdf, i);
 	poppler_page_get_size(page, &pdfw, &pdfh);
-	XGetGeometry(dpy, win, (Window *) &ig, &ig, &ig, &_ww, &_wh, &ig, &ig);
+	XGetGeometry(dpy, win, (Window *) &ig, &ig, &ig, &_ww, &_wh, &uig, &uig);
 	scx = _ww / pdfw; scy = _wh / pdfh;
 	if (fixed) { /* adjust window size for fixed aspect ratio */
 		scx = (scx < scy ? (scy=scx) : scy);

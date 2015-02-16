@@ -7,7 +7,6 @@
 #include "slider.h"
 
 
-static Window _win;
 static int _cur, *_x;
 static bool _visible = false;
 static Window *_wins = NULL;

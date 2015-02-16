@@ -102,11 +102,11 @@ static const int winMin = 120;
 static const int winMax = 12000;
 void _pan_zoom(int mode) {
 	int x, y, xx, yy, dx, dy, ig;
-	unsigned int w, h;
+	unsigned int w, h, uig;
 	Window wig;
 	XEvent ev;
-	XQueryPointer(dpy, root, &wig, &wig, &xx, &yy, &ig, &ig , &ig);
-	XGetGeometry(dpy, presWin, &wig, &x, &y, &w, &h, &ig, &ig);
+	XQueryPointer(dpy, root, &wig, &wig, &xx, &yy, &ig, &ig , &uig);
+	XGetGeometry(dpy, presWin, &wig, &x, &y, &w, &h, &uig, &uig);
 	XGrabPointer(dpy, root, true, PointerMotionMask | ButtonReleaseMask,
 			GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
 	while (true) {
@@ -146,9 +146,10 @@ void _quit(const char *arg) {
 
 void _redraw(const char *arg) {
 	if (arg && arg[0] == 'n') {
-		unsigned int w, h, ig;
+		int ig;
+		unsigned int w, h, uig;
 		Window wig;
-		XGetGeometry(dpy, topWin, &wig, &ig, &ig, &w, &h, &ig, &ig);
+		XGetGeometry(dpy, topWin, &wig, &ig, &ig, &w, &h, &uig, &uig);
 		XMoveResizeWindow(dpy, presWin, 0, 0, w, h);
 	}
 	render_page(cur, presWin, false);

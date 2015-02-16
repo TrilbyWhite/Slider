@@ -27,7 +27,7 @@ static bool _visible = false;
 static Cursor no_cursor;
 
 int cursor_draw(int x, int y) {
-	static _x, _y;
+	static int _x, _y;
 	if (x != -1) { _x = x; _y = y; }
 	if (!_visible) return 0;
 	XMoveWindow(dpy, _win, _x - _cx, _y - _cy);
@@ -43,6 +43,7 @@ int cursor_free() {
 	cairo_surface_destroy(_img);
 	XFreeCursor(dpy, no_cursor);
 	XDestroyWindow(dpy, _win);
+	return 0;
 }
 
 int cursor_init(Window parent) {
@@ -94,6 +95,7 @@ bool cursor_visible(bool set) {
 	else {
 		XUnmapWindow(dpy, _win);
 	}
+	return _visible;
 }
 
 
@@ -128,5 +130,6 @@ int _img_dummy() {
 //cairo_move_to(c, 0, _img_cy + 32);
 //cairo_show_text(c, "Hello");
 	cairo_destroy(c);
+	return 0;
 }
 

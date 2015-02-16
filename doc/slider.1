@@ -1,0 +1,84 @@
+'\" t
+.\" Manual page created with latex2man on Mon Feb 16 14:11:16 EST 2015
+.\" NOTE: This file is generated, DO NOT EDIT.
+.de Vb
+.ft CW
+.nf
+..
+.de Ve
+.ft R
+
+.fi
+..
+.TH "SLIDER" "1" "16 February 2015" "pdf presenter " "pdf presenter "
+.SH NAME
+
+.PP
+Slider
+\- PDF presentation tool 
+.PP
+.SH SYNOPSIS
+
+slider 
+[\fB\-F\fP\fI config\fP]
+\fIpresentation\fP
+[\fInotes\fP]
+[\fB\-\-\fP\fI config\-override ...\fP]
+.PP
+.SH DESCRIPTION
+
+.PP
+Slider
+is a pdf slideshow presentation tool that can be used on a 
+single monitor, or with an optional and configurable presenter mode for 
+multiple outputs (e.g. laptop screen and projector). 
+.PP
+.SH OPTIONS
+
+.PP
+.TP
+\fB\-F\fP\fI config\fP
+ Specify a configuration file. If no configuration 
+files is specified on the command line, slider reads the first file found from 
+the following: 
+$XDG_CONFIG_HOME/slider/config,
+$HOME/.config/slider/config,
+/usr/share/slider/config\&.
+.PP
+.TP
+\fIpresentation\fP
+ The primary pdf file to be used for the 
+presentation (required). 
+.PP
+.TP
+\fInotes\fP
+ Secondary pdf file of presenter notes that will be 
+shown on the local screen (for two outputs only). 
+.PP
+.TP
+\fIconfig\-override\fP
+ Each parameter following a \fB\-\-\fP
+will be 
+interpreted as a configuration entry to add to or override settings from the 
+configuration file. 
+.PP
+.SH CONFIGURATION
+
+.PP
+TODO For now, please see the comments in the default config file 
+.PP
+.SH AUTHOR
+
+Copyright (C)2012\-2015 Jesse McClure 
+.br
+License GPLv3: GNU GPL version 3 \fBhttp://gnu.org/licenses/gpl.html\fP
+.br
+This is free software: you are free to change and redistribute it. 
+.br
+There is NO WARRANTY, to the extent permitted by law. 
+.PP
+Submit bug reports via github: 
+.br
+\fBhttp://github.com/TrilbyWhite/slider.git\fP
+.PP
+.\" NOTE: This file is generated, DO NOT EDIT.
