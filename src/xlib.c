@@ -35,23 +35,36 @@ int xlib_init() {
 	presWin = XCreateWindow(dpy, topWin, 0, 0, get_d(presW), get_d(presH), 0,
 			DefaultDepth(dpy,scr), InputOutput, DefaultVisual(dpy,scr),
 			CWBackingStore | CWEventMask, &wa);
+	XClassHint hint;
+	hint.res_name = "Presentation";
+	hint.res_class = "Slider";
+	XSetClassHint(dpy, topWin, &hint);
 	XStoreName(dpy, topWin, "Slider");
 	XMapWindow(dpy, topWin); // TODO where is it?
 	XMapWindow(dpy, presWin);
-
+	/* override placement of annoying WMs */
+	XMoveWindow(dpy, topWin, get_d(presX), get_d(presY));
 	/* other init functions */
 	if (command_init()) return xlib_free(1);
 	if (render_init(get_s(presFile))) return xlib_free(2);
+#ifdef module_cursor
 	if (cursor_init(presWin)) return xlib_free(3);
+#endif
+#ifdef module_sorter
 	if (sorter_init(topWin)) return xlib_free(4);
+#endif
 	render_set_fader(presWin, 20);
 	command(cmdFullscreen, NULL);
 	return 0;
 }
 
 int xlib_free(int ret) {
+#ifdef module_sorter
 	sorter_free();
+#endif
+#ifdef module_cursor
 	cursor_free();
+#endif
 	render_free();
 	command_free();
 	XDestroyWindow(dpy, topWin);
@@ -63,7 +76,9 @@ int xlib_mainloop() {
 	running = true;
 	render_page(cur, presWin, false);
 	while (running && !XNextEvent(dpy,&ev)) {
+#ifdef module_sorter
 		if (sorter_event(&ev)) continue;
+#endif
 		//if (notes_event(&ev)) continue;
 		if (ev.type < LASTEvent && handler[ev.type])
 			handler[ev.type](&ev);
@@ -83,7 +98,9 @@ void _keypress(XEvent *ev) {
 }
 
 void _motionnotify(XEvent *ev) {
+#ifdef module_cursor
 	XMotionEvent *e = &ev->xmotion;
 	cursor_draw(e->x, e->y);
+#endif
 }
 

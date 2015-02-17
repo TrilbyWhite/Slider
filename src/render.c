@@ -51,8 +51,10 @@ int render_page(int i, Window win, bool fixed) {
 	/* if this is the fader window, fade in */
 	if (win == fade_win) {
 		/* hide cursor for fade transitions */
+#ifdef module_cursor
 		bool pre = cursor_visible(query);
 		cursor_visible(false);
+#endif
 		/* get image, set up context, and render page */
 		img = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, _ww, _wh);
 		ctx = cairo_create(img);
@@ -75,14 +77,18 @@ int render_page(int i, Window win, bool fixed) {
 		/* clean up */
 		cairo_destroy(ctx);
 		cairo_surface_destroy(img);
+#ifdef module_cursor
 		cursor_visible(pre);
+#endif
 	}
 	g_object_unref(page);
 	/* set the pixmap to be the window background */
 	XSetWindowBackgroundPixmap(dpy, win, pix);
 	XFreePixmap(dpy, pix);
 	XClearWindow(dpy, win);
+#ifdef module_cursor
 	cursor_draw(-1, -1);
+#endif
 	return 0;
 }
 

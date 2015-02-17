@@ -69,7 +69,11 @@ int command_free() {
 
 
 void _cursor(const char *arg) {
+#ifdef module_cursor
 	cursor_visible(toggle);
+#else
+	fprintf(stderr,"[SLIDER] Module \"cursor\" not included in this build.\n");
+#endif
 }
 
 void _fullscreen(const char *arg) {
@@ -153,16 +157,22 @@ void _redraw(const char *arg) {
 		XMoveResizeWindow(dpy, presWin, 0, 0, w, h);
 	}
 	render_page(cur, presWin, false);
+#ifdef module_sorter
 	sorter_draw(cur);
+#endif
 	if (!arg) return;
 	// TODO notes ...
 }
 
 void _sorter(const char *arg) {
+#ifdef module_sorter
 	if (!arg || arg[0] == 't') sorter_visible(toggle);
 	else if (arg[0] == 's') sorter_visible(true);
 	else if (arg[0] == 'h') sorter_visible(false);
 	_redraw(NULL);
+#else
+	fprintf(stderr,"[SLIDER] Module \"sorter\" not included in this build.\n");
+#endif
 }
 
 void _zoom(const char *arg) {

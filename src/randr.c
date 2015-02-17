@@ -69,15 +69,22 @@ int _screen_info(const char *name, int num, Rect *r) {
 			continue;
 		}
 		/* skip if name is provided and doesn't match */
-		/* and skip if number is provided and doesn't match */
-		if ( !(name && strncmp(name, info->name, strlen(name))) ||
-				!(num && num - 1 != i) ) {
-			/* match found, return size */
-			r->x = crtc->x;
-			r->y = crtc->y;
-			r->w = crtc->width;
-			r->h = crtc->height;
+		if (name && strncmp(name, info->name, strlen(name))) {
+			XRRFreeCrtcInfo(crtc);
+			XRRFreeOutputInfo(info);
+			continue;
 		}
+		/* and skip if number is provided and doesn't match */
+		if (num && num - 1 != i) {
+			XRRFreeCrtcInfo(crtc);
+			XRRFreeOutputInfo(info);
+			continue;
+		}
+		/* match found, return size */
+		r->x = crtc->x;
+		r->y = crtc->y;
+		r->w = crtc->width;
+		r->h = crtc->height;
 		XRRFreeCrtcInfo(crtc);
 		XRRFreeOutputInfo(info);
 		if (r->w && r->h) break;

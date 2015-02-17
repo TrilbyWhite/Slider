@@ -82,6 +82,7 @@ float get_f(int);
 const char *get_s(int);
 
 /* cursor.c */
+#ifdef module_cursor
 int cursor_draw(int, int);
 int cursor_init(Window);
 int cursor_free();
@@ -89,6 +90,7 @@ int cursor_set_size(int, int);
 int cursor_set_size_relative(int, int);
 bool cursor_visible(bool);
 bool cursor_suspend(bool);
+#endif /* module_cursor */
 
 /* link.c */
 int link_follow(PopplerActionType);
@@ -97,7 +99,7 @@ int link_follow(PopplerActionType);
 #ifdef module_randr
 int randr_init();
 int randr_free();
-#endif /* module randr */
+#endif /* module_randr */
 
 /* render.c */
 int render_init();
@@ -108,6 +110,7 @@ PopplerDocument *render_get_pdf_ptr();
 Window *render_create_sorter(Window);
 
 /* sorter.c */
+#ifdef module_sorter
 int sorter_draw(int);
 int sorter_init(Window);
 bool sorter_event(XEvent *);
@@ -115,6 +118,7 @@ int sorter_free();
 int sorter_set_offset(int);
 int sorter_set_offset_relative(int);
 bool sorter_visible(bool);
+#endif /* module_sorter */
 
 /* xlib.c */
 int xlib_init();

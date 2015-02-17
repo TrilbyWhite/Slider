@@ -23,8 +23,14 @@ to be used for daily use.  As of 16 Feb 2015, the master branch points to 4.0.
 ## Todo
 
 - Multimonitor testing
+	- Functions on openbox as of 17 Feb 2015
+	- Need to test on other WMs
 - Notes windows (currently not implemented at all)
+- Modular compiles:
+	- exclude randr works
+	- exclude sorter works
 - Configuration (in progress)
+- Adjust spacing of preview slides to account for different size pdfs
 - Uncommon links types
 - Cursors (other than current circle/dot, low priority)
 - History (low priority)
