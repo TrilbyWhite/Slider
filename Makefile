@@ -11,7 +11,7 @@ CONFFILE =  ${PREFIX}/share/${PROG}/config
 DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER} -DDEFAULT_CONFIG=${CONFFILE}
 DEFS     += $(foreach mod, ${MODULES}, -Dmodule_${mod})
 DEPS     =  x11 cairo poppler-glib xrandr
-CFLAGS   ?= -march=native -O2 -pipe -fstack-protector-strong --param=ssp-buffer-size=4 -Wall -Werror -g
+CFLAGS   ?= -march=native -O2 -pipe -fstack-protector-strong --param=ssp-buffer-size=4 -Wall -Werror
 CFLAGS   += $(shell pkg-config --cflags ${DEPS}) ${DEFS}
 LDLIBS   += $(shell pkg-config --libs ${DEPS}) -lm
 HEADERS  =  slider.h

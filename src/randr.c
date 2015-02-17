@@ -15,18 +15,36 @@ static int _screen_info(const char *, int, Rect *);
 
 int randr_init() {
 	Rect r;
-// TODO strtok_r from get_s(videoOut);
-	/* try to put presentation on specified output: */
-	int i, n = _screen_info("LVDS1", 0, &r);
+	int i = 0, n = 0;
+	char *ptr, *output, *str = NULL;
+	/* try to put presentation on the first available specified output: */
+	if (get_s(videoOut)) {
+		str = strdup(get_s(videoOut));
+		output = strtok_r(str, ", ", &ptr);
+		n = _screen_info(output, 0, &r);
+		while ( !(r.w && r.h) && (output=strtok_r(NULL, ", ", &ptr)) )
+			_screen_info(output, 0, &r);
+	}
 	/* if that failed, get the first available output: */
-	if (!(r.w && r.h)) for (i = 1; i < n; ++i) _screen_info(NULL, i, &r);
-	if (!(r.w && r.h)) return 1;
+	else {
+		n = _screen_info(NULL, i = 1, &r);
+		while (!(r.w && r.h) && (++i) < n) _screen_info(NULL, i, &r);
+	}
+	/* if no output can be found, return 1, otherwise set pres variables */
+	if (!(r.w && r.h)) {
+		if (str) free(str);
+		return 1;
+	}
 	set(presX, r.x); set(presY, r.y); set(presW, r.w); set(presH, r.h);
-	/* try to put notes on the specified output: */
+	/* try to put notes on the next available specified output: */
 	r.x = r.y = r.w = r.h = 0;
-	_screen_info("VGA1", 0, &r);
+	if (str && output) {
+		while ( !(r.w && r.h) && (output=strtok_r(NULL, ", ", &ptr)) )
+			_screen_info(output, 0, &r);
+		free(str);
+	}
 	/* if that failed, get the next available output (if any): */
-	if (!(r.w && r.h)) for (i = 1; i < n; ++i) _screen_info(NULL, i, &r);
+	while (!(r.w && r.h) && (++i) < n) _screen_info(NULL, i, &r);
 	if (!(r.w && r.h)) return 0;
 	set(noteX, r.x); set(noteY, r.y);
 	return 0;
