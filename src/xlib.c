@@ -47,6 +47,7 @@ int xlib_init() {
 	/* other init functions */
 	if (command_init()) return xlib_free(1);
 	if (render_init(get_s(presFile))) return xlib_free(2);
+//	render_init(get_s(noteFile));
 #ifdef module_cursor
 	if (cursor_init(presWin)) return xlib_free(3);
 #endif

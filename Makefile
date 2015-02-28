@@ -6,7 +6,7 @@ PREFIX   ?= /usr
 VPATH    =  src
 
 MODULES  ?= command config cursor links randr render slider sorter xlib
-#MODULES  ?= command config links render slider xlib
+#MODULES  ?= command config render slider xlib
 CONFFILE =  ${PREFIX}/share/${PROG}/config
 #CONFFILE =  /etc/xdg/${PROG}/config
 DEFS     =  -DPROGRAM_NAME=${PROG} -DPROGRAM_VER=${VER} -DDEFAULT_CONFIG=${CONFFILE}

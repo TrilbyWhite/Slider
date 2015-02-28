@@ -26,9 +26,9 @@ to be used for daily use.  As of 16 Feb 2015, the master branch points to 4.0.
 	- Functions on openbox as of 17 Feb 2015
 	- Need to test on other WMs
 - Notes windows (currently not implemented at all)
-- Modular compiles:
-	- exclude randr works
-	- exclude sorter works
+- Modular compiles (done):
+	- required modules: commands, config, render, slider, xlib
+	- optional modules: cursor, links, randr, sorter
 - Configuration (in progress)
 - Adjust spacing of preview slides to account for different size pdfs
 - Uncommon links types

@@ -94,7 +94,11 @@ void _fullscreen(const char *arg) {
 }
 
 void _link(const char *arg) {
+#ifdef module_links
 	link_follow(0);
+#else
+	fprintf(stderr,"[SLIDER] Module \"links\" not included in this build.\n");
+#endif
 }
 
 void _next(const char *arg) {

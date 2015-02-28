@@ -92,8 +92,10 @@ bool cursor_visible(bool);
 bool cursor_suspend(bool);
 #endif /* module_cursor */
 
-/* link.c */
+/* links.c */
+#ifdef module_links
 int link_follow(PopplerActionType);
+#endif /* module_link */
 
 /* randr.c */
 #ifdef module_randr
@@ -105,6 +107,7 @@ int randr_free();
 int render_init();
 int render_free();
 int render_page(int, Window, bool);
+int render_pdf_page(int, int, Window, bool);
 int render_set_fader(Window, int);
 PopplerDocument *render_get_pdf_ptr();
 Window *render_create_sorter(Window);

@@ -54,6 +54,7 @@ int link_follow(PopplerActionType type) {
 	XDefineCursor(dpy, presWin, XCreateFontCursor(dpy, 68));
 	XGrabPointer(dpy, root, true, PointerMotionMask | ButtonPressMask,
 			GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+// TODO get current pointer location and check for links under mouse
 	while (!XNextEvent(dpy, &ev)) {
 		if (ev.type == ButtonPress) break;
 		else if (ev.type == MotionNotify && !act) {
