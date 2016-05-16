@@ -114,44 +114,37 @@ int _spawn(const char *fmt, const char *fname) {
 	for (start = fmt; *start;) {
 		if ( (end=strchr(start, '%')) ) {
 			strncat(line, start, end - start);
-			if (*(++end) == 's') {
-				if (fname) strcat(line, fname);
-				else strcat(line, "%s");
-			}
-			else if (*end == 'x') {
-				snprintf(num, 8, "%d", (int) r->x1);
-				strcat(line, num);
-			}
-			else if (*end == 'y') {
-				snprintf(num, 8, "%d", (int) r->y1);
-				strcat(line, num);
-			}
-			else if (*end == 'w' || *end == 'W') {
-				snprintf(num, 8, "%d", (int) (r->x2 -  r->x1));
-				strcat(line, num);
-			}
-			else if (*end == 'h' || *end == 'H') {
-				snprintf(num, 8, "%d", (int) (r->y2 - r->y1));
-				strcat(line, num);
-			}
-			else if (*end == 'X') {
-				snprintf(num, 8, "%d", (int) r->x1 + get_d(presX));
-				strcat(line, num);
-			}
-			else if (*end == 'Y') {
-				snprintf(num, 8, "%d", (int) r->y1 + get_d(presY));
-				strcat(line, num);
-			}
-			else {
-				num[0] = '%'; num[1] = *end; num[2] = '\0';
-				strcat(line, num);
+			switch (*(++end)) {
+				case 's': strcat(line, (fname ? fname : "%s")); break;
+				case 'x': snprintf(num, 8, "%d", (int) r->x1); strcat(line, num); break;
+				case 'y': snprintf(num, 8, "%d", (int) r->y1); strcat(line, num); break;
+				case 'X': snprintf(num, 8, "%d", (int) r->x1 + get_d(presX)); strcat(line, num); break;
+				case 'Y': snprintf(num, 8, "%d", (int) r->y1 + get_d(presY)); strcat(line, num); break;
+				case 'w': case 'W': snprintf(num, 8, "%d", (int) (r->x2 -  r->x1)); strcat(line, num); break;
+				case 'h': case 'H': snprintf(num, 8, "%d", (int) (r->y2 -  r->y1)); strcat(line, num); break;
+				default: num[0] = '%'; num[1] = *end; num[2] = '\0'; strcat(line, num);
 			}
 			++end;
 		}
 		else strcat(line, start);
 		start = end;
 	}
-	system(line); // TODO
+	int pid;
+	if ( (pid=fork()) < 0) return 1;
+	else if (pid != 0) return 0;
+	close(ConnectionNumber(dpy));
+	setsid();
+	char **args = NULL;
+	char *tok;
+	int ntoks = 0;
+	for (tok = strtok(line," "); tok; tok = strtok(NULL," ")) {
+		args = realloc(args, (++ntoks) * sizeof(char *));
+		args[ntoks-1] = strdup(tok);
+		fprintf(stderr,"%s\n", tok);
+	}
+	args = realloc(args, (++ntoks) * sizeof(char *));
+	args[ntoks-1] = NULL;
+	execvp(args[0], (char *const *)args);
 	return 0;
 }
 
