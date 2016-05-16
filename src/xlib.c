@@ -54,7 +54,7 @@ int xlib_init() {
 #ifdef module_sorter
 	if (sorter_init(topWin)) return xlib_free(4);
 #endif
-	render_set_fader(presWin, 20);
+	render_set_fader(presWin, 1);
 	command(cmdFullscreen, NULL);
 	return 0;
 }
@@ -85,6 +85,7 @@ int xlib_mainloop() {
 			handler[ev.type](&ev);
 		XSync(dpy,true);
 	}
+	// TODO show a blank/black page first with no fade in.
 	return 0;
 }
 

@@ -82,8 +82,8 @@ int render_pdf_page(int pdf, int pg, Window win, bool fixed) {
 		/* fade in */
 		for (ig = _fade_steps; ig; --ig) {
 			cairo_paint_with_alpha(ctx, 1 / (float) ig); // memory leak?!
-			XFlush(dpy);
-			usleep(10000);
+			//XFlush(dpy);
+			usleep(200);
 		}
 		/* clean up */
 		cairo_destroy(ctx);

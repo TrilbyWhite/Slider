@@ -1,0 +1,2 @@
+Start by clearing to black otherwise the previous openGL content is shown as the
+new content fades in.
